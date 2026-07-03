@@ -1,0 +1,85 @@
+services:
+  django:
+    build:
+      context: .
+      dockerfile: ./docker/dev/django/Dockerfile
+    container_name: arkkala_dev_django
+    env_file:
+      - .env.dev
+    command: python manage.py runserver 0.0.0.0:${DJANGO_PORT:-8000}
+    volumes:
+      - ./arkkala:/app
+    ports:
+      - "${DJANGO_PORT:-8000}:${DJANGO_PORT:-8000}"
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: arkkala_dev_postgres
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-arkkala_dev_db}
+      - POSTGRES_USER=${POSTGRES_USER:-arkkala_dev_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-arkkala_dev_pass}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+
+  redis:
+    image: redis:7-alpine
+    container_name: arkkala_dev_redis
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: ./docker/dev/celery/Dockerfile
+    container_name: arkkala_dev_celery_worker
+    env_file:
+      - .env.dev
+    command: /start_worker
+    volumes:
+      - ./arkkala:/app
+    depends_on:
+      - redis
+      - postgres
+
+  celery_beat:
+    build:
+      context: .
+      dockerfile: ./docker/dev/celery/Dockerfile
+    container_name: arkkala_dev_celery_beat
+    env_file:
+      - .env.dev
+    command: /start_beat
+    volumes:
+      - ./arkkala:/app
+    depends_on:
+      - redis
+      - postgres
+
+  pgadmin:
+      image: dpage/pgadmin4
+      container_name: arkkala_dev_pgadmin
+      depends_on:
+        - postgres
+      environment:
+        - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL}
+        - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD}
+      env_file:
+        - .env.dev
+      ports:
+        - "${PGADMIN_LISTEN_PORT:-5050}:80"
+
+  react:
+      build:
+        context: .
+        dockerfile: ./docker/dev/react/Dockerfile
+      container_name: arkkala_dev_react
+      ports:
+        - "${REACT_PORT:-3000}:3000"
+      volumes:
+        - ./frontend/src:/frontend/src
+        - ./frontend/public:/frontend/public
+        - ./frontend/package.json:/frontend/package.json
+      environment:
+        - CHOKIDAR_USEPOLLING=true
+        - WDS_SOCKET_PORT=0

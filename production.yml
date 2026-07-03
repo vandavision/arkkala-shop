@@ -1,0 +1,111 @@
+version: "3.8"
+
+services:
+  django:
+    build:
+      context: .
+      dockerfile: ./docker/prod/django/Dockerfile
+    container_name: arkkala_prod_django
+    env_file:
+      - .env.prod
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+      python manage.py collectstatic --noinput &&
+      gunicorn arkkala.asgi:application -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:${DJANGO_PORT:-8000} --workers 4"
+    environment:
+      - DJANGO_SETTINGS_MODULE=arkkala.settings.prod
+    ports:
+      - "${DJANGO_PORT:-8000}:8000"
+    volumes:
+      - static_volume:/app/staticfiles
+      - media_volume:/app/mediafiles
+    depends_on:
+      - postgres
+      - redis
+    restart: always
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: arkkala_prod_postgres
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-arkkala_prod_db}
+      - POSTGRES_USER=${POSTGRES_USER:-arkkala_prod_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres_password_2026}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    env_file:
+      - .env.prod
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    container_name: arkkala_prod_redis
+    volumes:
+      - redis_data:/data
+    env_file:
+      - .env.prod
+    restart: always
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: ./docker/prod/celery/Dockerfile
+    container_name: arkkala_prod_celery_worker
+    env_file:
+      - .env.prod
+    command: /start_worker
+    volumes:
+      - media_volume:/app/mediafiles
+    depends_on:
+      - redis
+      - postgres
+    restart: always
+
+  celery_beat:
+    build:
+      context: .
+      dockerfile: ./docker/prod/celery/Dockerfile
+    container_name: arkkala_prod_celery_beat
+    env_file:
+      - .env.prod
+    command: /start_beat
+    depends_on:
+      - redis
+      - postgres
+    restart: always
+
+  nginx:
+    build:
+      context: .
+      dockerfile: ./docker/prod/nginx/Dockerfile
+    container_name: arkkala_prod_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - static_volume:/app/staticfiles
+      - media_volume:/app/mediafiles
+      - /var/www/certbot:/var/www/certbot
+      - /etc/letsencrypt:/etc/letsencrypt
+    depends_on:
+      - django
+    env_file:
+      - .env.prod
+    restart: always
+
+  certbot:
+    image: certbot/certbot
+    container_name: arkkala_prod_certbot
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt
+      - /var/www/certbot:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h; done;'"
+    restart: always
+
+volumes:
+  postgres_data:
+  redis_data:
+  static_volume:
+  media_volume:

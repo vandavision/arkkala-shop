@@ -1,0 +1,39 @@
+/* Reset & Base */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Tahoma, Arial, sans-serif; direction: rtl; background: #f8f9fa; color: #333; }
+
+.container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+/* Breadcrumb */
+.breadcrumb { display: flex; list-style: none; gap: 8px; margin-bottom: 20px; font-size: 14px; color: #6c757d; }
+.breadcrumb a { text-decoration: none; color: #0d6efd; }
+
+/* Product Layout */
+.product-main-row { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+@media (max-width: 768px) { .product-main-row { grid-template-columns: 1fr; } }
+
+/* Typography */
+.title { font-size: 24px; font-weight: 800; margin-bottom: 8px; }
+.english-title { font-size: 16px; color: #adb5bd; margin-bottom: 20px; text-transform: capitalize; }
+.price { font-size: 28px; font-weight: bold; color: #198754; display: block; margin-bottom: 20px; }
+
+/* Attributes (Dynamic Variants) */
+.attribute-group { margin-bottom: 20px; }
+.attribute-name { font-size: 14px; margin-bottom: 10px; color: #495057; }
+.attribute-options { display: flex; gap: 10px; flex-wrap: wrap; }
+.option-btn { padding: 8px 16px; border: 1px solid #dee2e6; background: #fff; border-radius: 8px; cursor: pointer; transition: 0.2s; font-family: inherit; }
+.option-btn.active { border-color: #0d6efd; background: #e9f2ff; color: #0d6efd; font-weight: bold; }
+
+/* Buttons */
+.btn { padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; font-family: inherit; }
+.btn-primary { background: #0d6efd; color: #fff; width: 100%; }
+.btn-danger { background: #dc3545; color: #fff; width: 100%; cursor: not-allowed; }
+
+/* Swiper Gallery */
+.product-gallery img { width: 100%; border-radius: 12px; object-fit: cover; }
+
+/* Comments */
+.comments-section { background: #fff; padding: 30px; border-radius: 12px; margin-top: 20px; }
+.comment-card { padding: 15px; border-bottom: 1px solid #eee; margin-bottom: 15px; }
+.comment-card .rating { display: block; font-size: 12px; color: #ffc107; margin: 5px 0; }
+.comment-form textarea { width: 100%; padding: 15px; border: 1px solid #dee2e6; border-radius: 8px; margin: 15px 0; min-height: 120px; font-family: inherit; resize: vertical; }

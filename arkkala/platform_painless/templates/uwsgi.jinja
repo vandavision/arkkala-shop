@@ -1,0 +1,4 @@
+[uwsgi]
+{%for key in config%}
+{{key}}={{config.get(key)}}
+{%endfor%}

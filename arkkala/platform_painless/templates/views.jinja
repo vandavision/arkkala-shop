@@ -1,0 +1,82 @@
+{% if cache_support %}
+from django.http import Http404
+{% endif %}
+from rest_framework.viewsets import ModelViewSet
+{% if permission_support %}
+# permission support
+from rest_framework import permissions
+{% endif %}
+{% if filter_support %}
+# filter support
+from django_filters.rest_framework import DjangoFilterBackend
+{% endif %}
+{% if search_support %}
+# search support
+from rest_framework.filters import SearchFilter
+{% endif %}
+
+{% for model in models %}
+from {{app_name}}.models.{{model.name.lower()}} import {{model.name}}
+{% endfor %}
+from {{app_name}}.api.serializers import (
+{% for model in models %}{{model.name}}Serializer,
+{% endfor %}
+)
+
+{% for model in models %}
+class {{model.name}}Viewset(ModelViewSet):
+    """
+    {{model.name}} Viewset
+    Auto generated
+    """
+    serializer_class = {{model.name}}Serializer
+    {% if model.api_config %}
+    {% if model.api_config.get('methods') %}http_method_names = {{model.api_config.get('methods')}}{% endif %}
+    {% if model.api_config.get('permission') %}permission_classes = (permissions.{{model.api_config.get('permission')}},){% endif %}
+    {% if model.api_config.get('filter') and model.api_config.get('search') %}
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    search_fields = [
+        {% for field in model.search_fields %}'{{field}}',{% endfor %}
+    ]
+    filterset_fields = [
+        {% for field in model.filter_fields %}'{{field}}',{% endfor %}
+    ]
+    {% elif model.api_config.get('filter') and not model.api_config.get('search') %}
+    filter_backends = [DjangoFilterBackend,]
+    filterset_fields = [
+        {% for field in model.filter_fields %}'{{field}}',{% endfor %}
+    ]
+    {% elif not model.api_config.get('filter') and model.api_config.get('search') %}
+    filter_backends = [SearchFilter,]
+    search_fields = [
+        {% for field in model.search_fields %}'{{field}}',{% endfor %}
+    ]
+    {% endif %}
+    {% endif %}
+    {% if cache_support %}
+    model_class = {{model.name}}
+
+    def get_queryset(self):
+        """
+        get queryset from cache
+        """
+        return self.model_class.get_all_from_cache()
+
+    def get_object(self):
+        """
+        get object from cache
+        """
+        queryset = self.get_queryset()
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+        filter_kwargs = {
+            self.lookup_field: int(self.kwargs[lookup_url_kwarg]) if self.kwargs[lookup_url_kwarg].isdigit() else None
+        }
+        qs = self.model_class.filter_from_cache(queryset, **filter_kwargs)
+        if len(qs) == 0:
+            raise Http404('Not Found')
+        obj = qs[0]
+        return obj
+    {% else %}
+    queryset = {{model.name}}.objects.all()
+    {% endif %}
+{% endfor %}

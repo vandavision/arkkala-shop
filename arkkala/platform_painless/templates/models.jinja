@@ -1,0 +1,52 @@
+from django.db import models
+from django.utils.translation import ugettext_lazy as _
+{% if validator_support %}
+# validator support
+from importlib import import_module
+validators = import_module('django.core.validators')
+{% endif %}
+{% if cache_support %}
+# cache support
+from {{app_name}}.mixins import ModelCacheMixin
+{% endif %}
+{% if encrypt_support %}
+# encrypt support
+from platform_encrypt.services.encrypt import encrypt_field
+{% endif %}
+{% if fk_models %}
+{% for model in fk_models %}
+from {{app_name}}.models.{{model.lower()}} import {{model}}
+{% endfor %}
+{% endif %}
+{% for model in models %}
+
+class {{model.name}}(models.Model{% if cache_support %}, ModelCacheMixin{% endif %}):
+    """
+    {{model.name}} Model
+    Auto generated
+    """
+    {% if cache_support %}
+    CACHE_KEY = '{{model.name.lower()}}' # auto generated CACHE_KEY
+    {% endif %}
+    {% for field in model.fields %}
+    {% if field.type %}
+    {{field.name}} = {% if field.encrypted %}encrypt_field({% endif %}models.{{field.type}}({% for attr in field.attrs %}
+             {% if attr.key == 'on_delete' %}{{attr.key}}=models.{{attr.value}},{% else %}{{attr.key}}={{attr.value}},{%endif%}{% endfor %}
+             {% if field.validators %}
+             validators=[
+                {% for validator in field.validators %}
+                getattr(validators, '{{validator.func}}')({{validator.arg}}),
+                {% endfor %}
+             ]
+             {% endif %}
+    ){% if field.encrypted %}){% endif %}
+    {% endif %}
+    {% endfor %}
+
+    def __str__(self):
+        return {% if model.get_str %} f"{{model.get_str}} {self.pk}" {% else %} f"{self.pk}" {% endif %}
+
+    class Meta:
+        verbose_name = _("{{model.verbose_name}}")  # auto generated verbose_name
+        verbose_name_plural = _("{{model.verbose_name_plural}}")
+{% endfor %}
