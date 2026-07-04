@@ -18,11 +18,17 @@ INSTALLED_APPS: list[str] = [
     
     'corsheaders',
     'rest_framework',
-    
+    'platform_painless',
     'platform_tools',
     'platform_seo',
-    'platform_painless',
+
+    'rest_framework_simplejwt',
+    'users',
     'shop',
+    'orders',
+    'payments',
+    'blog',
+    'search',
 ]
 
 MIDDLEWARE: list[str] = [
@@ -72,3 +78,16 @@ DEFAULT_AUTO_FIELD: str = 'django.db.models.BigAutoField'
 
 WSGI_APPLICATION: str = 'arkkala.wsgi.application'
 ASGI_APPLICATION: str = 'arkkala.asgi.application'
+
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    )
+}
+
+AUTH_USER_MODEL = 'users.User'
+
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'noreply@arkkala.com'
+VAT_RATE = 0

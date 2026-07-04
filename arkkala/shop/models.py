@@ -67,14 +67,18 @@ class Product(UUIDBaseModel, TimeStampMixin, TitleSlugMixin, SEOMixin, ProductDe
     short_description = models.TextField(null=True, blank=True, verbose_name=_('توضیح کوتاه'))
     description = models.TextField(verbose_name=_('توضیحات کامل'))
     
-    base_price = models.DecimalField(max_digits=12, decimal_places=0, verbose_name=_('قیمت پایه'))
+    base_price = models.DecimalField(max_digits=12, decimal_places=0, verbose_name=_('قیمت پایه (تکی)'))
     base_inventory = models.PositiveIntegerField(default=0, verbose_name=_('موجودی پایه'))
+    
+    is_wholesale = models.BooleanField(default=False, verbose_name=_('قابلیت فروش عمده دارد؟'))
+    wholesale_min_quantity = models.PositiveIntegerField(default=10, verbose_name=_('حداقل تعداد برای خرید عمده'), help_text=_("در صورت خرید بیشتر از این تعداد، قیمت عمده محاسبه می‌شود."))
+    wholesale_base_price = models.DecimalField(max_digits=12, decimal_places=0, null=True, blank=True, verbose_name=_('قیمت پایه عمده'))
     
     sold_count = models.PositiveIntegerField(default=0, verbose_name=_('تعداد فروش'))
     view_count = models.PositiveIntegerField(default=0, verbose_name=_('تعداد بازدید'))
     average_rating = models.FloatField(default=0.0, verbose_name=_('میانگین امتیاز'))
     
-    is_variable = models.BooleanField(default=False, verbose_name=_('متغیر است؟'))
+    is_variable = models.BooleanField(default=False, verbose_name=_('محصول متغیر است؟'))
     is_active = models.BooleanField(default=True, verbose_name=_('فعال'))
 
     class Meta:
@@ -97,8 +101,11 @@ class ProductVariant(UUIDBaseModel, TimeStampMixin):
     """Product Variants for Variable Products."""
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='variants', verbose_name=_('محصول'))
     attribute_values = models.ManyToManyField(AttributeValue, related_name='variants', verbose_name=_('مقادیر ویژگی'))
-    price = models.DecimalField(max_digits=12, decimal_places=0, verbose_name=_('قیمت'))
+    
+    price = models.DecimalField(max_digits=12, decimal_places=0, verbose_name=_('قیمت تکی'))
     inventory = models.PositiveIntegerField(default=0, verbose_name=_('موجودی'))
+    
+    wholesale_price = models.DecimalField(max_digits=12, decimal_places=0, null=True, blank=True, verbose_name=_('قیمت عمده'))
 
     class Meta:
         verbose_name = _('تنوع محصول')

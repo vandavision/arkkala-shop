@@ -1,7 +1,7 @@
 """
 Serializers for the Shop App.
 """
-from typing import Any, Dict
+from typing import Any, Dict, List
 from rest_framework import serializers
 from .models import Brand, Product, ProductVariant, AttributeValue, Comment, ProductGallery
 
@@ -23,9 +23,11 @@ class ProductSeoSerializer(serializers.ModelSerializer):
         fields = ['meta_keywords', 'meta_description', 'canonical_url', 'og_image_url', 'json_ld']
 
     def get_json_ld(self, obj: Product) -> Dict[str, Any]:
+        """Get generated JSON-LD from Product model."""
         return obj.generate_json_ld() if hasattr(obj, 'generate_json_ld') else {}
 
     def get_og_image_url(self, obj: Product) -> str | None:
+        """Get OG Image URL."""
         return obj.og_image.url if hasattr(obj, 'og_image') and obj.og_image else None
 
 
@@ -44,7 +46,7 @@ class ProductVariantSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProductVariant
-        fields = ['id', 'price', 'inventory', 'attributes']
+        fields = ['id', 'price', 'wholesale_price', 'inventory', 'attributes']
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -56,6 +58,7 @@ class CommentSerializer(serializers.ModelSerializer):
         fields = ['id', 'user_name', 'body', 'rating', 'created_at']
         
     def get_user_name(self, obj: Comment) -> str:
+        """Get User Full Name or return anonymous string."""
         return obj.user.get_full_name() if obj.user and obj.user.get_full_name() else "کاربر ناشناس"
 
 
@@ -80,10 +83,13 @@ class ProductDetailSerializer(serializers.ModelSerializer):
         model = Product
         fields = [
             'id', 'title', 'english_title', 'slug', 'brand', 'short_description', 'description', 
-            'base_price', 'base_inventory', 'sold_count', 'view_count', 'average_rating',
+            'base_price', 'base_inventory', 
+            'is_wholesale', 'wholesale_min_quantity', 'wholesale_base_price',
+            'sold_count', 'view_count', 'average_rating',
             'is_variable', 'gallery', 'variants', 'comments', 'seo', 'created_at'
         ]
 
-    def get_comments(self, obj: Product) -> list[Dict[str, Any]]:
+    def get_comments(self, obj: Product) -> List[Dict[str, Any]]:
+        """Return approved comments for the product."""
         approved_comments = obj.comments.filter(is_approved=True)
         return CommentSerializer(approved_comments, many=True).data

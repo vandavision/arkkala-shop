@@ -22,7 +22,7 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = ProductDetailSerializer
     
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['category__slug', 'brand__slug', 'is_variable']
+    filterset_fields = ['category__slug', 'brand__slug', 'is_variable', 'is_wholesale']
     search_fields = ['title', 'english_title', 'description', 'short_description']
     ordering_fields = ['base_price', 'sold_count', 'view_count', 'average_rating', 'created_at']
     ordering = ['-created_at']

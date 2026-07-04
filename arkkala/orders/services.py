@@ -1,141 +1,172 @@
 """
-Business Logic for Orders and Cart.
+Service Layer for Orders and Cart processing.
 """
-from typing import Dict, Any, Optional
-from django.db import transaction
-from django.contrib.auth import get_user_model
-from django.http import HttpRequest
+from decimal import Decimal
+from typing import Tuple, Dict, Any
 
-from shop.models import ProductVariant
-from .models import Cart, CartItem, Order, OrderItem, OrderStatus, ShippingMethod
-from .tasks import cancel_unpaid_order
+from django.db import transaction
+from django.db.models import F
+from django.utils import timezone
+from django.contrib.auth import get_user_model
+from django.conf import settings
+
+from .models import Cart, CartItem, Order, OrderItem, ShippingMethod, Coupon
+from shop.models import Product, ProductVariant
+from platform_tools.services.email import EmailService
 
 User = get_user_model()
 
 
 class CartService:
-    """Service to handle Cart operations for Users and Guests."""
-
+    """Business logic for Cart management."""
+    
     @staticmethod
-    def get_or_create_cart(request: HttpRequest) -> Cart:
-        """Fetch existing cart or create a new one based on session or user."""
-        if request.user.is_authenticated:
-            cart, _ = Cart.objects.get_or_create(user=request.user)
-            return cart
-        
-        if not request.session.session_key:
-            request.session.create()
-        
-        session_key = request.session.session_key
-        cart, _ = Cart.objects.get_or_create(session_key=session_key)
+    def get_user_cart(user: User) -> Cart:
+        cart, _ = Cart.objects.get_or_create(user=user)
         return cart
 
     @staticmethod
-    @transaction.atomic
-    def merge_guest_cart_to_user(request: HttpRequest) -> None:
-        """Called upon login to merge session cart items into user cart."""
-        session_key = request.session.session_key
-        if not session_key:
-            return
-
-        guest_cart = Cart.objects.filter(session_key=session_key).first()
-        if not guest_cart:
-            return
-
-        user_cart, _ = Cart.objects.get_or_create(user=request.user)
+    def add_to_cart(user: User, product_id: str, variant_id: str = None, quantity: int = 1) -> CartItem:
+        cart = CartService.get_user_cart(user)
         
-        for item in guest_cart.items.all():
-            user_item, created = CartItem.objects.get_or_create(cart=user_cart, variant=item.variant)
-            if not created:
-                user_item.quantity += item.quantity
-            else:
-                user_item.quantity = item.quantity
-            user_item.save()
-            
-        guest_cart.delete()
+        item = CartItem.objects.filter(cart=cart, product_id=product_id, variant_id=variant_id).first()
+        if item:
+            item.quantity += quantity
+            item.save(update_fields=['quantity'])
+        else:
+            item = CartItem.objects.create(
+                cart=cart,
+                product_id=product_id,
+                variant_id=variant_id,
+                quantity=quantity
+            )
+        return item
 
     @staticmethod
-    def add_item(request: HttpRequest, variant_id: str, quantity: int = 1) -> CartItem:
-        """Add item to cart and validate inventory."""
-        cart = CartService.get_or_create_cart(request)
-        variant = ProductVariant.objects.get(id=variant_id)
-        
-        if variant.inventory < quantity:
-            raise ValueError("موجودی کالا کافی نیست.")
-
-        item, created = CartItem.objects.get_or_create(cart=cart, variant=variant)
-        new_quantity = quantity if created else item.quantity + quantity
-        
-        if new_quantity > variant.inventory:
-            raise ValueError("موجودی کالا برای این تعداد درخواست شده کافی نیست.")
-            
-        item.quantity = new_quantity
-        item.save()
+    def update_item_quantity(item_id: str, user: User, quantity: int) -> CartItem:
+        item = CartItem.objects.get(id=item_id, cart__user=user)
+        item.quantity = quantity
+        item.save(update_fields=['quantity'])
         return item
+
+    @staticmethod
+    def remove_item(item_id: str, user: User) -> None:
+        CartItem.objects.filter(id=item_id, cart__user=user).delete()
+
+    @staticmethod
+    def calculate_item_price(item: CartItem) -> Decimal:
+        """
+        محاسبه هوشمند قیمت. اگر تعداد خرید کاربر به حدنصاب عمده برسد و فروش عمده فعال باشد،
+        قیمت به صورت عمده شکسته می‌شود.
+        """
+        product = item.product
+        variant = item.variant
+        qty = item.quantity
+        
+        if variant:
+            if product.is_wholesale and qty >= product.wholesale_min_quantity and variant.wholesale_price:
+                return variant.wholesale_price
+            return variant.price
+        else:
+            if product.is_wholesale and qty >= product.wholesale_min_quantity and product.wholesale_base_price:
+                return product.wholesale_base_price
+            return product.base_price
 
 
 class OrderService:
-    """Service to handle Order operations."""
+    """Business logic for Checkout and Orders."""
+    
+    @staticmethod
+    def validate_coupon(code: str) -> Coupon:
+        """Check if coupon is active, within date range, and under usage limits."""
+        now = timezone.now()
+        coupon = Coupon.objects.filter(
+            code__iexact=code,
+            is_active=True,
+            valid_from__lte=now,
+            valid_to__gte=now,
+            used_count__lt=F('usage_limit')
+        ).first()
+        
+        if not coupon:
+            raise ValueError("کد تخفیف نامعتبر است یا منقضی شده است.")
+        return coupon
 
     @staticmethod
     @transaction.atomic
-    def checkout(request: HttpRequest, payload: Dict[str, Any]) -> Order:
-        """Convert Cart to Order, apply shipping cost, and schedule auto-cancellation."""
-        cart = CartService.get_or_create_cart(request)
-        items = cart.items.select_related('variant').all()
+    def checkout(user: User, address_data: Dict[str, Any], shipping_method_id: str, coupon_code: str = None) -> Order:
+        """
+        Convert cart to a finalized Order.
+        Calculates shipping cost based on is_pay_on_delivery logic.
+        """
+        cart = CartService.get_user_cart(user)
+        cart_items = cart.items.select_related('product', 'variant').all()
         
-        if not items.exists():
+        if not cart_items.exists():
             raise ValueError("سبد خرید شما خالی است.")
-
-        shipping_method_id = payload.get('shipping_method_id')
-        try:
-            shipping_method = ShippingMethod.objects.get(id=shipping_method_id, is_active=True)
-        except ShippingMethod.DoesNotExist:
-            raise ValueError("روش ارسال نامعتبر است.")
-
-        products_total = sum(item.variant.price * item.quantity for item in items)
-        shipping_cost = shipping_method.base_cost
-        payable_price = products_total + shipping_cost
+            
+        shipping = ShippingMethod.objects.get(id=shipping_method_id)
         
-        user = request.user if request.user.is_authenticated else None
+        total_items_amount = Decimal(0)
+        for item in cart_items:
+            unit_price = CartService.calculate_item_price(item)
+            total_items_amount += unit_price * item.quantity
+
+        shipping_cost = Decimal(0) if shipping.is_pay_on_delivery else shipping.base_cost
+        
+        discount_amount = Decimal(0)
+        coupon = None
+        if coupon_code:
+            coupon = OrderService.validate_coupon(coupon_code)
+            discount_amount = (total_items_amount * coupon.discount_percent) / Decimal(100)
+            if coupon.max_discount_amount and discount_amount > coupon.max_discount_amount:
+                discount_amount = coupon.max_discount_amount
+            
+            coupon.used_count = F('used_count') + 1
+            coupon.save(update_fields=['used_count'])
+            
+        tax_rate = Decimal(getattr(settings, 'VAT_RATE', 0.10))
+        subtotal = (total_items_amount - discount_amount)
+        tax_amount = subtotal * tax_rate
+            
+        payable_amount = subtotal + tax_amount + shipping_cost
         
         order = Order.objects.create(
             user=user,
-            guest_mobile=payload.get('guest_mobile'),
-            guest_first_name=payload.get('guest_first_name'),
-            guest_last_name=payload.get('guest_last_name'),
-            shipping_method=shipping_method,
-            products_total=products_total,
+            shipping_method=shipping,
+            coupon=coupon,
+            total_items_amount=total_items_amount,
+            discount_amount=discount_amount,
             shipping_cost=shipping_cost,
-            payable_price=payable_price,
-            title=payload.get('title'),
-            country=payload.get('country', 'Iran'),
-            province=payload.get('province'),
-            city=payload.get('city'),
-            postal_address=payload.get('postal_address'),
-            postal_code=payload.get('postal_code'),
-            plaque=payload.get('plaque'),
-            building_unit=payload.get('building_unit')
+            payable_amount=payable_amount,
+            **address_data
         )
-
-        order_items = [
-            OrderItem(
-                order=order,
-                variant=item.variant,
-                price=item.variant.price,
-                quantity=item.quantity
-            ) for item in items
-        ]
-        OrderItem.objects.bulk_create(order_items)
         
-        # Deduct inventory immediately to reserve products
-        for item in items:
-            item.variant.inventory -= item.quantity
-            item.variant.save()
-
-        cart.items.all().delete()
-
-        # Schedule auto-cancel after 1 hour
-        cancel_unpaid_order.apply_async((str(order.id),), countdown=3600)
-
+        order_items_to_create = []
+        for item in cart_items:
+            unit_price = CartService.calculate_item_price(item)
+            order_items_to_create.append(
+                OrderItem(
+                    order=order,
+                    product=item.product,
+                    variant=item.variant,
+                    quantity=item.quantity,
+                    unit_price=unit_price,
+                    total_price=unit_price * item.quantity
+                )
+            )
+            if item.variant:
+                item.variant.inventory = F('inventory') - item.quantity
+                item.variant.save(update_fields=['inventory'])
+            else:
+                item.product.base_inventory = F('base_inventory') - item.quantity
+                item.product.save(update_fields=['base_inventory'])
+                
+        OrderItem.objects.bulk_create(order_items_to_create)
+        
+        cart_items.delete()
+        
+        if user.email:
+             EmailService.send_order_invoice(order=order, user_email=user.email)
+        
         return order

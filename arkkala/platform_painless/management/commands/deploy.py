@@ -22,7 +22,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         diagram_path = options.get('diagram')
         git_support = options.get('git', False)
-        stdout_messages = list()  # initial empty messages
+        stdout_messages = list()
 
         reporter = ReportUserAnswer(
             app_name='deploy-config',

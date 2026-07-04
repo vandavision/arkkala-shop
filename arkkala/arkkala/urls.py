@@ -9,7 +9,12 @@ from typing import Any
 
 urlpatterns: list[Any] = [
     path('admin/', admin.site.urls),
+    path('api/users/', include('users.urls')),
     path('api/shop/', include('shop.urls')),
+    path('api/orders/', include('orders.urls')),
+    path('api/payments/', include('payments.urls')),
+    path('api/blog/', include('blog.urls')),
+    path('api/search/', include('search.urls')),
 ]
 
 if settings.DEBUG:

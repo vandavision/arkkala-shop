@@ -1,91 +1,88 @@
 """
-Service for ZarinPal Integration.
+Service layer for orchestrating Payments and Orders.
 """
-import requests
+from django.urls import reverse
 from django.conf import settings
-from typing import Tuple, Optional
+from rest_framework.request import Request
 
-from orders.models import Order, OrderStatus
-from .models import Transaction, TransactionStatus
-
-ZARINPAL_MERCHANT = getattr(settings, 'ZARINPAL_MERCHANT', 'XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX')
-ZP_API_REQUEST = "https://api.zarinpal.com/pg/v4/payment/request.json"
-ZP_API_VERIFY = "https://api.zarinpal.com/pg/v4/payment/verify.json"
-ZP_API_STARTPAY = "https://www.zarinpal.com/pg/StartPay/{authority}"
+from orders.models import Order
+from .models import Transaction
+from .gateways import GatewayFactory
 
 
-class ZarinPalService:
-    """ZarinPal Gateway Operations."""
+class PaymentService:
+    """Service to handle business logic for transactions."""
 
     @staticmethod
-    def create_transaction(order: Order, callback_url: str) -> Tuple[Optional[str], str]:
-        """Request payment from ZarinPal and create Transaction record."""
-        # Convert Toman to Rial for ZarinPal
-        amount_rial = int(order.payable_price * 10)
-        
-        # Determine Contact Info (User vs Guest)
-        mobile = getattr(order.user, 'mobile', order.guest_mobile) if order.user else order.guest_mobile
-        email = getattr(order.user, 'email', '') if order.user else ''
-        
-        payload = {
-            "merchant_id": ZARINPAL_MERCHANT,
-            "amount": amount_rial,
-            "description": f"پرداخت سفارش ثبت شده در ارک کالا - شناسه: {str(order.id)[:8]}",
-            "callback_url": callback_url,
-            "metadata": {
-                "mobile": mobile or "00000000000",
-                "email": email
-            }
-        }
-        
-        try:
-            response = requests.post(ZP_API_REQUEST, json=payload, timeout=10)
-            data = response.json().get('data', {})
-            
-            if data and data.get('code') == 100:
-                authority = data.get('authority')
-                Transaction.objects.create(
-                    order=order,
-                    amount=order.payable_price,
-                    authority=authority
-                )
-                return ZP_API_STARTPAY.format(authority=authority), "درخواست با موفقیت ثبت شد"
-                
-            return None, "درگاه پرداخت در حال حاضر پاسخگو نیست، لطفاً مجدداً تلاش کنید."
-        except requests.exceptions.RequestException:
-            return None, "خطا در برقراری ارتباط با سرور زرین‌پال."
+    def initiate_payment(order: Order, gateway_name: str, request: Request) -> str:
+        """
+        Creates a transaction and fetches the gateway redirect URL.
+        """
+        if order.status != 'pending':
+            raise ValueError("این سفارش قابل پرداخت نیست (احتمالاً لغو شده است).")
+        if order.is_paid:
+            raise ValueError("این سفارش قبلاً پرداخت شده است.")
+
+        gateway = GatewayFactory.get_gateway(gateway_name)
+
+        transaction = Transaction.objects.create(
+            user=order.user,
+            order=order,
+            amount=order.payable_amount,
+            gateway=gateway_name,
+        )
+
+        callback_path = reverse('payment-callback')
+        callback_url = request.build_absolute_uri(callback_path) + f"?gateway={gateway_name}&transaction_id={transaction.id}"
+
+        payment_url, authority = gateway.request_payment(
+            amount=int(order.payable_amount),
+            callback_url=callback_url,
+            description=f"پرداخت سفارش شماره {order.id} توسط {order.user.get_full_name()}"
+        )
+
+        transaction.authority = authority
+        transaction.save(update_fields=['authority'])
+
+        return payment_url
 
     @staticmethod
-    def verify_transaction(authority: str) -> Tuple[bool, str]:
-        """Verify payment with ZarinPal after user returns."""
-        transaction = Transaction.objects.filter(authority=authority, status=TransactionStatus.PENDING).first()
-        if not transaction:
-            return False, "تراکنش یافت نشد یا مهلت پرداخت به پایان رسیده است."
+    def verify_payment(transaction_id: str, authority: str, gateway_name: str, status_param: str) -> Transaction:
+        """
+        Verifies the payment and updates both Transaction and Order status.
+        """
+        transaction = Transaction.objects.get(id=transaction_id)
+        
+        if transaction.status != 'pending':
+            return transaction 
 
-        amount_rial = int(transaction.amount * 10)
-        payload = {
-            "merchant_id": ZARINPAL_MERCHANT,
-            "amount": amount_rial,
-            "authority": authority
-        }
+        gateway = GatewayFactory.get_gateway(gateway_name)
 
-        try:
-            response = requests.post(ZP_API_VERIFY, json=payload, timeout=10)
-            data = response.json().get('data', {})
-
-            if data and data.get('code') in [100, 101]:
-                transaction.status = TransactionStatus.SUCCESS
-                transaction.ref_id = str(data.get('ref_id'))
-                transaction.save()
-
-                order = transaction.order
-                order.status = OrderStatus.PAID
-                order.save()
-
-                return True, f"پرداخت با موفقیت انجام شد. کد پیگیری: {transaction.ref_id}"
+        if status_param and status_param.upper() != 'OK':
+            transaction.status = 'canceled'
+            transaction.description = "کاربر از پرداخت انصراف داد."
+            transaction.save(update_fields=['status', 'description'])
             
-            transaction.status = TransactionStatus.FAILED
-            transaction.save()
-            return False, "پرداخت توسط بانک تایید نشد."
-        except requests.exceptions.RequestException:
-            return False, "خطا در برقراری ارتباط جهت تایید پرداخت."
+            return transaction
+
+        is_success, ref_id_or_error = gateway.verify_payment(
+            authority=authority,
+            amount=int(transaction.amount)
+        )
+
+        if is_success:
+            transaction.status = 'successful'
+            transaction.ref_id = ref_id_or_error
+            transaction.save(update_fields=['status', 'ref_id'])
+
+            order = transaction.order
+            order.is_paid = True
+            order.status = 'paid'
+            order.tracking_code = ref_id_or_error  
+            order.save(update_fields=['is_paid', 'status', 'tracking_code'])
+        else:
+            transaction.status = 'failed'
+            transaction.description = ref_id_or_error
+            transaction.save(update_fields=['status', 'description'])
+
+        return transaction

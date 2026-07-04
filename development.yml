@@ -1,18 +1,21 @@
 services:
   django:
-    build:
-      context: .
-      dockerfile: ./docker/dev/django/Dockerfile
-    container_name: arkkala_dev_django
-    env_file:
-      - .env.dev
-    command: python manage.py runserver 0.0.0.0:${DJANGO_PORT:-8000}
-    volumes:
-      - ./arkkala:/app
-    ports:
-      - "${DJANGO_PORT:-8000}:${DJANGO_PORT:-8000}"
-    depends_on:
-      - postgres
+      build:
+        context: .
+        dockerfile: ./docker/dev/django/Dockerfile
+      container_name: arkkala_dev_django
+      env_file:
+        - .env.dev
+      command: python manage.py runserver 0.0.0.0:${DJANGO_PORT:-8000}
+      environment:
+        - DJANGO_WATCHMAN_TIMEOUT=20
+        - CHOKIDAR_USEPOLLING=true
+      volumes:
+        - ./arkkala:/app
+      ports:
+        - "${DJANGO_PORT:-8000}:${DJANGO_PORT:-8000}"
+      depends_on:
+        - postgres
 
   postgres:
     image: postgres:15-alpine

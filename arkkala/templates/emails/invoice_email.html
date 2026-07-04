@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>فاکتور خرید شما</title>
+</head>
+<body style="font-family: Tahoma, sans-serif; padding: 20px; text-align: right;">
+    <h2>سلام {{ user.first_name }} عزیز،</h2>
+    <p>از خرید شما از فروشگاه ارک کالا سپاسگزاریم.</p>
+    <p>سفارش شما با کد <strong>{{ order.id }}</strong> با موفقیت ثبت شد.</p>
+    <hr>
+    <h3>جزئیات فاکتور:</h3>
+    <ul>
+        <li>مبلغ کالاها: {{ order.total_items_amount }} تومان</li>
+        <li>تخفیف: {{ order.discount_amount }} تومان</li>
+        <li>هزینه ارسال: {{ order.shipping_cost }} تومان</li>
+        <li><strong>مبلغ نهایی قابل پرداخت: {{ order.payable_amount }} تومان</strong></li>
+    </ul>
+    <h3>اقلام سفارش:</h3>
+    <ul>
+        {% for item in items %}
+            <li>{{ item.product.title }} - تعداد: {{ item.quantity }} - مبلغ کل: {{ item.total_price }} تومان</li>
+        {% endfor %}
+    </ul>
+    <p>با احترام،<br>تیم پشتیبانی ارک کالا</p>
+</body>
+</html>

@@ -1,60 +1,89 @@
 """
-API Views for Orders and Cart.
+Views for Orders and Cart.
 """
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.request import Request
 
+from .models import CartItem, Order, ShippingMethod
+from .serializers import (
+    CartItemSerializer, OrderSerializer, CheckoutSerializer, ShippingMethodSerializer
+)
 from .services import CartService, OrderService
-from .serializers import CartSerializer, OrderSerializer
+
+
+class ShippingMethodViewSet(viewsets.ReadOnlyModelViewSet):
+    """List available shipping methods."""
+    queryset = ShippingMethod.objects.filter(is_active=True)
+    serializer_class = ShippingMethodSerializer
 
 
 class CartViewSet(viewsets.ViewSet):
-    """Cart API allowing both authenticated users and guests."""
-    permission_classes = [AllowAny]
+    """Manage User Cart."""
+    permission_classes = [IsAuthenticated]
 
-    def list(self, request) -> Response:
-        cart = CartService.get_or_create_cart(request)
-        return Response(CartSerializer(cart).data)
+    def list(self, request: Request) -> Response:
+        cart = CartService.get_user_cart(request.user)
+        serializer = CartItemSerializer(cart.items.all(), many=True)
+        return Response(serializer.data)
 
     @action(detail=False, methods=['post'])
-    def add(self, request) -> Response:
-        variant_id = request.data.get('variant_id')
-        quantity = int(request.data.get('quantity', 1))
+    def add(self, request: Request) -> Response:
+        serializer = CartItemSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        CartService.add_to_cart(
+            user=request.user,
+            product_id=serializer.validated_data['product'].id,
+            variant_id=serializer.validated_data.get('variant').id if serializer.validated_data.get('variant') else None,
+            quantity=serializer.validated_data.get('quantity', 1)
+        )
+        return Response({"message": "به سبد خرید اضافه شد."}, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['patch'])
+    def update_quantity(self, request: Request, pk=None) -> Response:
+        quantity = request.data.get('quantity')
+        CartService.update_item_quantity(pk, request.user, int(quantity))
+        return Response({"message": "تعداد بروزرسانی شد."})
+
+    @action(detail=True, methods=['delete'])
+    def remove(self, request: Request, pk=None) -> Response:
+        CartService.remove_item(pk, request.user)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class OrderViewSet(viewsets.ReadOnlyModelViewSet):
+    """User Orders and Checkout process."""
+    permission_classes = [IsAuthenticated]
+    serializer_class = OrderSerializer
+
+    def get_queryset(self):
+        return Order.objects.filter(user=self.request.user)
+
+    @action(detail=False, methods=['post'])
+    def checkout(self, request: Request) -> Response:
+        serializer = CheckoutSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
         
-        if not variant_id:
-            return Response({"detail": "شناسه محصول (Variant) الزامی است."}, status=status.HTTP_400_BAD_REQUEST)
-            
+        address_data = {
+            'title': serializer.validated_data['title'],
+            'country': serializer.validated_data['country'],
+            'province': serializer.validated_data['province'],
+            'city': serializer.validated_data['city'],
+            'postal_address': serializer.validated_data['postal_address'],
+            'postal_code': serializer.validated_data['postal_code'],
+            'plaque': serializer.validated_data['plaque'],
+            'building_unit': serializer.validated_data.get('building_unit', ''),
+        }
+        
         try:
-            CartService.add_item(request, variant_id, quantity)
-            return Response({"detail": "آیتم به سبد خرید اضافه شد."}, status=status.HTTP_200_OK)
-        except ValueError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-
-class OrderViewSet(viewsets.ViewSet):
-    """Order API handling Checkout for both Users and Guests."""
-    
-    def get_permissions(self):
-        if self.action in ['list', 'reorder']:
-            return [IsAuthenticated()]
-        return [AllowAny()]
-
-    def list(self, request) -> Response:
-        orders = request.user.orders.all().order_by('-created_at')
-        return Response(OrderSerializer(orders, many=True).data)
-
-    @action(detail=False, methods=['post'])
-    def checkout(self, request) -> Response:
-        # Validate guest checkout requirement
-        if not request.user.is_authenticated and not request.data.get('guest_mobile'):
-            return Response({"detail": "برای ثبت سفارش مهمان، وارد کردن شماره موبایل الزامی است."}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            order = OrderService.checkout(request, request.data)
+            order = OrderService.checkout(
+                user=request.user,
+                address_data=address_data,
+                shipping_method_id=serializer.validated_data['shipping_method_id'],
+                coupon_code=serializer.validated_data.get('coupon_code')
+            )
             return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
         except ValueError as e:
-            return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            return Response({"detail": "خطای پیش‌بینی نشده در ثبت سفارش."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
