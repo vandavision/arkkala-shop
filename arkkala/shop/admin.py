@@ -3,12 +3,18 @@ Django Admin configuration for shop models.
 """
 from django.contrib import admin
 from django.http import HttpRequest
-from .models import Category, Brand, Attribute, AttributeValue, Product, ProductGallery, ProductVariant, Comment
+from .models import Category, Brand, Attribute, AttributeValue, Product, ProductGallery, ProductVideo, ProductVariant, Comment
 
 
 class ProductGalleryInline(admin.TabularInline):
-    """Inline Admin for Product Gallery."""
+    """Inline Admin for Product Images."""
     model = ProductGallery
+    extra = 1
+
+
+class ProductVideoInline(admin.TabularInline):
+    """Inline Admin for Product Videos."""
+    model = ProductVideo
     extra = 1
 
 
@@ -27,7 +33,7 @@ class ProductAdmin(admin.ModelAdmin):
     list_filter: tuple = ('is_active', 'is_wholesale', 'is_variable', 'category', 'brand')
     search_fields: tuple = ('title', 'english_title')
     readonly_fields: tuple = ('sold_count', 'view_count', 'average_rating')
-    inlines: list = [ProductGalleryInline, ProductVariantInline]
+    inlines: list = [ProductGalleryInline, ProductVideoInline, ProductVariantInline]
     
     fieldsets = (
         ('اطلاعات اصلی', {

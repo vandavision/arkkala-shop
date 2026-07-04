@@ -9,3 +9,8 @@ export const submitComment = async (productId, data) => {
     const response = await axiosInstance.post(`shop/products/${productId}/add_comment/`, data);
     return response.data;
 };
+
+export const getProductsList = async (queryString = '') => {
+    const response = await axiosInstance.get(`shop/products/?${queryString}`);
+    return response.data;
+};

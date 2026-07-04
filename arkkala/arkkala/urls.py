@@ -15,6 +15,7 @@ urlpatterns: list[Any] = [
     path('api/payments/', include('payments.urls')),
     path('api/blog/', include('blog.urls')),
     path('api/search/', include('search.urls')),
+    path('api/home/', include('home.urls')),
 ]
 
 if settings.DEBUG:

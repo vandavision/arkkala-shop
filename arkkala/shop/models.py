@@ -1,9 +1,10 @@
 """
-Shop Models including Category, Brand, Product, Variants, and Comments.
+Shop Models including Category, Brand, Product, Variants, Images, Videos, and Comments.
 """
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
+from django.core.validators import FileExtensionValidator
 
 from platform_tools.mixins.models.base import UUIDBaseModel, TimeStampMixin, TitleSlugMixin
 from platform_seo.models.mixins.seo import SEOMixin, ProductDetailJsonLdMixin
@@ -93,8 +94,24 @@ class ProductGallery(UUIDBaseModel):
     is_main = models.BooleanField(default=False, verbose_name=_('تصویر اصلی'))
 
     class Meta:
-        verbose_name = _('گالری محصول')
-        verbose_name_plural = _('گالری محصولات')
+        verbose_name = _('گالری تصویر محصول')
+        verbose_name_plural = _('گالری تصاویر محصولات')
+
+
+class ProductVideo(UUIDBaseModel):
+    """Product Videos."""
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='videos', verbose_name=_('محصول'))
+    video_file = models.FileField(
+        upload_to='products/videos/',
+        verbose_name=_('فایل ویدیو'),
+        validators=[FileExtensionValidator(allowed_extensions=['mp4', 'mkv', 'webm', 'avi'])]
+    )
+    title = models.CharField(max_length=255, null=True, blank=True, verbose_name=_('عنوان ویدیو'))
+
+    class Meta:
+        verbose_name = _('ویدیو محصول')
+        verbose_name_plural = _('ویدیوهای محصول')
+        ordering = ['created_at'] if hasattr(UUIDBaseModel, 'created_at') else []
 
 
 class ProductVariant(UUIDBaseModel, TimeStampMixin):

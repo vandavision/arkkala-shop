@@ -84,7 +84,6 @@ const ProductDetailPage = () => {
             
             <main className="product-single-container">
                 <div className="container">
-                    {/* Breadcrumb */}
                     <nav className="breadcrumb-container">
                         <ol className="breadcrumb">
                             <li><a href="/">ارک کالا</a></li>
@@ -93,7 +92,6 @@ const ProductDetailPage = () => {
                     </nav>
 
                     <div className="product-main-row">
-                        {/* گالری تصاویر */}
                         <div className="product-gallery">
                             <Swiper
                                 modules={[Navigation, Thumbs]}
@@ -109,7 +107,6 @@ const ProductDetailPage = () => {
                             </Swiper>
                         </div>
 
-                        {/* اطلاعات محصول */}
                         <div className="product-info">
                             <h1 className="title">{product.title}</h1>
                             <h2 className="english-title">{product.english_title}</h2>
@@ -118,7 +115,6 @@ const ProductDetailPage = () => {
                                 <span className="price">{Number(currentPrice).toLocaleString()} تومان</span>
                             </div>
 
-                            {/* رندر داینامیک ویژگی‌ها (رنگ، وزن، نوع پایه و...) */}
                             {product.is_variable && Object.keys(availableAttributes).map(attrName => (
                                 <div key={attrName} className="attribute-group">
                                     <h4 className="attribute-name">{attrName}:</h4>
@@ -148,7 +144,6 @@ const ProductDetailPage = () => {
                         </div>
                     </div>
 
-                    {/* تب‌های توضیحات و نظرات */}
                     <div className="product-tabs">
                         <div className="description-content" dangerouslySetInnerHTML={{ __html: product.description }} />
                         

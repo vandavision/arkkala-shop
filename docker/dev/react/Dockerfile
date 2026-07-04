@@ -1,4 +1,4 @@
-FROM node:alpine AS development
+FROM node:20-alpine AS development
 
 ENV NODE_ENV=development
 WORKDIR /frontend
@@ -9,4 +9,4 @@ RUN npm install
 
 COPY ./frontend .
 
-CMD ["npm", "start"]
+CMD ["npm", "run", "dev"]

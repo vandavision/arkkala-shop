@@ -1,29 +1,38 @@
 """
 Serializers for the Blog App.
+Handles data transformation and validation for blog models.
 """
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from rest_framework import serializers
+from rest_framework.request import Request
 from .models import Category, Tag, Post, Comment
 
 
 class BlogCategorySerializer(serializers.ModelSerializer):
-    """Serializer for Blog Category."""
+    """Serializer for the Blog Category model."""
+    
     class Meta:
         model = Category
-        fields = ['id', 'title', 'slug']
+        fields = ['uuid', 'title', 'slug']
 
 
 class TagSerializer(serializers.ModelSerializer):
-    """Serializer for Blog Tags."""
+    """Serializer for the Blog Tag model."""
+    
     class Meta:
         model = Tag
-        fields = ['id', 'title', 'slug']
+        fields = ['uuid', 'title', 'slug']
 
 
 class PostSeoSerializer(serializers.ModelSerializer):
-    """SEO fields Serializer for Blog Post."""
+    """
+    SEO fields Serializer for Blog Post.
+    Utilizes platform_seo package features for rich snippets and OpenGraph.
+    """
     json_ld = serializers.SerializerMethodField()
     og_image_url = serializers.SerializerMethodField()
+    meta_keywords = serializers.JSONField(source='keywords', read_only=True)
+    canonical_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Post
@@ -33,9 +42,23 @@ class PostSeoSerializer(serializers.ModelSerializer):
         """Get generated JSON-LD from Post model."""
         return obj.generate_json_ld() if hasattr(obj, 'generate_json_ld') else {}
 
-    def get_og_image_url(self, obj: Post) -> str | None:
-        """Get OG Image URL."""
-        return obj.og_image.url if hasattr(obj, 'og_image') and obj.og_image else None
+    def get_og_image_url(self, obj: Post) -> Optional[str]:
+        """Construct the absolute URL for the OpenGraph image."""
+        if hasattr(obj, 'og_image') and obj.og_image:
+            request: Optional[Request] = self.context.get('request')
+            return request.build_absolute_uri(obj.og_image.url) if request else obj.og_image.url
+        return None
+        
+    def get_canonical_url(self, obj: Post) -> str:
+        """
+        Construct the canonical URL for the post.
+        Uses 'slug' instead of 'id' for SEO standard compliance.
+        """
+        request: Optional[Request] = self.context.get('request')
+        path: str = f"/blog/{obj.slug}/"
+        if request:
+            return request.build_absolute_uri(path)
+        return path
 
 
 class BlogCommentSerializer(serializers.ModelSerializer):
@@ -44,11 +67,13 @@ class BlogCommentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Comment
-        fields = ['id', 'user_name', 'body', 'created_at']
+        fields = ['uuid', 'user_name', 'body', 'created_at']
         
     def get_user_name(self, obj: Comment) -> str:
         """Get User Full Name or return anonymous string."""
-        return obj.user.get_full_name() if obj.user and obj.user.get_full_name() else "کاربر ناشناس"
+        if obj.user and obj.user.get_full_name():
+            return obj.user.get_full_name()
+        return "کاربر ناشناس"
 
 
 class PostListSerializer(serializers.ModelSerializer):
@@ -59,7 +84,7 @@ class PostListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Post
         fields = [
-            'id', 'title', 'slug', 'category', 'author_name', 'image', 
+            'uuid', 'title', 'slug', 'category', 'author_name', 'image', 
             'short_description', 'view_count', 'read_time', 'created_at'
         ]
 
@@ -75,12 +100,12 @@ class PostDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Post
         fields = [
-            'id', 'title', 'slug', 'category', 'tags', 'author_name', 'image', 
+            'uuid', 'title', 'slug', 'category', 'tags', 'author_name', 'image', 
             'short_description', 'body', 'view_count', 'read_time', 
             'comments', 'seo', 'created_at'
         ]
 
     def get_comments(self, obj: Post) -> List[Dict[str, Any]]:
-        """Return approved comments for the post."""
+        """Return approved comments for the specific post."""
         approved_comments = obj.comments.filter(is_approved=True)
         return BlogCommentSerializer(approved_comments, many=True).data

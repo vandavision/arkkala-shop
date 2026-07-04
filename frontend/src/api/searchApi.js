@@ -9,3 +9,8 @@ export const globalSearch = async (query) => {
     const response = await axiosInstance.get(`search/global/?q=${query}`);
     return response.data;
 };
+
+export const getBrandsList = async () => {
+    const response = await axiosInstance.get('search/brands/');
+    return response.data;
+};

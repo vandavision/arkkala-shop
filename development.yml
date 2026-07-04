@@ -60,29 +60,25 @@ services:
       - postgres
 
   pgadmin:
-      image: dpage/pgadmin4
-      container_name: arkkala_dev_pgadmin
-      depends_on:
-        - postgres
-      environment:
-        - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL}
-        - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD}
-      env_file:
-        - .env.dev
-      ports:
-        - "${PGADMIN_LISTEN_PORT:-5050}:80"
+    image: dpage/pgadmin4
+    container_name: arkkala_dev_pgadmin
+    depends_on:
+      - postgres
+    env_file:
+      - .env.dev
+    ports:
+      - "${PGADMIN_LISTEN_PORT:-5050}:80"
 
   react:
-      build:
-        context: .
-        dockerfile: ./docker/dev/react/Dockerfile
-      container_name: arkkala_dev_react
-      ports:
-        - "${REACT_PORT:-3000}:3000"
-      volumes:
-        - ./frontend/src:/frontend/src
-        - ./frontend/public:/frontend/public
-        - ./frontend/package.json:/frontend/package.json
-      environment:
-        - CHOKIDAR_USEPOLLING=true
-        - WDS_SOCKET_PORT=0
+    build:
+      context: .
+      dockerfile: ./docker/dev/react/Dockerfile
+    container_name: arkkala_dev_react
+    ports:
+      - "${REACT_PORT:-3000}:3000"
+    volumes:
+      - ./frontend:/frontend
+      - /frontend/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - VITE_API_BASE_URL=http://localhost:8000/api/

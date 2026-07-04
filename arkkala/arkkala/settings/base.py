@@ -21,6 +21,7 @@ INSTALLED_APPS: list[str] = [
     'platform_painless',
     'platform_tools',
     'platform_seo',
+    'django_jsonform',
 
     'rest_framework_simplejwt',
     'users',
@@ -29,6 +30,7 @@ INSTALLED_APPS: list[str] = [
     'payments',
     'blog',
     'search',
+    'home',
 ]
 
 MIDDLEWARE: list[str] = [

@@ -10,6 +10,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from .models import Product
 from .serializers import ProductDetailSerializer
 from .services import ProductService
+from .filters import ProductFilter
 
 
 class ProductViewSet(viewsets.ReadOnlyModelViewSet):
@@ -22,7 +23,7 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = ProductDetailSerializer
     
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['category__slug', 'brand__slug', 'is_variable', 'is_wholesale']
+    filterset_class = ProductFilter
     search_fields = ['title', 'english_title', 'description', 'short_description']
     ordering_fields = ['base_price', 'sold_count', 'view_count', 'average_rating', 'created_at']
     ordering = ['-created_at']

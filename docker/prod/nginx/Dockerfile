@@ -1,4 +1,4 @@
-FROM node:18-alpine AS frontend-builder
+FROM node:20-alpine AS frontend-builder
 
 WORKDIR /frontend
 
@@ -14,7 +14,7 @@ RUN rm /etc/nginx/conf.d/default.conf
 
 COPY docker/prod/nginx/nginx.conf /etc/nginx/nginx.conf
 
-COPY --from=frontend-builder /frontend/build /usr/share/nginx/html
+COPY --from=frontend-builder /frontend/dist /usr/share/nginx/html
 
 RUN mkdir -p /app/staticfiles /app/mediafiles \
     && chown -R nginx:nginx /usr/share/nginx/html /app/staticfiles /app/mediafiles /var/cache/nginx /var/log/nginx /etc/nginx/conf.d

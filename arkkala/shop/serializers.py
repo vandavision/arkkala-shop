@@ -1,43 +1,65 @@
 """
 Serializers for the Shop App.
+Handles data transformation and validation for shop models.
 """
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from rest_framework import serializers
-from .models import Brand, Product, ProductVariant, AttributeValue, Comment, ProductGallery
+from rest_framework.request import Request
+from .models import Brand, Product, ProductVariant, AttributeValue, Comment, ProductGallery, ProductVideo
 
 
 class BrandSerializer(serializers.ModelSerializer):
-    """Serializer for Brand."""
+    """Serializer for the Brand model."""
+    
     class Meta:
         model = Brand
-        fields = ['id', 'title', 'slug', 'logo']
+        fields = ['uuid', 'title', 'slug', 'logo']
 
 
 class ProductSeoSerializer(serializers.ModelSerializer):
-    """SEO fields Serializer."""
+    """
+    Serializer for handling SEO-related fields of the Product model.
+    Utilizes platform_seo package features.
+    """
     json_ld = serializers.SerializerMethodField()
     og_image_url = serializers.SerializerMethodField()
+    meta_keywords = serializers.JSONField(source='keywords', read_only=True)
+    canonical_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
         fields = ['meta_keywords', 'meta_description', 'canonical_url', 'og_image_url', 'json_ld']
 
     def get_json_ld(self, obj: Product) -> Dict[str, Any]:
-        """Get generated JSON-LD from Product model."""
+        """Get generated JSON-LD from Product model for rich snippets."""
         return obj.generate_json_ld() if hasattr(obj, 'generate_json_ld') else {}
 
-    def get_og_image_url(self, obj: Product) -> str | None:
-        """Get OG Image URL."""
-        return obj.og_image.url if hasattr(obj, 'og_image') and obj.og_image else None
+    def get_og_image_url(self, obj: Product) -> Optional[str]:
+        """Construct the absolute URL for the OpenGraph image."""
+        if hasattr(obj, 'og_image') and obj.og_image:
+            request: Optional[Request] = self.context.get('request')
+            return request.build_absolute_uri(obj.og_image.url) if request else obj.og_image.url
+        return None
+        
+    def get_canonical_url(self, obj: Product) -> str:
+        """
+        Construct the canonical URL for the product.
+        Uses 'slug' instead of 'id' for better SEO standards.
+        """
+        request: Optional[Request] = self.context.get('request')
+        path: str = f"/product/{obj.slug}/"
+        if request:
+            return request.build_absolute_uri(path)
+        return path
 
 
 class AttributeValueSerializer(serializers.ModelSerializer):
-    """Serializer for Variant Attributes."""
+    """Serializer for Variant Attribute Values."""
     attribute_name = serializers.CharField(source='attribute.title')
 
     class Meta:
         model = AttributeValue
-        fields = ['id', 'attribute_name', 'value']
+        fields = ['uuid', 'attribute_name', 'value']
 
 
 class ProductVariantSerializer(serializers.ModelSerializer):
@@ -46,7 +68,7 @@ class ProductVariantSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProductVariant
-        fields = ['id', 'price', 'wholesale_price', 'inventory', 'attributes']
+        fields = ['uuid', 'price', 'wholesale_price', 'inventory', 'attributes']
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -55,15 +77,17 @@ class CommentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Comment
-        fields = ['id', 'user_name', 'body', 'rating', 'created_at']
+        fields = ['uuid', 'user_name', 'body', 'rating', 'created_at']
         
     def get_user_name(self, obj: Comment) -> str:
         """Get User Full Name or return anonymous string."""
-        return obj.user.get_full_name() if obj.user and obj.user.get_full_name() else "کاربر ناشناس"
+        if obj.user and obj.user.get_full_name():
+            return obj.user.get_full_name()
+        return "کاربر ناشناس"
 
 
 class ProductGallerySerializer(serializers.ModelSerializer):
-    """Serializer for Product Images."""
+    """Serializer for Product Images Gallery."""
     url = serializers.FileField(source='image')
     
     class Meta:
@@ -71,25 +95,35 @@ class ProductGallerySerializer(serializers.ModelSerializer):
         fields = ['url', 'is_main']
 
 
+class ProductVideoSerializer(serializers.ModelSerializer):
+    """Serializer for Product Videos."""
+    url = serializers.FileField(source='video_file')
+    
+    class Meta:
+        model = ProductVideo
+        fields = ['uuid', 'title', 'url']
+
+
 class ProductDetailSerializer(serializers.ModelSerializer):
-    """Main Serializer for Product detail and list."""
+    """Main Serializer for Product detail and list representation."""
     brand = BrandSerializer(read_only=True)
     variants = ProductVariantSerializer(many=True, read_only=True)
     comments = serializers.SerializerMethodField()
     seo = ProductSeoSerializer(source='*', read_only=True)
     gallery = ProductGallerySerializer(many=True, read_only=True)
+    videos = ProductVideoSerializer(many=True, read_only=True)
 
     class Meta:
         model = Product
         fields = [
-            'id', 'title', 'english_title', 'slug', 'brand', 'short_description', 'description', 
+            'uuid', 'title', 'english_title', 'slug', 'brand', 'short_description', 'description', 
             'base_price', 'base_inventory', 
             'is_wholesale', 'wholesale_min_quantity', 'wholesale_base_price',
             'sold_count', 'view_count', 'average_rating',
-            'is_variable', 'gallery', 'variants', 'comments', 'seo', 'created_at'
+            'is_variable', 'gallery', 'videos', 'variants', 'comments', 'seo', 'created_at'
         ]
 
     def get_comments(self, obj: Product) -> List[Dict[str, Any]]:
-        """Return approved comments for the product."""
+        """Return approved comments for the specific product."""
         approved_comments = obj.comments.filter(is_approved=True)
         return CommentSerializer(approved_comments, many=True).data
