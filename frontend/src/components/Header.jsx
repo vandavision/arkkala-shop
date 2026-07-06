@@ -1,18 +1,23 @@
-// arkkala/frontend/src/components/Header.jsx
-import React, { useState, useEffect, useContext, useRef } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useContext } from 'react';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { CartContext } from '../context/CartContext';
+import { CompareContext } from '../context/CompareContext';
 import { getCategoryTree, globalSearch } from '../api/searchApi';
+import CartDrawer from './CartDrawer';
 
 const Header = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const [searchParams] = useSearchParams();
     
     const { user, logout } = useContext(AuthContext);
     const { cartItems } = useContext(CartContext);
+    const { compareIds } = useContext(CompareContext);
 
-    const [searchQuery, setSearchQuery] = useState('');
+    const initialSearch = searchParams.get('search') || searchParams.get('q') || '';
+    const [searchQuery, setSearchQuery] = useState(initialSearch);
+    
     const [searchResults, setSearchResults] = useState(null);
     const [isSearching, setIsSearching] = useState(false);
     const [showSearchDropdown, setShowSearchDropdown] = useState(false);
@@ -20,19 +25,19 @@ const Header = () => {
     const [categories, setCategories] = useState([]);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [expandedCategory, setExpandedCategory] = useState(null);
-    
-    const searchRef = useRef(null);
 
     useEffect(() => {
+        let isMounted = true;
         const fetchCategories = async () => {
             try {
                 const data = await getCategoryTree();
-                setCategories(data);
+                if (isMounted) setCategories(data);
             } catch (error) {
                 console.error('خطا در دریافت دسته‌بندی‌ها:', error);
             }
         };
         fetchCategories();
+        return () => { isMounted = false; };
     }, []);
 
     useEffect(() => {
@@ -41,11 +46,15 @@ const Header = () => {
     }, [location]);
 
     useEffect(() => {
-        if (searchQuery.trim().length > 2) {
+        setSearchQuery(searchParams.get('search') || searchParams.get('q') || '');
+    }, [searchParams]);
+
+    useEffect(() => {
+        if (searchQuery.trim().length >= 2) {
             setIsSearching(true);
             const delayDebounceFn = setTimeout(async () => {
                 try {
-                    const data = await globalSearch(searchQuery);
+                    const data = await globalSearch(searchQuery.trim());
                     setSearchResults(data);
                     setShowSearchDropdown(true);
                 } catch (error) {
@@ -64,7 +73,7 @@ const Header = () => {
 
     useEffect(() => {
         const handleClickOutside = (event) => {
-            if (searchRef.current && !searchRef.current.contains(event.target)) {
+            if (!event.target.closest('.search-container')) {
                 setShowSearchDropdown(false);
             }
         };
@@ -78,10 +87,12 @@ const Header = () => {
     }, [isMobileMenuOpen]);
 
     const handleSearchSubmit = (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
+        setShowSearchDropdown(false);
         if (searchQuery.trim()) {
-            setShowSearchDropdown(false);
-            navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
+            navigate(`/shop?search=${encodeURIComponent(searchQuery.trim())}`);
+        } else {
+            navigate('/shop');
         }
     };
 
@@ -90,51 +101,120 @@ const Header = () => {
         else setExpandedCategory(id);
     };
 
+    const hasResults = searchResults && (
+        searchResults.products?.length > 0 || 
+        searchResults.categories?.length > 0 || 
+        searchResults.brands?.length > 0 || 
+        searchResults.posts?.length > 0
+    );
 
-    const SearchBar = ({ isMobile }) => (
-        <form onSubmit={handleSearchSubmit} className="position-relative w-100 mx-auto search-container" ref={!isMobile ? searchRef : null}>
-            <div className="input-group">
+    const renderSearchBar = () => (
+        <form onSubmit={handleSearchSubmit} className="position-relative w-100 mx-auto search-container z-3">
+            <div className="input-group shadow-sm rounded-pill border border-light overflow-hidden">
                 <input 
                     type="text" 
-                    className="form-control bg-light border-0 shadow-none ps-4 pe-5 text-dark font-14 search-input" 
+                    className="form-control bg-light border-0 shadow-none ps-4 pe-5 text-dark font-13 search-input py-3" 
                     placeholder="جستجو در محصولات، برندها..." 
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    onFocus={() => searchQuery.length > 2 && setShowSearchDropdown(true)}
+                    onFocus={() => searchQuery.trim().length >= 2 && setShowSearchDropdown(true)}
+                    autoComplete="off"
                 />
-                <button type="submit" className="btn bg-light border-0 text-muted search-btn">
-                    {isSearching ? <div className="spinner-border spinner-border-sm text-danger" role="status"></div> : <i className="bi bi-search fs-5"></i>}
+                <button type="submit" className="btn bg-light border-0 text-muted search-btn px-4" aria-label="Search">
+                    {isSearching ? <div className="spinner-border spinner-border-sm text-danger" role="status"></div> : <i className="bi bi-search fs-5 text-danger"></i>}
                 </button>
             </div>
 
-            {/* دراپ‌داون نتایج جستجو */}
-            {showSearchDropdown && searchResults && (
-                <div className="search-dropdown position-absolute w-100 bg-white shadow-xl rounded-4 mt-2 overflow-hidden border border-light">
-                    {searchResults.products?.length > 0 || searchResults.posts?.length > 0 ? (
-                        <div className="p-2 custom-scrollbar" style={{ maxHeight: '400px', overflowY: 'auto' }}>
-                            {searchResults.products?.length > 0 && (
-                                <div className="mb-3">
-                                    <h6 className="font-12 fw-bold text-muted px-3 py-2 bg-light rounded-3 mb-2">محصولات</h6>
-                                    <ul className="list-unstyled mb-0">
-                                        {searchResults.products.map(product => (
-                                            <li key={`search-prod-${product.uuid}`}>
-                                                <Link to={`/product/${product.slug}`} className="d-flex align-items-center p-2 text-decoration-none text-dark hover-bg-light rounded-3 transition">
-                                                    <img src={product.image_url || '/assets/image/product/product_cover_1.png'} alt={product.title} className="rounded-3 shadow-sm object-fit-cover" style={{ width: '50px', height: '50px' }} />
-                                                    <div className="ms-3 flex-grow-1">
-                                                        <div className="font-13 fw-bold text-overflow-1">{product.title}</div>
-                                                        <div className="text-danger font-13 fw-bold mt-1">{Number(product.base_price || 0).toLocaleString()} تومان</div>
+            {showSearchDropdown && (
+                <div className="search-dropdown position-absolute w-100 bg-white shadow-lg rounded-4 mt-2 overflow-hidden border border-ui text-start" style={{ top: '100%', right: 0, zIndex: 9999 }} dir="rtl">
+                    {isSearching ? (
+                        <div className="text-center py-5">
+                            <div className="spinner-border text-danger" role="status" style={{ width: '2rem', height: '2rem' }}></div>
+                            <div className="mt-3 text-muted font-14 fw-bold">در حال جستجو...</div>
+                        </div>
+                    ) : hasResults ? (
+                        <div className="row g-0">
+                            <div className="col-md-8 col-12 p-3 custom-scrollbar" style={{ maxHeight: '450px', overflowY: 'auto' }}>
+                                <div className="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+                                    <h6 className="font-14 fw-bold text-dark m-0"><i className="bi bi-box-seam text-danger me-1"></i> محصولات مرتبط</h6>
+                                    <button type="button" className="btn btn-sm btn-link text-danger text-decoration-none fw-bold p-0" onClick={handleSearchSubmit}>
+                                        نمایش همه <i className="bi bi-chevron-left font-12"></i>
+                                    </button>
+                                </div>
+                                
+                                <div className="row g-2">
+                                    {searchResults.products?.length > 0 ? (
+                                        searchResults.products.map(product => (
+                                            <div className="col-md-6 col-12" key={`search-prod-${product.uuid}`}>
+                                                <Link to={`/product/${product.slug}`} className="d-flex align-items-center p-2 text-decoration-none text-dark hover-bg-light rounded-3 transition border border-light h-100" onClick={() => setShowSearchDropdown(false)}>
+                                                    <img 
+                                                        src={product.image_url || '/assets/image/product/logo.png'} 
+                                                        alt={product.title} 
+                                                        className="rounded-3 shadow-sm object-fit-cover bg-white" 
+                                                        style={{ width: '60px', height: '60px', border: '1px solid #eee' }} 
+                                                        onError={(e) => { e.target.src = '/assets/image/product/logo.png'; }} 
+                                                    />
+                                                    <div className="ms-3 flex-grow-1 text-end">
+                                                        <div className="font-13 fw-bold text-overflow-2 mb-1" style={{ lineHeight: '1.4' }}>{product.title}</div>
+                                                        <div className="text-danger font-13 fw-bold">{Number(product.base_price || 0).toLocaleString()} تومان</div>
                                                     </div>
                                                 </Link>
-                                            </li>
-                                        ))}
-                                    </ul>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="col-12 text-center py-4 text-muted font-13">محصولی با این نام یافت نشد.</div>
+                                    )}
                                 </div>
-                            )}
+                            </div>
+
+                            <div className="col-md-4 col-12 bg-light p-3 border-start custom-scrollbar" style={{ maxHeight: '450px', overflowY: 'auto' }}>
+                                {searchResults.categories?.length > 0 && (
+                                    <div className="mb-4 text-end">
+                                        <h6 className="font-13 fw-bold text-dark mb-3"><i className="bi bi-grid text-muted me-1"></i> دسته‌بندی‌ها</h6>
+                                        <div className="d-flex flex-wrap gap-2">
+                                            {searchResults.categories.map(cat => (
+                                                <Link to={`/shop?category__slug=${cat.slug}`} key={`search-cat-${cat.uuid}`} className="badge bg-white text-dark border border-ui p-2 fw-normal hover-bg-danger font-12 text-decoration-none shadow-sm transition" onClick={() => setShowSearchDropdown(false)}>
+                                                    {cat.title}
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {searchResults.brands?.length > 0 && (
+                                    <div className="mb-4 text-end">
+                                        <h6 className="font-13 fw-bold text-dark mb-3"><i className="bi bi-tags text-muted me-1"></i> برندها</h6>
+                                        <div className="d-flex flex-wrap gap-2">
+                                            {searchResults.brands.map(brand => (
+                                                <Link to={`/shop?brands=${brand.slug}`} key={`search-brand-${brand.uuid}`} className="d-flex align-items-center badge bg-white text-dark border border-ui px-2 py-1 fw-normal hover-bg-danger text-decoration-none shadow-sm transition" onClick={() => setShowSearchDropdown(false)}>
+                                                    {brand.logo && <img src={brand.logo} alt={brand.title} width="16" height="16" className="me-2 object-fit-contain" onError={(e) => { e.target.style.display = 'none'; }} />}
+                                                    <span className="font-12">{brand.title}</span>
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {searchResults.posts?.length > 0 && (
+                                    <div className="mb-2 text-end">
+                                        <h6 className="font-13 fw-bold text-dark mb-3"><i className="bi bi-journal-text text-primary me-1"></i> در مجله آبتین بخوانید</h6>
+                                        <div className="d-flex flex-column gap-2">
+                                            {searchResults.posts.map(post => (
+                                                <Link to={`/blog/${post.slug}`} key={`search-post-${post.uuid}`} className="d-flex align-items-center text-decoration-none text-secondary hover-text-danger transition" onClick={() => setShowSearchDropdown(false)}>
+                                                    <i className="bi bi-dot"></i>
+                                                    <span className="font-12 text-overflow-1">{post.title}</span>
+                                                </Link>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     ) : (
-                        <div className="p-4 text-center text-muted font-14">
-                            <i className="bi bi-emoji-frown fs-3 d-block mb-2 text-warning"></i>
-                            نتیجه‌ای یافت نشد!
+                        <div className="p-5 text-center text-muted">
+                            <i className="bi bi-search fs-1 text-muted opacity-25 d-block mb-3"></i>
+                            <h6 className="font-14 fw-bold">نتیجه‌ای برای "{searchQuery}" پیدا نشد!</h6>
+                            <p className="font-12 mt-2">لطفاً املای کلمه را بررسی کنید یا کلمه دیگری را امتحان کنید.</p>
                         </div>
                     )}
                 </div>
@@ -144,44 +224,53 @@ const Header = () => {
 
     return (
         <>
-            <header className="main-header bg-white sticky-top shadow-sm border-bottom border-light" style={{ zIndex: 1040 }}>
+            <header className="override-header-styles bg-white shadow-sm border-bottom border-light">
                 
+                <div className="d-lg-none bg-white w-100" style={{ position: 'relative', zIndex: 10 }}>
+                    <div className="container-fluid px-3 pt-3 pb-3">
+                        <div className="row align-items-center pb-3 m-0 w-100">
+                            
+                            <div className="col-auto p-0">
+                                <button className="btn border-0 p-0 text-dark hover-lift shadow-none" onClick={() => setIsMobileMenuOpen(true)}>
+                                    <i className="bi bi-list" style={{ fontSize: '32px' }}></i>
+                                </button>
+                            </div>
+                            
+                            <div className="col text-center p-0">
+                                <Link to="/" className="d-inline-block text-center w-100">
+                                    <img src="/assets/image/logo.png" alt="آبتین" className="img-fluid" style={{ maxHeight: '38px', objectFit: 'contain' }} />
+                                </Link>
+                            </div>
+                            
+                            <div className="col-auto text-end p-0">
+                                <ul className="d-flex align-items-center justify-content-end list-unstyled m-0 p-0 gap-3">
+                                    
 
-                <div className="d-lg-none">
-                    <div className="d-flex justify-content-between align-items-center p-3">
-                        <button className="btn border-0 p-0 text-dark" onClick={() => setIsMobileMenuOpen(true)}>
-                            <i className="bi bi-list" style={{ fontSize: '28px' }}></i>
-                        </button>
 
-                        <Link to="/" className="d-inline-block text-center flex-grow-1">
-                            <img src="/assets/image/logo.png" alt="آبتین" className="img-fluid" style={{ maxHeight: '40px', objectFit: 'contain' }} />
-                        </Link>
+                                 
 
-                        <Link to="/cart" className="position-relative text-dark text-decoration-none">
-                            <i className="bi bi-cart3" style={{ fontSize: '24px' }}></i>
-                            <span className="position-absolute top-0 start-0 translate-middle badge rounded-circle bg-danger" style={{ padding: '5px', fontSize: '10px' }}>
-                                {cartItems?.length || 0}
-                            </span>
-                        </Link>
-                    </div>
-                    <div className="px-3 pb-3" ref={searchRef}>
-                        <SearchBar isMobile={true} />
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div className="w-100 overflow-visible-custom">
+                            {renderSearchBar()}
+                        </div>
                     </div>
                 </div>
-
 
                 <div className={`mobile-overlay ${isMobileMenuOpen ? 'show' : ''}`} onClick={() => setIsMobileMenuOpen(false)}></div>
                 <div className={`mobile-sidebar bg-white ${isMobileMenuOpen ? 'open' : ''}`}>
                     <div className="d-flex justify-content-between align-items-center p-3 border-bottom border-light">
                         <img src="/assets/image/logo.png" alt="آبتین" style={{ maxHeight: '35px' }} />
-                        <button className="btn border-0 text-muted p-1" onClick={() => setIsMobileMenuOpen(false)}>
+                        <button className="btn border-0 text-muted p-1 hover-lift" onClick={() => setIsMobileMenuOpen(false)}>
                             <i className="bi bi-x-lg fs-4"></i>
                         </button>
                     </div>
                     
                     <div className="p-3 custom-scrollbar" style={{ height: 'calc(100vh - 140px)', overflowY: 'auto' }}>
                         {user ? (
-                            <div className="d-flex align-items-center bg-light p-3 rounded-4 mb-4">
+                            <div className="d-flex align-items-center bg-light p-3 rounded-4 mb-4 border border-ui">
                                 <div className="bg-white rounded-circle d-flex justify-content-center align-items-center shadow-sm" style={{width: '45px', height: '45px'}}>
                                     <i className="bi bi-person text-danger fs-4"></i>
                                 </div>
@@ -189,10 +278,10 @@ const Header = () => {
                                     <h6 className="mb-1 font-14 fw-bold">{user.first_name || 'کاربر سایت'}</h6>
                                     <Link to="/profile" onClick={() => setIsMobileMenuOpen(false)} className="font-12 text-muted text-decoration-none">مشاهده حساب کاربری</Link>
                                 </div>
-                                <button className="btn p-0 text-danger" onClick={() => { logout(); setIsMobileMenuOpen(false); }}><i className="bi bi-box-arrow-right fs-5"></i></button>
+                                <button className="btn p-0 text-danger hover-lift" onClick={() => { logout(); setIsMobileMenuOpen(false); }}><i className="bi bi-box-arrow-right fs-5"></i></button>
                             </div>
                         ) : (
-                            <Link to="/login" onClick={() => setIsMobileMenuOpen(false)} className="d-flex align-items-center bg-light p-3 rounded-4 mb-4 text-decoration-none text-dark">
+                            <Link to="/login" onClick={() => setIsMobileMenuOpen(false)} className="d-flex align-items-center bg-light p-3 rounded-4 mb-4 border border-ui text-decoration-none text-dark hover-lift transition">
                                 <div className="bg-white rounded-circle d-flex justify-content-center align-items-center shadow-sm" style={{width: '45px', height: '45px'}}>
                                     <i className="bi bi-box-arrow-in-left text-danger fs-4"></i>
                                 </div>
@@ -260,65 +349,90 @@ const Header = () => {
 
                         <h6 className="font-13 fw-bold text-muted mb-3 mt-4">دسترسی سریع</h6>
                         <ul className="list-unstyled mobile-menu-list">
-                            <li><Link to="/special-offers" onClick={() => setIsMobileMenuOpen(false)} className="d-block py-3 border-bottom border-light font-14 fw-bold text-dark text-decoration-none"><i className="bi bi-percent text-danger me-2 fs-5"></i> پیشنهادهای ویژه</Link></li>
-                            <li><Link to="/best-sellers" onClick={() => setIsMobileMenuOpen(false)} className="d-block py-3 border-bottom border-light font-14 fw-bold text-dark text-decoration-none"><i className="bi bi-fire text-warning me-2 fs-5"></i> پرفروش‌ترین‌ها</Link></li>
-                            <li><Link to="/blog" onClick={() => setIsMobileMenuOpen(false)} className="d-block py-3 font-14 fw-bold text-dark text-decoration-none"><i className="bi bi-journal-text text-primary me-2 fs-5"></i> مجله آبتین</Link></li>
+                            <li><Link to="/compare" onClick={() => setIsMobileMenuOpen(false)} className="d-block py-3 border-bottom border-light font-14 fw-bold text-dark text-decoration-none hover-text-danger transition"><i className="bi bi-shuffle text-warning me-2 fs-5"></i> مقایسه محصولات</Link></li>
+                            <li><Link to="/special-offers" onClick={() => setIsMobileMenuOpen(false)} className="d-block py-3 border-bottom border-light font-14 fw-bold text-dark text-decoration-none hover-text-danger transition"><i className="bi bi-percent text-danger me-2 fs-5"></i> پیشنهادهای ویژه</Link></li>
+                            <li><Link to="/best-sellers" onClick={() => setIsMobileMenuOpen(false)} className="d-block py-3 border-bottom border-light font-14 fw-bold text-dark text-decoration-none hover-text-danger transition"><i className="bi bi-fire text-warning me-2 fs-5"></i> پرفروش‌ترین‌ها</Link></li>
+                            <li><Link to="/blog" onClick={() => setIsMobileMenuOpen(false)} className="d-block py-3 font-14 fw-bold text-dark text-decoration-none hover-text-danger transition"><i className="bi bi-journal-text text-primary me-2 fs-5"></i> مجله آبتین</Link></li>
                         </ul>
                     </div>
                 </div>
 
                 <div className="d-none d-lg-block pb-1">
                     <div className="container-fluid py-3">
-                        <div className="row align-items-center">
+                        <div className="row align-items-center m-0 w-100">
                             
-                            <div className="col-lg-2">
+                            <div className="col-lg-2 p-0">
                                 <Link to="/" className="d-inline-block hover-lift transition">
                                     <img src="/assets/image/logo.png" alt="فروشگاه آبتین" className="img-fluid" style={{ maxHeight: '55px', objectFit: 'contain' }} />
                                 </Link>
                             </div>
 
                             <div className="col-lg-6 px-4">
-                                <SearchBar isMobile={false} />
+                                {renderSearchBar()}
                             </div>
 
-                            <div className="col-lg-4 d-flex justify-content-end gap-3 align-items-center">
-                                {user ? (
-                                    <div className="dropdown profile-dropdown hover-menu">
-                                        <button className="btn border border-ui rounded-pill px-4 py-2 bg-white d-flex align-items-center gap-2 hover-shadow transition shadow-sm font-14 fw-bold text-dark">
-                                            <i className="bi bi-person-circle fs-5 text-danger"></i>
-                                            {user.first_name || 'حساب کاربری'}
-                                            <i className="bi bi-chevron-down font-10 text-muted ms-1 mt-1"></i>
-                                        </button>
-                                        <ul className="dropdown-menu dropdown-menu-end shadow-xl border-0 rounded-4 mt-1 p-2" style={{ minWidth: '220px' }}>
-                                            <li><Link className="dropdown-item py-2 font-14 rounded-3 hover-bg-light text-dark fw-bold mb-1" to="/profile"><i className="bi bi-person me-2 fs-5 text-muted"></i> پروفایل کاربری</Link></li>
-                                            <li><Link className="dropdown-item py-2 font-14 rounded-3 hover-bg-light text-dark fw-bold mb-1" to="/orders"><i className="bi bi-box-seam me-2 fs-5 text-muted"></i> سفارشات من</Link></li>
-                                            <li><hr className="dropdown-divider my-2 border-light" /></li>
-                                            <li><button className="dropdown-item py-2 font-14 rounded-3 hover-bg-light text-danger fw-bold" onClick={logout}><i className="bi bi-box-arrow-right me-2 fs-5"></i> خروج از حساب</button></li>
-                                        </ul>
-                                    </div>
-                                ) : (
-                                    <Link to="/login" className="btn border border-ui rounded-pill px-4 py-2 bg-white d-flex align-items-center gap-2 hover-shadow transition shadow-sm">
-                                        <i className="bi bi-box-arrow-in-left fs-5 text-danger"></i>
-                                        <span className="font-14 fw-bold text-dark">ورود | ثبت‌نام</span>
-                                    </Link>
-                                )}
-                                
-                                <div className="vr bg-light mx-2" style={{ height: '35px', width: '2px' }}></div>
+                            <div className="col-lg-4 p-0 d-flex justify-content-end align-items-center">
+                                <ul className="d-flex align-items-center justify-content-end list-unstyled m-0 p-0 gap-3">
+                                    
+                                    <li className="position-relative" style={{ zIndex: 20 }}>
+                                        {user ? (
+                                            <div className="dropdown profile-dropdown hover-menu">
+                                                <button className="btn border border-ui rounded-pill px-4 py-2 bg-white d-flex align-items-center gap-2 hover-shadow transition shadow-sm font-14 fw-bold text-dark">
+                                                    <i className="bi bi-person-circle fs-5 text-danger"></i>
+                                                    {user.first_name || 'حساب کاربری'}
+                                                    <i className="bi bi-chevron-down font-10 text-muted ms-1 mt-1"></i>
+                                                </button>
+                                                <ul className="dropdown-menu dropdown-menu-end shadow-xl border-0 rounded-4 mt-1 p-2" style={{ minWidth: '220px' }}>
+                                                    <li><Link className="dropdown-item py-2 font-14 rounded-3 hover-bg-light text-dark fw-bold mb-1" to="/profile"><i className="bi bi-person me-2 fs-5 text-muted"></i> پروفایل کاربری</Link></li>
+                                                    <li><Link className="dropdown-item py-2 font-14 rounded-3 hover-bg-light text-dark fw-bold mb-1" to="/orders"><i className="bi bi-box-seam me-2 fs-5 text-muted"></i> سفارشات من</Link></li>
+                                                    <li><hr className="dropdown-divider my-2 border-light" /></li>
+                                                    <li><button className="dropdown-item py-2 font-14 rounded-3 hover-bg-light text-danger fw-bold" onClick={logout}><i className="bi bi-box-arrow-right me-2 fs-5"></i> خروج از حساب</button></li>
+                                                </ul>
+                                            </div>
+                                        ) : (
+                                            <Link to="/login" className="btn border border-ui rounded-pill px-4 py-2 bg-white d-flex align-items-center gap-2 hover-shadow transition shadow-sm text-decoration-none">
+                                                <i className="bi bi-box-arrow-in-left fs-5 text-danger"></i>
+                                                <span className="font-14 fw-bold text-dark">ورود | ثبت‌نام</span>
+                                            </Link>
+                                        )}
+                                    </li>
 
-                                <Link to="/cart" className="btn border border-ui rounded-pill px-4 py-2 position-relative bg-white d-flex align-items-center gap-2 hover-shadow transition shadow-sm cart-btn">
-                                    <i className="bi bi-cart3 fs-5 text-dark"></i>
-                                    <span className="font-14 fw-bold text-dark">سبد خرید</span>
-                                    <span className="position-absolute top-0 start-0 translate-middle badge rounded-circle bg-danger shadow-sm border border-2 border-white d-flex align-items-center justify-content-center" style={{ width: '24px', height: '24px', fontSize: '11px' }}>
-                                        {cartItems?.length || 0}
-                                    </span>
-                                </Link>
+                                    <li className="vr bg-light mx-1" style={{ height: '35px', width: '2px' }}></li>
+
+                                    <li className="position-relative" style={{ zIndex: 20 }}>
+                                        <Link to="/compare" className="btn border border-ui rounded-circle bg-white d-flex align-items-center justify-content-center shadow-sm hover-shadow transition text-decoration-none" title="مقایسه محصولات" style={{ width: '45px', height: '45px', padding: 0 }}>
+                                            <i className="bi bi-shuffle text-dark fs-5"></i>
+                                            {compareIds?.length > 0 && (
+                                                <span className="position-absolute bg-warning text-dark shadow-sm fw-bold d-flex align-items-center justify-content-center" 
+                                                      style={{ top: '-3px', right: '-2px', minWidth: '20px', height: '20px', fontSize: '11px', border: '2px solid #fff', borderRadius: '50rem' }}>
+                                                    {compareIds.length}
+                                                </span>
+                                            )}
+                                        </Link>
+                                    </li>
+
+                                    <li className="position-relative" style={{ zIndex: 20 }}>
+                                        <button type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasCart" aria-controls="offcanvasCart" className="btn border border-ui rounded-pill px-4 py-2 bg-white d-flex align-items-center gap-2 shadow-sm hover-shadow transition text-decoration-none">
+                                            <div className="position-relative d-flex align-items-center justify-content-center" style={{ width: '24px', height: '24px' }}>
+                                                <i className="bi bi-cart3 fs-5 text-dark"></i>
+                                                {cartItems?.length > 0 && (
+                                                    <span className="position-absolute bg-danger text-white shadow-sm fw-bold d-flex align-items-center justify-content-center" 
+                                                          style={{ top: '-10px', right: '-12px', minWidth: '22px', height: '22px', fontSize: '11px', border: '2px solid #fff', borderRadius: '50rem' }}>
+                                                        {cartItems.length}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <span className="font-14 fw-bold text-dark ms-1">سبد خرید</span>
+                                        </button>
+                                    </li>
+
+                                </ul>
                             </div>
                         </div>
                     </div>
 
                     <div className="container-fluid mt-2 pb-2">
                         <ul className="d-flex list-unstyled m-0 p-0 align-items-center gap-4 h-40-px desktop-nav">
-                            
                             <li className="dropdown h-100 d-flex align-items-center position-relative group-mega-menu z-3">
                                 <Link to="/categories" className="btn bg-danger text-white rounded-pill px-4 py-2 fw-bold font-14 text-decoration-none d-flex align-items-center gap-2 shadow-sm transition hover-lift">
                                     <i className="bi bi-list fs-5"></i>
@@ -367,7 +481,6 @@ const Header = () => {
                             </li>
                             
                             <li key="nav-divider" className="vr bg-light" style={{ height: '20px', width: '2px' }}></li>
-                            
                             <li key="nav-special-offers">
                                 <Link to="/special-offers" className="text-muted font-14 fw-bold text-decoration-none d-flex align-items-center gap-2 hover-text-danger transition">
                                     <i className="bi bi-percent fs-5 text-danger"></i> پیشنهاد ویژه
@@ -393,52 +506,47 @@ const Header = () => {
                         </ul>
                     </div>
                 </div>
+
+                <style jsx="true">{`
+                    .override-header-styles { position: sticky !important; top: 0 !important; height: auto !important; min-height: fit-content !important; z-index: 1040 !important; padding: 0 !important; display: block !important; overflow: visible !important; }
+                    .overflow-visible-custom { overflow: visible !important; }
+                    .hover-shadow:hover { box-shadow: 0 .5rem 1rem rgba(0,0,0,.08)!important; transform: translateY(-1px); }
+                    .hover-bg-light:hover { background-color: #f8f9fa!important; }
+                    .hover-bg-danger:hover { background-color: #ffe6e9 !important; border-color: #ef4056 !important; color: #ef4056 !important;}
+                    .hover-text-danger:hover { color: #ef4056!important; }
+                    .hover-lift { transition: transform 0.2s ease; }
+                    .hover-lift:hover { transform: translateY(-2px); }
+                    .cursor-pointer { cursor: pointer; }
+                    .transition { transition: all 0.2s ease-in-out; }
+                    .text-overflow-1 { overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; }
+                    .text-overflow-2 { overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+                    .search-container .search-input { border-radius: 0 50px 50px 0 !important; }
+                    .search-container .search-btn { border-radius: 50px 0 0 50px !important; }
+                    .search-container .form-control:focus { background-color: #fff !important; box-shadow: 0 0 0 4px rgba(239, 64, 86, 0.1) !important; border: 1px solid #ef4056 !important; }
+                    .group-mega-menu:hover .mega-menu-panel { opacity: 1 !important; visibility: visible !important; transform: translateY(10px); }
+                    .menu-item-group:hover .menu-link { color: #ef4056 !important; background-color: #fce8eb; }
+                    .menu-item-group:hover .arrow-icon { color: #ef4056 !important; transform: translateX(-3px); }
+                    .menu-item-group:hover .cat-bullet { background-color: #ef4056 !important; transform: scale(1.5); }
+                    .menu-item-group:hover .sub-menu-panel { opacity: 1 !important; visibility: visible !important; }
+                    .sub-menu-link:hover { color: #ef4056 !important; padding-right: 10px; }
+                    .cat-bullet { width: 6px; height: 6px; background-color: #ccc; border-radius: 50%; transition: all 0.2s ease; }
+                    .mobile-sidebar { position: fixed; top: 0; right: 0; width: 300px; height: 100vh; z-index: 1060; transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: -5px 0 15px rgba(0,0,0,0.05); }
+                    .mobile-sidebar.open { transform: translateX(0); }
+                    .mobile-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(0,0,0,0.5); z-index: 1055; opacity: 0; visibility: hidden; transition: all 0.3s; backdrop-filter: blur(2px); }
+                    .mobile-overlay.show { opacity: 1; visibility: visible; }
+                    .rotate-180 { transform: rotate(180deg); }
+                    .mobile-submenu { max-height: 0; opacity: 0; transition: all 0.3s ease-in-out; }
+                    .mobile-submenu.open { max-height: 500px; opacity: 1; margin-bottom: 10px; }
+                    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+                    .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+                    .custom-scrollbar::-webkit-scrollbar-thumb { background: #ddd; border-radius: 10px; }
+                    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #ccc; }
+                    .rounded-circle {border-radius: 11% !important;}
+
+                `}</style>
             </header>
 
-            <style jsx="true">{`
-                .hover-shadow:hover { box-shadow: 0 .5rem 1rem rgba(0,0,0,.08)!important; transform: translateY(-1px); }
-                .hover-bg-light:hover { background-color: #f8f9fa!important; }
-                .hover-text-danger:hover { color: #ef4056!important; }
-                .hover-lift { transition: transform 0.2s ease; }
-                .hover-lift:hover { transform: translateY(-2px); }
-                .transition { transition: all 0.2s ease-in-out; }
-                
-                .search-container .search-input { border-radius: 0 12px 12px 0 !important; }
-                .search-container .search-btn { border-radius: 12px 0 0 12px !important; }
-                .search-container .form-control:focus { background-color: #fff !important; box-shadow: 0 0 0 4px rgba(239, 64, 86, 0.1) !important; border: 1px solid #ef4056 !important; }
-                .search-dropdown { z-index: 1060; }
-                
-                .group-mega-menu:hover .mega-menu-panel { opacity: 1 !important; visibility: visible !important; transform: translateY(10px); }
-                .menu-item-group:hover .menu-link { color: #ef4056 !important; background-color: #fce8eb; }
-                .menu-item-group:hover .arrow-icon { color: #ef4056 !important; transform: translateX(-3px); }
-                .menu-item-group:hover .cat-bullet { background-color: #ef4056 !important; transform: scale(1.5); }
-                .menu-item-group:hover .sub-menu-panel { opacity: 1 !important; visibility: visible !important; }
-                .sub-menu-link:hover { color: #ef4056 !important; padding-right: 10px; }
-                .cat-bullet { width: 6px; height: 6px; background-color: #ccc; border-radius: 50%; transition: all 0.2s ease; }
-                
-                .mobile-sidebar { position: fixed; top: 0; right: 0; width: 300px; height: 100vh; z-index: 1060; transform: translateX(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: -5px 0 15px rgba(0,0,0,0.05); }
-                .mobile-sidebar.open { transform: translateX(0); }
-                .mobile-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100vh; background: rgba(0,0,0,0.5); z-index: 1055; opacity: 0; visibility: hidden; transition: all 0.3s; backdrop-filter: blur(2px); }
-                .mobile-overlay.show { opacity: 1; visibility: visible; }
-                
-                .rotate-180 { transform: rotate(180deg); }
-                .mobile-submenu { max-height: 0; opacity: 0; transition: all 0.3s ease-in-out; }
-                .mobile-submenu.open { max-height: 500px; opacity: 1; margin-bottom: 10px; }
-                
-                .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-                .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
-                .custom-scrollbar::-webkit-scrollbar-thumb { background: #ddd; border-radius: 10px; }
-                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #ccc; }
-
-                @keyframes fadeUp {
-                    from { opacity: 0; transform: translateY(10px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-                @keyframes fadeRight {
-                    from { opacity: 0; transform: translateX(10px); }
-                    to { opacity: 1; transform: translateX(0); }
-                }
-            `}</style>
+            <CartDrawer />
         </>
     );
 };

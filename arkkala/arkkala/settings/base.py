@@ -3,6 +3,7 @@ Base Django settings for arkkala project.
 """
 import os
 from pathlib import Path
+from corsheaders.defaults import default_headers
 
 BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent
 
@@ -93,3 +94,10 @@ AUTH_USER_MODEL = 'users.User'
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 DEFAULT_FROM_EMAIL = 'noreply@arkkala.com'
 VAT_RATE = 0
+
+
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    'x-guest-id',
+]
+
+CORS_ALLOW_ALL_ORIGINS = True

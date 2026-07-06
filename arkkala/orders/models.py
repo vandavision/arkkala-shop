@@ -54,8 +54,9 @@ class Coupon(UUIDBaseModel, TimeStampMixin):
 
 
 class Cart(UUIDBaseModel, TimeStampMixin):
-    """User Shopping Cart."""
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='cart', verbose_name=_('کاربر'))
+    """User and Guest Shopping Cart."""
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='cart', null=True, blank=True, verbose_name=_('کاربر'))
+    guest_id = models.CharField(max_length=255, null=True, blank=True, verbose_name=_('شناسه مهمان'))
 
     class Meta:
         verbose_name = _('سبد خرید')
@@ -85,7 +86,12 @@ class Order(UUIDBaseModel, TimeStampMixin, AddressMixin):
         ('cancelled', _('لغو شده')),
     )
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders', verbose_name=_('کاربر'))
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='orders', null=True, blank=True, verbose_name=_('کاربر'))
+    
+    guest_first_name = models.CharField(max_length=150, null=True, blank=True, verbose_name=_('نام مهمان'))
+    guest_last_name = models.CharField(max_length=150, null=True, blank=True, verbose_name=_('نام خانوادگی مهمان'))
+    guest_phone = models.CharField(max_length=20, null=True, blank=True, verbose_name=_('موبایل مهمان'))
+    
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name=_('وضعیت سفارش'))
     
     shipping_method = models.ForeignKey(ShippingMethod, on_delete=models.SET_NULL, null=True, verbose_name=_('روش ارسال'))

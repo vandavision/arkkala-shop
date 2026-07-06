@@ -1,22 +1,28 @@
-// arkkala/frontend/src/App.jsx
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import ProductDetailPage from './pages/ProductDetailPage';
 import HomePage from './pages/HomePage';
-import ShopPage from './pages/ShopPage'; // <--- صفحه جدید وارد شد
+import ShopPage from './pages/ShopPage';
+import CartPage from './pages/CartPage';
+import CheckoutPage from './pages/CheckoutPage';
+import ComparePage from './pages/ComparePage';
 import Header from './components/Header';
 import Footer from './components/Footer';
 
 function App() {
   return (
-    <div className="app-wrapper">
+    <div className="app-wrapper bg-light">
       <Header />
       <div className="main-content">
         <Routes>
           <Route path="/" element={<HomePage />} />
-          <Route path="/shop" element={<ShopPage />} /> {/* روت فروشگاه اصلی */}
-          <Route path="/category/:slug" element={<ShopPage />} /> {/* روت اختصاصی هر دسته */}
-          <Route path="/product/:id" element={<ProductDetailPage />} />
+          <Route path="/shop" element={<ShopPage />} /> 
+          <Route path="/category/:slug" element={<ShopPage />} /> 
+          <Route path="/product/:slug" element={<ProductDetailPage />} />
+          
+          <Route path="/cart" element={<CartPage />} />
+          <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/compare" element={<ComparePage />} />
           
           <Route path="*" element={
             <div className="container py-5 mt-5 text-center" style={{minHeight: '50vh'}}>

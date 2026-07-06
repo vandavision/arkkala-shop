@@ -5,15 +5,36 @@ Handles data transformation and validation for shop models.
 from typing import Any, Dict, List, Optional
 from rest_framework import serializers
 from rest_framework.request import Request
-from .models import Brand, Product, ProductVariant, AttributeValue, Comment, ProductGallery, ProductVideo
+from .models import Brand, Product, ProductVariant, AttributeValue, Comment, ProductGallery, ProductVideo, Question, PriceHistory
+
+
+class QuestionSerializer(serializers.ModelSerializer):
+    """
+    Serializer for the Question model to display approved Q&As.
+    """
+    user_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Question
+        fields = ['uuid', 'user_name', 'text', 'answer_text', 'created_at']
+
+    def get_user_name(self, obj: Question) -> str:
+        if obj.user and obj.user.get_full_name():
+            return obj.user.get_full_name()
+        return obj.name or "کاربر مهمان"
 
 
 class BrandSerializer(serializers.ModelSerializer):
     """Serializer for the Brand model."""
+    product_count = serializers.SerializerMethodField()
     
     class Meta:
         model = Brand
-        fields = ['uuid', 'title', 'slug', 'logo']
+        fields = ['uuid', 'title', 'slug', 'logo', 'product_count']
+
+    def get_product_count(self, obj: Brand) -> int:
+        """Return the number of active products for this brand."""
+        return obj.products.filter(is_active=True).count()
 
 
 class ProductSeoSerializer(serializers.ModelSerializer):
@@ -104,26 +125,44 @@ class ProductVideoSerializer(serializers.ModelSerializer):
         fields = ['uuid', 'title', 'url']
 
 
+class PriceHistorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PriceHistory
+        fields = ['price', 'created_at']
+
 class ProductDetailSerializer(serializers.ModelSerializer):
-    """Main Serializer for Product detail and list representation."""
     brand = BrandSerializer(read_only=True)
     variants = ProductVariantSerializer(many=True, read_only=True)
     comments = serializers.SerializerMethodField()
     seo = ProductSeoSerializer(source='*', read_only=True)
     gallery = ProductGallerySerializer(many=True, read_only=True)
     videos = ProductVideoSerializer(many=True, read_only=True)
+    questions = serializers.SerializerMethodField()
+    price_history = PriceHistorySerializer(many=True, read_only=True)
+    is_favorite = serializers.SerializerMethodField() # 🔴 اضافه شد
 
     class Meta:
         model = Product
         fields = [
             'uuid', 'title', 'english_title', 'slug', 'brand', 'short_description', 'description', 
-            'base_price', 'base_inventory', 
+            'base_price', 'base_inventory', 'weight', 'volume',
             'is_wholesale', 'wholesale_min_quantity', 'wholesale_base_price',
             'sold_count', 'view_count', 'average_rating',
-            'is_variable', 'gallery', 'videos', 'variants', 'comments', 'seo', 'created_at'
+            'is_variable', 'gallery', 'videos', 'variants', 'comments', 'seo', 'created_at', 
+            'questions', 'price_history', 'is_favorite'
         ]
 
+    def get_is_favorite(self, obj: Product) -> bool:
+        """Check if current user has favorited this product."""
+        request = self.context.get('request')
+        if request and request.user and request.user.is_authenticated:
+            return obj.favorites.filter(id=request.user.id).exists()
+        return False
+
     def get_comments(self, obj: Product) -> List[Dict[str, Any]]:
-        """Return approved comments for the specific product."""
         approved_comments = obj.comments.filter(is_approved=True)
         return CommentSerializer(approved_comments, many=True).data
+    
+    def get_questions(self, obj: Product) -> list:
+        approved_questions = obj.questions.filter(is_approved=True)
+        return QuestionSerializer(approved_questions, many=True, context=self.context).data

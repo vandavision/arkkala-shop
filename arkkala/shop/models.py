@@ -71,6 +71,10 @@ class Product(UUIDBaseModel, TimeStampMixin, TitleSlugMixin, SEOMixin, ProductDe
     base_price = models.DecimalField(max_digits=12, decimal_places=0, verbose_name=_('قیمت پایه (تکی)'))
     base_inventory = models.PositiveIntegerField(default=0, verbose_name=_('موجودی پایه'))
     
+    weight = models.PositiveIntegerField(default=500, verbose_name=_('وزن (گرم)'), help_text=_('جهت محاسبه دقیق هزینه پستی'))
+    volume = models.PositiveIntegerField(default=1000, verbose_name=_('حجم بسته (سانتی‌متر مکعب)'))
+    favorites = models.ManyToManyField(User, related_name='favorite_products', blank=True, verbose_name=_('علاقه‌مندی‌ها'))
+    
     is_wholesale = models.BooleanField(default=False, verbose_name=_('قابلیت فروش عمده دارد؟'))
     wholesale_min_quantity = models.PositiveIntegerField(default=10, verbose_name=_('حداقل تعداد برای خرید عمده'), help_text=_("در صورت خرید بیشتر از این تعداد، قیمت عمده محاسبه می‌شود."))
     wholesale_base_price = models.DecimalField(max_digits=12, decimal_places=0, null=True, blank=True, verbose_name=_('قیمت پایه عمده'))
@@ -140,3 +144,41 @@ class Comment(UUIDBaseModel, TimeStampMixin):
     class Meta:
         verbose_name = _('نظر')
         verbose_name_plural = _('نظرات')
+
+
+class Question(UUIDBaseModel, TimeStampMixin):
+    """
+    Represents a user or guest question about a specific product, along with its answer.
+    """
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='questions', verbose_name=_('محصول'))
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name=_('کاربر ثبت‌نام شده'))
+    name = models.CharField(max_length=255, null=True, blank=True, verbose_name=_('نام نویسنده مهمان'))
+    text = models.TextField(verbose_name=_('متن پرسش'))
+    answer_text = models.TextField(null=True, blank=True, verbose_name=_('متن پاسخ ادمین'))
+    is_approved = models.BooleanField(default=False, verbose_name=_('تایید شده برای نمایش'))
+
+    class Meta:
+        verbose_name = _('پرسش و پاسخ')
+        verbose_name_plural = _('پرسش‌ها و پاسخ‌ها')
+        ordering = ['-created_at']
+
+    def __str__(self) -> str:
+        author = self.user.get_full_name() if self.user else (self.name or _('کاربر مهمان'))
+        return f"Question on {self.product.title} by {author}"
+
+
+class PriceHistory(UUIDBaseModel):
+    """
+    Tracks the price changes of a product over time for the price chart.
+    """
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='price_history', verbose_name=_('محصول'))
+    price = models.DecimalField(max_digits=12, decimal_places=0, verbose_name=_('قیمت'))
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_('تاریخ ثبت'))
+
+    class Meta:
+        verbose_name = _('تاریخچه قیمت')
+        verbose_name_plural = _('تاریخچه قیمت‌ها')
+        ordering = ['created_at']
+
+    def __str__(self) -> str:
+        return f"{self.product.title} - {self.price} - {self.created_at.strftime('%Y-%m-%d')}"

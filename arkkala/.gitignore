@@ -11,7 +11,7 @@ logs/
 .coverage.*
 htmlcov/
 local_settings.py
-
+/mediafiles/
 */migrations/000*.py
 
 *.pyc

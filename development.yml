@@ -8,8 +8,9 @@ services:
         - .env.dev
       command: python manage.py runserver 0.0.0.0:${DJANGO_PORT:-8000}
       environment:
-        - DJANGO_WATCHMAN_TIMEOUT=20
-        - CHOKIDAR_USEPOLLING=true
+            - DJANGO_SETTINGS_MODULE=arkkala.settings.dev
+            - DJANGO_WATCHMAN_TIMEOUT=20
+            - CHOKIDAR_USEPOLLING=true
       volumes:
         - ./arkkala:/app
       ports:

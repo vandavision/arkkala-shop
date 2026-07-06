@@ -4,7 +4,7 @@ const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/
 
 const axiosInstance = axios.create({
     baseURL: baseURL,
-    timeout: 10000,
+    timeout: 15000,
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -31,7 +31,12 @@ axiosInstance.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config;
         
-        if (error.response && error.response.status === 401 && !originalRequest._retry) {
+        if (!error.response) {
+            console.error("ارتباط با سرور قطع شده است. بررسی کنید که بک‌اند روی 0.0.0.0:8000 ران باشد.");
+            return Promise.reject(error);
+        }
+
+        if (error.response.status === 401 && !originalRequest._retry && !originalRequest.url.includes('token/refresh')) {
             originalRequest._retry = true;
             const refreshToken = localStorage.getItem('refresh_token');
             
@@ -41,9 +46,11 @@ axiosInstance.interceptors.response.use(
                         refresh: refreshToken
                     });
                     
-                    localStorage.setItem('access_token', response.data.access);
-                    axiosInstance.defaults.headers['Authorization'] = 'Bearer ' + response.data.access;
-                    originalRequest.headers['Authorization'] = 'Bearer ' + response.data.access;
+                    const newAccessToken = response.data.access;
+                    localStorage.setItem('access_token', newAccessToken);
+                    
+                    axiosInstance.defaults.headers['Authorization'] = 'Bearer ' + newAccessToken;
+                    originalRequest.headers['Authorization'] = 'Bearer ' + newAccessToken;
                     
                     return axiosInstance(originalRequest);
                 } catch (err) {

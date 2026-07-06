@@ -20,7 +20,7 @@ class Transaction(UUIDBaseModel, TimeStampMixin):
         ('canceled', _('لغو شده')),
     )
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='transactions', verbose_name=_('کاربر'))
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='transactions', verbose_name=_('کاربر'))
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='transactions', verbose_name=_('سفارش'))
     
     amount = models.DecimalField(max_digits=12, decimal_places=0, verbose_name=_('مبلغ تراکنش'))

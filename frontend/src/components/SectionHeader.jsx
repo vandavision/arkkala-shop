@@ -1,13 +1,6 @@
-// arkkala/frontend/src/components/SectionHeader.jsx
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-/**
- * Reusable Section Header with Title and "View All" button.
- * @param {Object} props
- * @param {string} props.title
- * @param {string} props.link
- */
 const SectionHeader = ({ title, link = "#" }) => {
     return (
         <div className="section-header">

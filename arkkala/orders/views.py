@@ -4,10 +4,10 @@ Views for Orders and Cart.
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.request import Request
 
-from .models import CartItem, Order, ShippingMethod
+from .models import Order, ShippingMethod
 from .serializers import (
     CartItemSerializer, OrderSerializer, CheckoutSerializer, ShippingMethodSerializer
 )
@@ -18,14 +18,24 @@ class ShippingMethodViewSet(viewsets.ReadOnlyModelViewSet):
     """List available shipping methods."""
     queryset = ShippingMethod.objects.filter(is_active=True)
     serializer_class = ShippingMethodSerializer
+    permission_classes = [AllowAny]
 
 
 class CartViewSet(viewsets.ViewSet):
-    """Manage User Cart."""
-    permission_classes = [IsAuthenticated]
+    """Manage User & Guest Cart."""
+    permission_classes = [AllowAny]
+
+    def get_guest_id(self, request: Request) -> str:
+        return request.headers.get('X-Guest-ID')
 
     def list(self, request: Request) -> Response:
-        cart = CartService.get_user_cart(request.user)
+        guest_id = self.get_guest_id(request)
+        user = request.user
+        
+        if not user.is_authenticated and not guest_id:
+            return Response([])
+
+        cart = CartService.get_or_create_cart(user=user if user.is_authenticated else None, guest_id=guest_id)
         serializer = CartItemSerializer(cart.items.all(), many=True)
         return Response(serializer.data)
 
@@ -33,10 +43,19 @@ class CartViewSet(viewsets.ViewSet):
     def add(self, request: Request) -> Response:
         serializer = CartItemSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        
+        guest_id = self.get_guest_id(request)
+        if not request.user.is_authenticated and not guest_id:
+            return Response({"error": "شناسه دستگاه شما مشخص نیست."}, status=status.HTTP_400_BAD_REQUEST)
+
+        product_instance = serializer.validated_data['product']
+        variant_instance = serializer.validated_data.get('variant')
+
         CartService.add_to_cart(
-            user=request.user,
-            product_id=serializer.validated_data['product'].id,
-            variant_id=serializer.validated_data.get('variant').id if serializer.validated_data.get('variant') else None,
+            user=request.user if request.user.is_authenticated else None,
+            guest_id=guest_id,
+            product_id=product_instance.pk,
+            variant_id=variant_instance.pk if variant_instance else None,
             quantity=serializer.validated_data.get('quantity', 1)
         )
         return Response({"message": "به سبد خرید اضافه شد."}, status=status.HTTP_201_CREATED)
@@ -44,22 +63,38 @@ class CartViewSet(viewsets.ViewSet):
     @action(detail=True, methods=['patch'])
     def update_quantity(self, request: Request, pk=None) -> Response:
         quantity = request.data.get('quantity')
-        CartService.update_item_quantity(pk, request.user, int(quantity))
+        CartService.update_item_quantity(pk, int(quantity), user=request.user if request.user.is_authenticated else None, guest_id=self.get_guest_id(request))
         return Response({"message": "تعداد بروزرسانی شد."})
 
     @action(detail=True, methods=['delete'])
     def remove(self, request: Request, pk=None) -> Response:
-        CartService.remove_item(pk, request.user)
+        CartService.remove_item(pk, user=request.user if request.user.is_authenticated else None, guest_id=self.get_guest_id(request))
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class OrderViewSet(viewsets.ReadOnlyModelViewSet):
-    """User Orders and Checkout process."""
-    permission_classes = [IsAuthenticated]
+    """User/Guest Orders and Checkout process."""
+    permission_classes = [AllowAny]
     serializer_class = OrderSerializer
 
     def get_queryset(self):
-        return Order.objects.filter(user=self.request.user)
+        if self.request.user.is_authenticated:
+            return Order.objects.filter(user=self.request.user)
+        return Order.objects.none()
+
+    @action(detail=False, methods=['post'])
+    def validate_coupon_api(self, request: Request) -> Response:
+        code = request.data.get('code')
+        if not code:
+            return Response({"error": "کد تخفیف وارد نشده است."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            coupon = OrderService.validate_coupon(code)
+            return Response({
+                "discount_percent": coupon.discount_percent,
+                "max_discount_amount": coupon.max_discount_amount
+            }, status=status.HTTP_200_OK)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False, methods=['post'])
     def checkout(self, request: Request) -> Response:
@@ -79,7 +114,11 @@ class OrderViewSet(viewsets.ReadOnlyModelViewSet):
         
         try:
             order = OrderService.checkout(
-                user=request.user,
+                user=request.user if request.user.is_authenticated else None,
+                guest_id=request.headers.get('X-Guest-ID'),
+                guest_first_name=serializer.validated_data.get('guest_first_name'),
+                guest_last_name=serializer.validated_data.get('guest_last_name'),
+                guest_phone=serializer.validated_data.get('guest_phone'),
                 address_data=address_data,
                 shipping_method_id=serializer.validated_data['shipping_method_id'],
                 coupon_code=serializer.validated_data.get('coupon_code')

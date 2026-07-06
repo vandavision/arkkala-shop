@@ -7,12 +7,17 @@ from shop.serializers import ProductDetailSerializer, ProductVariantSerializer
 
 
 class ShippingMethodSerializer(serializers.ModelSerializer):
+    """Serializer for Shipping Methods."""
+    id = serializers.UUIDField(source='uuid', read_only=True)
+
     class Meta:
         model = ShippingMethod
         fields = ['id', 'name', 'description', 'base_cost', 'is_pay_on_delivery']
 
 
 class CartItemSerializer(serializers.ModelSerializer):
+    """Serializer for items within a cart."""
+    id = serializers.UUIDField(source='uuid', read_only=True)
     product_details = ProductDetailSerializer(source='product', read_only=True)
     variant_details = ProductVariantSerializer(source='variant', read_only=True)
     unit_price = serializers.SerializerMethodField()
@@ -36,6 +41,8 @@ class CartItemSerializer(serializers.ModelSerializer):
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
+    """Serializer for finalized Order Items."""
+    id = serializers.UUIDField(source='uuid', read_only=True)
     product_title = serializers.CharField(source='product.title', read_only=True)
 
     class Meta:
@@ -44,6 +51,8 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 
 class OrderSerializer(serializers.ModelSerializer):
+    """Serializer for displaying Orders."""
+    id = serializers.UUIDField(source='uuid', read_only=True)
     items = OrderItemSerializer(many=True, read_only=True)
     shipping_method_name = serializers.CharField(source='shipping_method.name', read_only=True)
 
@@ -57,9 +66,13 @@ class OrderSerializer(serializers.ModelSerializer):
 
 
 class CheckoutSerializer(serializers.Serializer):
-    """Payload serializer for creating an order."""
+    """Payload serializer for creating an order checkout."""
     shipping_method_id = serializers.UUIDField()
     coupon_code = serializers.CharField(required=False, allow_blank=True)
+    
+    guest_first_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    guest_last_name = serializers.CharField(max_length=150, required=False, allow_blank=True)
+    guest_phone = serializers.CharField(max_length=20, required=False, allow_blank=True)
     
     title = serializers.CharField(max_length=100)
     country = serializers.CharField(max_length=100)

@@ -16,7 +16,7 @@ class CategoryTreeSerializer(serializers.ModelSerializer):
     def get_children(self, obj: Category):
         if obj.children.exists():
             active_children = obj.children.filter(is_active=True)
-            return CategoryTreeSerializer(active_children, many=True).data
+            return CategoryTreeSerializer(active_children, many=True, context=self.context).data
         return []
 
 class BrandBrowseSerializer(serializers.ModelSerializer):
@@ -36,10 +36,15 @@ class SearchProductItemSerializer(serializers.ModelSerializer):
         
     def get_image_url(self, obj: Product) -> str | None:
         main_image = obj.gallery.filter(is_main=True).first()
-        if main_image:
+        if not main_image:
+            main_image = obj.gallery.first()
+            
+        if main_image and main_image.image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(main_image.image.url)
             return main_image.image.url
-        first_image = obj.gallery.first()
-        return first_image.image.url if first_image else None
+        return None
 
 class SearchPostItemSerializer(serializers.ModelSerializer):
     class Meta:

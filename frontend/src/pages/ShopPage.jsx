@@ -1,58 +1,74 @@
-// arkkala/frontend/src/pages/ShopPage.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useParams, Link } from 'react-router-dom';
-import Nouislider from 'nouislider-react';
-import 'nouislider/dist/nouislider.css';
+import Slider from 'rc-slider';
+import 'rc-slider/assets/index.css';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { FreeMode } from 'swiper/modules';
 
-import { getProductsList } from '../api/shopApi';
+import { getProductsList, getMaxPrice } from '../api/shopApi';
 import { getCategoryTree, getBrandsList } from '../api/searchApi';
 import ProductCard from '../components/ProductCard';
+
+const MAX_PRICE_LIMIT = 50000000; 
 
 const ShopPage = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const { slug: categorySlug } = useParams();
     
-    // --- Data States ---
     const [products, setProducts] = useState([]);
     const [pagination, setPagination] = useState({ count: 0, next: null, previous: null });
     const [categories, setCategories] = useState([]);
     const [brands, setBrands] = useState([]);
     const [loading, setLoading] = useState(true);
     
-    // --- Filter States ---
-    const initialMin = Number(searchParams.get('min_price')) || 0;
-    const initialMax = Number(searchParams.get('max_price')) || 17700000;
+    const [maxPriceLimit, setMaxPriceLimit] = useState(0);
+    const [isMaxPriceLoaded, setIsMaxPriceLoaded] = useState(false);
+
+    const urlMin = parseInt(searchParams.get('min_price'), 10) || 0;
+    const urlMax = parseInt(searchParams.get('max_price'), 10) || null;
     
     const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
     const [ordering, setOrdering] = useState(searchParams.get('ordering') || '-created_at');
     
-    const [priceRange, setPriceRange] = useState([initialMin, initialMax]);
-    const [displayPrice, setDisplayPrice] = useState([initialMin, initialMax]);
-    const [sliderKey, setSliderKey] = useState(Date.now());
+    const [priceRange, setPriceRange] = useState([urlMin, 0]);
+    const [displayPrice, setDisplayPrice] = useState([urlMin, 0]);
+    const [sliderStart] = useState([urlMin, urlMax || MAX_PRICE_LIMIT]);
 
     const [stockStatus, setStockStatus] = useState(searchParams.get('has_stock') || 'all'); 
     const [hasDiscount, setHasDiscount] = useState(searchParams.get('has_discount') === 'true');
     const [selectedBrands, setSelectedBrands] = useState(searchParams.get('brands') ? searchParams.get('brands').split(',') : []);
     const [page, setPage] = useState(Number(searchParams.get('page')) || 1);
     
-    // --- UI States ---
     const [isReadMoreOpen, setIsReadMoreOpen] = useState(false);
     const filterTimeoutRef = useRef(null);
 
     useEffect(() => {
         getCategoryTree().then(setCategories).catch(console.error);
         getBrandsList().then(data => setBrands(data.results || data)).catch(console.error);
+        
+        getMaxPrice().then(fetchedMaxPrice => {
+            const finalMaxPrice = fetchedMaxPrice > 0 ? fetchedMaxPrice : MAX_PRICE_LIMIT;
+            setMaxPriceLimit(finalMaxPrice);
+            
+            const currentMax = urlMax !== null ? urlMax : finalMaxPrice;
+            setPriceRange([urlMin, currentMax]);
+            setDisplayPrice([urlMin, currentMax]);
+            
+            setIsMaxPriceLoaded(true);
+        });
     }, []);
 
     const fetchProducts = async (queryString) => {
         setLoading(true);
         try {
             const data = await getProductsList(queryString);
+            
             setProducts(data.results || data);
-            if (data.count !== undefined) {
+            
+            if (data && data.count !== undefined) {
                 setPagination({ count: data.count, next: data.next, previous: data.previous });
+            } else if (Array.isArray(data)) {
+                setPagination({ count: data.length, next: null, previous: null });
             }
         } catch (error) {
             console.error("Error fetching products:", error);
@@ -62,6 +78,8 @@ const ShopPage = () => {
     };
 
     const applyFilters = () => {
+        if (!isMaxPriceLoaded) return; 
+
         const params = new URLSearchParams();
         if (searchQuery) params.set('search', searchQuery);
         if (ordering) params.set('ordering', ordering);
@@ -70,8 +88,10 @@ const ShopPage = () => {
         if (stockStatus === 'unavailable') params.set('has_stock', 'false');
         
         if (hasDiscount) params.set('has_discount', 'true');
+        
         if (priceRange[0] > 0) params.set('min_price', priceRange[0]);
-        if (priceRange[1] < 17700000) params.set('max_price', priceRange[1]);
+        if (priceRange[1] < maxPriceLimit) params.set('max_price', priceRange[1]);
+        
         if (selectedBrands.length > 0) params.set('brands', selectedBrands.join(','));
         if (page > 1) params.set('page', page);
         if (categorySlug) params.set('category__slug', categorySlug);
@@ -85,15 +105,14 @@ const ShopPage = () => {
         filterTimeoutRef.current = setTimeout(() => {
             applyFilters();
         }, 600);
-        // eslint-disable-next-line
-    }, [searchQuery, ordering, stockStatus, hasDiscount, priceRange[0], priceRange[1], selectedBrands.join(','), page, categorySlug]);
+    }, [searchQuery, ordering, stockStatus, hasDiscount, priceRange[0], priceRange[1], selectedBrands.join(','), page, categorySlug, isMaxPriceLoaded]);
 
-    const handleSliderUpdate = (render, handle, value) => {
-        setDisplayPrice([Math.round(value[0]), Math.round(value[1])]);
+    const handleSliderUpdate = (value) => {
+        setDisplayPrice(value);
     };
 
-    const handleSliderChange = (render, handle, value) => {
-        setPriceRange([Math.round(value[0]), Math.round(value[1])]);
+    const handleSliderChange = (value) => {
+        setPriceRange(value);
         setPage(1);
     };
 
@@ -104,17 +123,20 @@ const ShopPage = () => {
 
     const clearAllFilters = () => {
         setSearchQuery('');
-        setPriceRange([0, 17700000]);
-        setDisplayPrice([0, 17700000]);
+        setPriceRange([0, maxPriceLimit]);
+        setDisplayPrice([0, maxPriceLimit]);
         setHasDiscount(false);
         setStockStatus('all');
         setSelectedBrands([]);
         setPage(1);
-        setSliderKey(Date.now());
     };
 
-    const totalPages = Math.ceil(pagination.count / 15);
+    const handlePageChange = (newPage) => {
+        setPage(newPage);
+        window.scrollTo({ top: 100, behavior: 'smooth' });
+    };
 
+    const totalPages = Math.ceil(pagination.count / 9);
 
     const renderSidebarFilters = (isMobile) => {
         const prefixId = isMobile ? 'mob-' : 'desk-'; 
@@ -140,41 +162,38 @@ const ShopPage = () => {
                 <section className="mb-4 border-ui shadow-sm filter-container bg-white p-4 rounded-4">
                     <h2 className="filter-title fw-bold mb-4 font-16">فیلتر قیمت</h2>
                     <div className="filter-price mt-4">
-                        <div className="px-2 mb-5">
-                            <Nouislider 
-                                key={sliderKey}
-                                className="custom-react-slider"
-                                range={{ min: 0, max: 17700000 }} 
-                                start={displayPrice} 
-                                connect={true} 
-                                step={100000}
-                                direction="rtl" 
-                                onUpdate={handleSliderUpdate}
-                                onChange={handleSliderChange}
-                            />
+                        <div className="px-3 mb-5 mt-4" dir="rtl">
+                            {isMaxPriceLoaded ? (
+                                <Slider
+                                    range
+                                    reverse={true}
+                                    min={0}
+                                    max={maxPriceLimit}
+                                    step={50000}
+                                    value={displayPrice}
+                                    start={sliderStart}
+                                    onChange={handleSliderUpdate}
+                                    onChangeComplete={handleSliderChange}
+                                    className="custom-rc-slider"
+                                />
+                            ) : (
+                                <div className="text-center text-muted font-12"><div className="spinner-grow spinner-grow-sm text-danger me-2"></div>در حال بارگذاری بازه قیمت...</div>
+                            )}
                         </div>
                         
-                        <div className="d-flex align-items-center justify-content-between mt-4 gap-2">
-                            <div className="d-flex flex-column align-items-center flex-grow-1 w-45">
-                                <input 
-                                    type="text" 
-                                    value={new Intl.NumberFormat('fa-IR').format(displayPrice[0])} 
-                                    className="form-control text-center font-14 fw-bold bg-light border-0 shadow-none py-2 rounded-3" 
-                                    disabled 
-                                />
-                                <span className="font-12 text-muted mt-2">تومان</span>
+                        <div className="d-flex align-items-center justify-content-between mt-4 bg-light rounded-3 p-3 border border-ui">
+                            <div className="d-flex flex-column align-items-start">
+                                <span className="font-12 text-muted mb-1">از قیمت</span>
+                                <span className="font-15 fw-bold text-dark">
+                                    {new Intl.NumberFormat('fa-IR').format(displayPrice[0])} <span className="font-11 fw-normal text-muted">تومان</span>
+                                </span>
                             </div>
-                            
-                            <div className="fw-bold text-muted font-14 mb-4">تا</div>
-                            
-                            <div className="d-flex flex-column align-items-center flex-grow-1 w-45">
-                                <input 
-                                    type="text" 
-                                    value={new Intl.NumberFormat('fa-IR').format(displayPrice[1])} 
-                                    className="form-control text-center font-14 fw-bold bg-light border-0 shadow-none py-2 rounded-3" 
-                                    disabled 
-                                />
-                                <span className="font-12 text-muted mt-2">تومان</span>
+                            <div className="text-muted"><i className="bi bi-arrow-left"></i></div>
+                            <div className="d-flex flex-column align-items-end">
+                                <span className="font-12 text-muted mb-1">تا قیمت</span>
+                                <span className="font-15 fw-bold text-dark">
+                                    {new Intl.NumberFormat('fa-IR').format(displayPrice[1])} <span className="font-11 fw-normal text-muted">تومان</span>
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -189,7 +208,7 @@ const ShopPage = () => {
                             checked={stockStatus === 'available'} 
                             onChange={(e) => { setStockStatus(e.target.checked ? 'available' : 'all'); setPage(1); }}
                         />
-                        <label className="form-check-label ms-3 font-14 cursor-pointer text-dark pt-1" htmlFor={`${prefixId}stock-available`}>محصولات موجود</label>
+                        <label className="form-check-label ms-3 font-14 cursor-pointer text-dark pt-1" htmlFor={`${prefixId}stock-available`}>فقط کالاهای موجود</label>
                     </div>
                     
                     <div className="form-check mt-3 d-flex align-items-center p-0">
@@ -200,7 +219,7 @@ const ShopPage = () => {
                             checked={hasDiscount}
                             onChange={(e) => { setHasDiscount(e.target.checked); setPage(1); }}
                         />
-                        <label className="form-check-label ms-3 font-14 cursor-pointer text-dark pt-1" htmlFor={`${prefixId}has-discount`}>فقط تخفیف خورده‌ها</label>
+                        <label className="form-check-label ms-3 font-14 cursor-pointer text-dark pt-1" htmlFor={`${prefixId}has-discount`}>فقط محصولات تخفیف‌دار</label>
                     </div>
                 </section>
 
@@ -301,11 +320,11 @@ const ShopPage = () => {
                                 <div className="box_filter d-lg-block d-none">
                                     <ul className="list-inline text-start mb-0 d-flex align-items-center m-0 p-0">
                                         <li className="list-inline-item title-font ms-3 fw-bold text-muted"><i className="bi bi-sort-down me-1"></i> مرتب‌سازی بر اساس:</li>
-                                        <li className="list-inline-item"><button onClick={() => { setOrdering('-base_price'); setPage(1); }} className={`btn btn-sm ${ordering === '-base_price' ? 'text-danger fw-bold border-bottom border-danger rounded-0' : 'text-muted'}`}>گران‌ترین</button></li>
-                                        <li className="list-inline-item"><button onClick={() => { setOrdering('base_price'); setPage(1); }} className={`btn btn-sm ${ordering === 'base_price' ? 'text-danger fw-bold border-bottom border-danger rounded-0' : 'text-muted'}`}>ارزان‌ترین</button></li>
-                                        <li className="list-inline-item"><button onClick={() => { setOrdering('-sold_count'); setPage(1); }} className={`btn btn-sm ${ordering === '-sold_count' ? 'text-danger fw-bold border-bottom border-danger rounded-0' : 'text-muted'}`}>پرفروش‌ترین</button></li>
-                                        <li className="list-inline-item"><button onClick={() => { setOrdering('-view_count'); setPage(1); }} className={`btn btn-sm ${ordering === '-view_count' ? 'text-danger fw-bold border-bottom border-danger rounded-0' : 'text-muted'}`}>محبوب‌ترین</button></li>
-                                        <li className="list-inline-item"><button onClick={() => { setOrdering('-created_at'); setPage(1); }} className={`btn btn-sm ${ordering === '-created_at' ? 'text-danger fw-bold border-bottom border-danger rounded-0' : 'text-muted'}`}>جدیدترین</button></li>
+                                        <li className="list-inline-item"><button onClick={() => { setOrdering('-base_price'); setPage(1); }} className={`btn btn-sm ${ordering === '-base_price' ? 'text-danger fw-bold border-bottom border-danger border-2 rounded-0 pb-1' : 'text-muted'}`}>گران‌ترین</button></li>
+                                        <li className="list-inline-item"><button onClick={() => { setOrdering('base_price'); setPage(1); }} className={`btn btn-sm ${ordering === 'base_price' ? 'text-danger fw-bold border-bottom border-danger border-2 rounded-0 pb-1' : 'text-muted'}`}>ارزان‌ترین</button></li>
+                                        <li className="list-inline-item"><button onClick={() => { setOrdering('-sold_count'); setPage(1); }} className={`btn btn-sm ${ordering === '-sold_count' ? 'text-danger fw-bold border-bottom border-danger border-2 rounded-0 pb-1' : 'text-muted'}`}>پرفروش‌ترین</button></li>
+                                        <li className="list-inline-item"><button onClick={() => { setOrdering('-view_count'); setPage(1); }} className={`btn btn-sm ${ordering === '-view_count' ? 'text-danger fw-bold border-bottom border-danger border-2 rounded-0 pb-1' : 'text-muted'}`}>محبوب‌ترین</button></li>
+                                        <li className="list-inline-item"><button onClick={() => { setOrdering('-created_at'); setPage(1); }} className={`btn btn-sm ${ordering === '-created_at' ? 'text-danger fw-bold border-bottom border-danger border-2 rounded-0 pb-1' : 'text-muted'}`}>جدیدترین</button></li>
                                     </ul>
                                 </div>
                                 
@@ -321,7 +340,7 @@ const ShopPage = () => {
                                 </div>
 
                                 <div className="box_filter_counter font-14 text-muted fw-bold d-none d-sm-block bg-light px-3 py-2 rounded-pill">
-                                    <i className="bi bi-card-list me-2"></i> {pagination.count} کالا
+                                    <i className="bi bi-box-seam me-2"></i> {pagination.count} کالا
                                 </div>
                             </div>
                         </div>
@@ -354,14 +373,14 @@ const ShopPage = () => {
                                 <nav aria-label="Page navigation">
                                     <ul className="pagination flex-wrap justify-content-center gap-2">
                                         <li className={`page-item ${!pagination.previous ? 'disabled' : ''}`}>
-                                            <button className="page-link rounded-3 border border-ui shadow-sm text-dark hover-bg-light" onClick={() => setPage(p => Math.max(1, p - 1))}>قبلی</button>
+                                            <button className="page-link rounded-3 border border-ui shadow-sm text-dark hover-bg-light" onClick={() => handlePageChange(Math.max(1, page - 1))}>قبلی</button>
                                         </li>
                                         {[...Array(totalPages)].map((_, i) => {
                                             const pageNum = i + 1;
                                             if (pageNum === 1 || pageNum === totalPages || (pageNum >= page - 2 && pageNum <= page + 2)) {
                                                 return (
                                                     <li key={i} className={`page-item ${page === pageNum ? 'active' : ''}`}>
-                                                        <button className={`page-link rounded-3 border shadow-sm ${page === pageNum ? 'bg-danger border-danger text-white' : 'border-ui text-dark hover-bg-light'}`} onClick={() => setPage(pageNum)}>{pageNum}</button>
+                                                        <button className={`page-link rounded-3 border shadow-sm ${page === pageNum ? 'bg-danger border-danger text-white' : 'border-ui text-dark hover-bg-light'}`} onClick={() => handlePageChange(pageNum)}>{pageNum}</button>
                                                     </li>
                                                 );
                                             } else if (pageNum === page - 3 || pageNum === page + 3) {
@@ -370,7 +389,7 @@ const ShopPage = () => {
                                             return null;
                                         })}
                                         <li className={`page-item ${!pagination.next ? 'disabled' : ''}`}>
-                                            <button className="page-link rounded-3 border border-ui shadow-sm text-dark hover-bg-light" onClick={() => setPage(p => Math.min(totalPages, p + 1))}>بعدی</button>
+                                            <button className="page-link rounded-3 border border-ui shadow-sm text-dark hover-bg-light" onClick={() => handlePageChange(Math.min(totalPages, page + 1))}>بعدی</button>
                                         </li>
                                     </ul>
                                 </nav>
@@ -382,7 +401,7 @@ const ShopPage = () => {
                                 <input className="read-more-state d-none" id="readMoreShop" type="checkbox" checked={isReadMoreOpen} onChange={() => setIsReadMoreOpen(!isReadMoreOpen)} />
                                 <div className="read-more-wrap">
                                     <h6 className="font-20 mb-3 title-font fw-900 border-bottom pb-2 d-inline-block border-danger border-2">
-                                        {categorySlug ? `خرید آنلاین محصولات دسته‌بندی` : 'فروشگاه اینترنتی آبتین'}
+                                        {categorySlug ? `خرید آنلاین محصولات` : 'فروشگاه اینترنتی آبتین'}
                                     </h6>
                                     <div className={`text-muted lh-lg text-justify font-14 ${isReadMoreOpen ? '' : 'text-truncate-3'}`} style={!isReadMoreOpen ? {maxHeight: '75px', overflow: 'hidden'} : {}}>
                                         <p>
@@ -407,50 +426,6 @@ const ShopPage = () => {
                 .hover-lift { transition: transform 0.2s ease; }
                 .hover-lift:hover { transform: translateY(-3px); }
                 .cursor-pointer { cursor: pointer; }
-
-                .custom-react-slider.noUi-target { 
-                    position: relative !important;
-                    background: #e9ecef !important; 
-                    border-radius: 10px !important; 
-                    border: none !important; 
-                    height: 6px !important; 
-                    box-shadow: none !important; 
-                }
-                .custom-react-slider .noUi-base,
-                .custom-react-slider .noUi-connects {
-                    position: absolute !important;
-                    width: 100% !important;
-                    height: 100% !important;
-                    z-index: 1 !important;
-                }
-                .custom-react-slider .noUi-connect { 
-                    position: absolute !important;
-                    background: #ef4056 !important; 
-                    height: 100% !important;
-                    top: 0 !important;
-                }
-                .custom-react-slider .noUi-origin {
-                    position: absolute !important;
-                    height: 0 !important;
-                    width: 0 !important;
-                }
-                .custom-react-slider .noUi-handle { 
-                    position: absolute !important;
-                    border: 2px solid #ef4056 !important; 
-                    background: #fff !important; 
-                    border-radius: 50% !important; 
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important; 
-                    cursor: pointer !important;
-                    width: 22px !important; 
-                    height: 22px !important; 
-                    top: -8px !important; 
-                    right: -11px !important;
-                    z-index: 5 !important;
-                }
-                .custom-react-slider .noUi-handle::before, 
-                .custom-react-slider .noUi-handle::after { 
-                    display: none !important; 
-                }
 
                 .custom-checkbox { width: 18px; height: 18px; border-radius: 4px; }
                 .custom-checkbox:checked { background-color: #ef4056 !important; border-color: #ef4056 !important; }

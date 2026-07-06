@@ -1,8 +1,10 @@
-// arkkala/frontend/src/components/ProductCard.jsx
-import React from 'react';
+import React, { useContext } from 'react';
 import { Link } from 'react-router-dom';
+import { CompareContext } from '../context/CompareContext';
 
 const ProductCard = ({ product }) => {
+    const { addToCompare } = useContext(CompareContext);
+
     const currentPrice = product.is_variable && product.variants?.length > 0 
         ? product.variants[0].price 
         : product.base_price;
@@ -10,23 +12,29 @@ const ProductCard = ({ product }) => {
     const discountAmount = product.discount_percent || 15; 
     const oldPrice = Math.round(currentPrice * (1 + (discountAmount / 100)));
 
+    const handleCompareClick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        addToCompare(product.uuid);
+    };
+
     return (
         <div className="product-box border-ui h-100 d-flex flex-column bg-white">
             <div className="product-timer position-relative">
                 <div className="product-header-btn flex-column position-absolute top-0">
-                    <a href="#" className="mb-1 border-ui btn p-0 d-flex align-items-center justify-content-center bg-white shadow-sm" data-bs-toggle="tooltip" data-bs-placement="right" title="مقایسه">
+                    <button onClick={handleCompareClick} className="mb-1 border-ui btn p-0 d-flex align-items-center justify-content-center bg-white shadow-sm" title="افزودن به لیست مقایسه">
                         <i className="bi bi-shuffle text-muted"></i>
-                    </a>
-                    <a href="#" className="mb-1 border-ui btn p-0 d-flex align-items-center justify-content-center bg-white shadow-sm" data-bs-toggle="tooltip" data-bs-placement="right" title="افزودن به علاقه‌مندی">
+                    </button>
+                    <button className="mb-1 border-ui btn p-0 d-flex align-items-center justify-content-center bg-white shadow-sm" title="افزودن به علاقه‌مندی">
                         <i className="bi bi-heart text-muted"></i>
-                    </a>
-                    <Link to={`/product/${product.uuid || product.id}`} className="mb-1 border-ui btn p-0 d-flex align-items-center justify-content-center bg-white shadow-sm" data-bs-toggle="tooltip" data-bs-placement="right" title="نمایش سریع">
+                    </button>
+                    <Link to={`/product/${product.slug}`} className="mb-1 border-ui btn p-0 d-flex align-items-center justify-content-center bg-white shadow-sm" title="نمایش سریع">
                         <i className="bi bi-eye text-muted"></i>
                     </Link>
                 </div>
             </div>
             
-            <Link to={`/product/${product.uuid || product.id}`} className="d-flex flex-column flex-grow-1 text-decoration-none">
+            <Link to={`/product/${product.slug}`} className="d-flex flex-column flex-grow-1 text-decoration-none">
                 <div className="product-image text-center pt-3 pb-2">
                     <img 
                         src={product.gallery?.[0]?.url || '/assets/image/product/television1.jpg'} 

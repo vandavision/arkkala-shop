@@ -1,5 +1,10 @@
+"""
+Admin Interface for Orders.
+"""
 from django.contrib import admin
-from .models import ShippingMethod, Coupon, Order, OrderItem
+from .models import ShippingMethod, Coupon, Order, OrderItem, Cart
+
+admin.site.register(Cart)
 
 @admin.register(ShippingMethod)
 class ShippingMethodAdmin(admin.ModelAdmin):
@@ -19,14 +24,14 @@ class OrderItemInline(admin.TabularInline):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('uuid', 'user', 'status', 'payable_amount', 'is_paid', 'created_at')
+    list_display = ('uuid', 'user', 'guest_phone', 'status', 'payable_amount', 'is_paid', 'created_at')
     list_filter = ('status', 'is_paid', 'shipping_method')
-    search_fields = ('user__username', 'tracking_code')
+    search_fields = ('user__username', 'guest_phone', 'tracking_code')
     readonly_fields = ('total_items_amount', 'discount_amount', 'shipping_cost', 'payable_amount')
     inlines = [OrderItemInline]
     fieldsets = (
         ('اطلاعات کاربر و وضعیت', {
-            'fields': ('user', 'status', 'is_paid', 'tracking_code')
+            'fields': ('user', 'guest_phone', 'status', 'is_paid', 'tracking_code')
         }),
         ('اطلاعات مالی', {
             'fields': ('total_items_amount', 'discount_amount', 'shipping_cost', 'payable_amount')

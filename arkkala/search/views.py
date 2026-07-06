@@ -26,7 +26,8 @@ class GlobalSearchView(views.APIView):
         limit = int(request.query_params.get('limit', 5))
         
         results = SearchService.global_search(query, limit)
-        serializer = GlobalSearchResponseSerializer(results)
+        
+        serializer = GlobalSearchResponseSerializer(results, context={'request': request})
         
         return Response(serializer.data, status=status.HTTP_200_OK)
 

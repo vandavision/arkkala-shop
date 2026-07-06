@@ -2,15 +2,26 @@
 Service Layer for Shop App.
 Handles business logic separated from Views and Models.
 """
-from django.db.models import F
+from django.db.models import F, Max
 from django.contrib.auth import get_user_model
-from .models import Product, Comment
-
+from .models import Product, Comment, Question
+from typing import Any, Optional
 User = get_user_model()
 
 
 class ProductService:
     """Service class for handling product-related business logic."""
+    
+    @staticmethod
+    def get_max_price() -> int:
+        """
+        Calculates and returns the maximum base_price among all products.
+        
+        Returns:
+            int: The maximum price. Returns 0 if no products are found.
+        """
+        result = Product.objects.aggregate(max_price=Max('base_price'))
+        return int(result.get('max_price') or 0)
 
     @staticmethod
     def increment_view_count(product: Product) -> None:
@@ -42,4 +53,21 @@ class ProductService:
             user=user,
             body=body,
             rating=rating
+        )
+
+
+class QuestionService:
+    """
+    Service Layer to handle business logic for product questions and answers.
+    """
+    @staticmethod
+    def add_question(product: Product, text: str, user: Optional[Any] = None, name: Optional[str] = None) -> Question:
+        """
+        Creates a new question for a product. Supports both authenticated and guest users.
+        """
+        return Question.objects.create(
+            product=product,
+            user=user if user and user.is_authenticated else None,
+            name=name if not (user and user.is_authenticated) else None,
+            text=text
         )

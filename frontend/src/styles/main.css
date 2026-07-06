@@ -1,25 +1,33 @@
-.custom-react-slider.noUi-target {
-    background: #e9ecef !important;
+.custom-rc-slider .rc-slider-rail {
+    background-color: #e9ecef !important;
+    height: 8px !important;
     border-radius: 10px !important;
-    border: none !important;
-    height: 6px !important;
-    box-shadow: none !important;
-    direction: rtl; /* اگر نیاز باشد */
 }
-.custom-react-slider .noUi-connect {
-    background: #ef4056 !important;
+
+.custom-rc-slider .rc-slider-track {
+    background-color: #ef4056 !important;
+    height: 8px !important;
 }
-.custom-react-slider .noUi-handle {
-    border: 2px solid #ef4056 !important;
-    background: #fff !important;
-    border-radius: 50% !important;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
-    cursor: pointer !important;
-    width: 22px !important;
-    height: 22px !important;
-    top: -8px !important;
+
+.custom-rc-slider .rc-slider-handle {
+    border: 3px solid #ef4056 !important;
+    background-color: #fff !important;
+    width: 24px !important;
+    height: 24px !important;
+    margin-top: -8px !important;
+    opacity: 1 !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15) !important;
+    cursor: grab !important;
 }
-.custom-react-slider .noUi-handle::before,
-.custom-react-slider .noUi-handle::after {
-    display: none !important;
+
+.custom-rc-slider .rc-slider-handle:active {
+    cursor: grabbing !important;
+    border-color: #d82a40 !important;
+}
+
+.custom-rc-slider .rc-slider-handle:hover,
+.custom-rc-slider .rc-slider-handle:focus {
+    box-shadow: 0 0 0 4px rgba(239, 64, 86, 0.2) !important;
+    border-color: #ef4056 !important;
+    outline: none !important;
 }

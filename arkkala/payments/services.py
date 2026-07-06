@@ -35,10 +35,12 @@ class PaymentService:
         callback_path = reverse('payment-callback')
         callback_url = request.build_absolute_uri(callback_path) + f"?gateway={gateway_name}&transaction_id={transaction.id}"
 
+        buyer_name = order.user.get_full_name() if order.user else 'کاربر مهمان'
+
         payment_url, authority = gateway.request_payment(
             amount=int(order.payable_amount),
             callback_url=callback_url,
-            description=f"پرداخت سفارش شماره {order.id} توسط {order.user.get_full_name()}"
+            description=f"پرداخت سفارش {order.id} توسط {buyer_name}"
         )
 
         transaction.authority = authority
@@ -62,7 +64,6 @@ class PaymentService:
             transaction.status = 'canceled'
             transaction.description = "کاربر از پرداخت انصراف داد."
             transaction.save(update_fields=['status', 'description'])
-            
             return transaction
 
         is_success, ref_id_or_error = gateway.verify_payment(
