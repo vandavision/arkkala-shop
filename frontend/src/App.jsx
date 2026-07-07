@@ -14,6 +14,7 @@ import BlogPage from './pages/BlogPage';
 import BlogDetailPage from './pages/BlogDetailPage';
 import FaqPage from './pages/FaqPage';
 import AboutUsPage from './pages/AboutUsPage';
+import LoginPage from './pages/LoginPage';
 
 // Components
 import Header from './components/Header';
@@ -34,10 +35,13 @@ const ScrollToTop = () => {
 };
 
 function App() {
+  const location = useLocation();
+  const isAuthPage = location.pathname === '/login';
+
   return (
     <div className="app-wrapper bg-light">
       <ScrollToTop />
-      <Header />
+      {!isAuthPage && <Header />}
       <div className="main-content">
         <Routes>
           <Route path="/" element={<HomePage />} />
@@ -58,6 +62,7 @@ function App() {
           <Route path="/cart" element={<CartPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/compare" element={<ComparePage />} />
+          <Route path="/login" element={<LoginPage />} />
           
           <Route path="*" element={
             <div className="container py-5 mt-5 text-center" style={{minHeight: '50vh'}}>
@@ -68,7 +73,7 @@ function App() {
           } />
         </Routes>
       </div>
-      <Footer />
+      {!isAuthPage && <Footer />}
     </div>
   );
 }

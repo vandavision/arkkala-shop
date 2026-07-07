@@ -47,6 +47,17 @@ const CheckoutPage = () => {
     };
 
     useEffect(() => {
+        if (user) {
+            setFormData(prev => ({
+                ...prev,
+                guest_first_name: user.first_name || '',
+                guest_last_name: user.last_name || '',
+                guest_phone: user.phone_number || '',
+            }));
+        }
+    }, [user]);
+
+    useEffect(() => {
         const fetchData = async () => {
             try {
                 const [cartData, shippingData] = await Promise.all([
@@ -95,6 +106,12 @@ const CheckoutPage = () => {
         
         if (!user && (!formData.guest_phone || !formData.guest_first_name || !formData.guest_last_name)) {
             return showToast("لطفا نام، نام خانوادگی و شماره موبایل خود را وارد کنید.", "warning");
+        }
+
+        if (user) {
+            if (!user.first_name && !formData.guest_first_name) return showToast("لطفاً نام خود را وارد کنید.", "warning");
+            if (!user.last_name && !formData.guest_last_name) return showToast("لطفاً نام خانوادگی خود را وارد کنید.", "warning");
+            if (!user.phone_number && !formData.guest_phone) return showToast("لطفاً شماره موبایل خود را وارد کنید.", "warning");
         }
 
         setIsSubmitting(true);
@@ -149,6 +166,10 @@ const CheckoutPage = () => {
     const taxAmount = subtotal * taxRate;
     const payableAmount = subtotal + taxAmount + shippingCost;
 
+    const showFirstNameInput = !user || !user.first_name;
+    const showLastNameInput = !user || !user.last_name;
+    const showPhoneInput = !user || !user.phone_number;
+
     return (
         <section className="checkout-page py-5 bg-light min-vh-100">
             <div className={`custom-toast ${toast.show ? 'show' : ''} bg-${toast.type} shadow-lg d-flex align-items-center gap-3`}>
@@ -164,28 +185,36 @@ const CheckoutPage = () => {
                             <div className="border-bottom border-light pb-3 mb-4">
                                 <h3 className="fw-900 text-dark d-flex align-items-center gap-2 m-0"><i className="bi bi-geo-alt-fill text-danger fs-3"></i> اطلاعات ارسال</h3>
                                 {!user && <p className="text-muted mt-3 font-13 bg-info bg-opacity-10 border border-info border-opacity-25 rounded-3 p-3 mb-0"><i className="bi bi-info-circle-fill text-info me-1 fs-5 align-middle"></i> شما به عنوان <strong>مهمان</strong> در حال خرید هستید. جهت ارسال و پیگیری سفارش، پر کردن مشخصات الزامی است.</p>}
+                                {user && (showFirstNameInput || showLastNameInput || showPhoneInput) && (
+                                    <p className="text-muted mt-3 font-13 bg-warning bg-opacity-10 border border-warning border-opacity-25 rounded-3 p-3 mb-0"><i className="bi bi-exclamation-circle-fill text-warning me-1 fs-5 align-middle"></i> مشخصات پروفایل شما کامل نیست. لطفاً برای ثبت سفارش اطلاعات زیر را تکمیل کنید.</p>
+                                )}
                             </div>
 
                             <form id="checkoutForm" onSubmit={handleCheckout}>
                                 <div className="row gy-4">
-                                    {!user && (
+                                    {(showFirstNameInput || showLastNameInput || showPhoneInput) && (
                                         <>
-                                            <div className="col-md-6">
-                                                <label className="fw-bold font-13 text-dark mb-2">نام <span className="text-danger">*</span></label>
-                                                <input type="text" name="guest_first_name" value={formData.guest_first_name} onChange={handleChange} className="form-control border-ui py-3 font-13 rounded-3 shadow-sm bg-light focus-white" placeholder="نام خود را وارد کنید" required />
-                                            </div>
-                                            <div className="col-md-6">
-                                                <label className="fw-bold font-13 text-dark mb-2">نام خانوادگی <span className="text-danger">*</span></label>
-                                                <input type="text" name="guest_last_name" value={formData.guest_last_name} onChange={handleChange} className="form-control border-ui py-3 font-13 rounded-3 shadow-sm bg-light focus-white" placeholder="نام خانوادگی خود را وارد کنید" required />
-                                            </div>
-                                            <div className="col-12">
-                                                <label className="fw-bold font-13 text-dark mb-2">شماره موبایل <span className="text-danger">*</span></label>
-                                                <input type="text" name="guest_phone" value={formData.guest_phone} onChange={handleChange} className="form-control border-ui py-3 font-14 rounded-3 text-start shadow-sm bg-light focus-white" placeholder="09123456789" required />
-                                            </div>
+                                            {showFirstNameInput && (
+                                                <div className="col-md-6">
+                                                    <label className="fw-bold font-13 text-dark mb-2">نام <span className="text-danger">*</span></label>
+                                                    <input type="text" name="guest_first_name" value={formData.guest_first_name} onChange={handleChange} className="form-control border-ui py-3 font-13 rounded-3 shadow-sm bg-light focus-white" placeholder="نام خود را وارد کنید" required />
+                                                </div>
+                                            )}
+                                            {showLastNameInput && (
+                                                <div className="col-md-6">
+                                                    <label className="fw-bold font-13 text-dark mb-2">نام خانوادگی <span className="text-danger">*</span></label>
+                                                    <input type="text" name="guest_last_name" value={formData.guest_last_name} onChange={handleChange} className="form-control border-ui py-3 font-13 rounded-3 shadow-sm bg-light focus-white" placeholder="نام خانوادگی خود را وارد کنید" required />
+                                                </div>
+                                            )}
+                                            {showPhoneInput && (
+                                                <div className="col-12">
+                                                    <label className="fw-bold font-13 text-dark mb-2">شماره موبایل <span className="text-danger">*</span></label>
+                                                    <input type="text" name="guest_phone" value={formData.guest_phone} onChange={handleChange} className="form-control border-ui py-3 font-14 rounded-3 text-start shadow-sm bg-light focus-white" placeholder="09123456789" required />
+                                                </div>
+                                            )}
+                                            <div className="col-12"><hr className="border-light m-0"/></div>
                                         </>
                                     )}
-                                    
-                                    <div className="col-12"><hr className="border-light m-0"/></div>
 
                                     <div className="col-md-6">
                                         <label className="fw-bold font-13 text-dark mb-2">استان <span className="text-danger">*</span></label>

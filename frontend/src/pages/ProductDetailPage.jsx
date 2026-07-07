@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { FreeMode, Navigation, Thumbs, Zoom, EffectFade, Autoplay } from 'swiper/modules';
+import { FreeMode, Navigation, Thumbs, Zoom, EffectFade } from 'swiper/modules';
+import Chart from 'chart.js/auto';
 import { getProductDetail, submitComment, submitQuestion, getProductsList, toggleFavorite } from '../api/shopApi';
 import { CartContext } from '../context/CartContext';
 import { AuthContext } from '../context/AuthContext';
@@ -70,67 +71,89 @@ const ProductDetailPage = () => {
 
     useEffect(() => {
         if (!productIdentifier) return;
+        let isMounted = true;
+
         const fetchProduct = async () => {
             try {
                 setLoading(true);
                 const data = await getProductDetail(productIdentifier);
-                setProduct(data);
-                setIsFavorite(data.is_favorite || false);
                 
-                if (data.is_variable && data.variants && data.variants.length > 0) {
-                    const initialOptions = {};
-                    data.variants[0].attributes.forEach(attr => {
-                        initialOptions[attr.attribute_name] = attr.value;
-                    });
-                    setSelectedOptions(initialOptions);
-                    setSelectedVariant(data.variants[0]);
+                if (isMounted) {
+                    setProduct(data);
+                    setIsFavorite(data.is_favorite || false);
+                    
+                    if (data.is_variable && data.variants && data.variants.length > 0) {
+                        const initialOptions = {};
+                        data.variants[0].attributes.forEach(attr => {
+                            initialOptions[attr.attribute_name] = attr.value;
+                        });
+                        setSelectedOptions(initialOptions);
+                        setSelectedVariant(data.variants[0]);
+                    }
                 }
 
                 if (data.category && data.category.slug) {
                     try {
                         const related = await getProductsList(`category__slug=${data.category.slug}`);
                         const filteredRelated = (related.results || related).filter(p => p.uuid !== data.uuid);
-                        setSuggestedProducts(filteredRelated);
+                        if (isMounted) setSuggestedProducts(filteredRelated);
                     } catch (err) {
                         console.error("Error fetching related products:", err);
                     }
                 }
             } catch (err) {
-                setError("محصول مورد نظر یافت نشد.");
+                if (isMounted) setError("محصول مورد نظر یافت نشد.");
             } finally {
-                setLoading(false);
+                if (isMounted) setLoading(false);
             }
         };
+
         fetchProduct();
         window.scrollTo(0, 0);
+
+        return () => {
+            isMounted = false;
+        };
     }, [productIdentifier]);
 
     useEffect(() => {
         const modalElement = document.getElementById('chartModal');
-        if (modalElement && window.Chart && product) {
+        
+        if (modalElement && product) {
             const handleModalShown = () => {
-                if (chartInstance.current) chartInstance.current.destroy();
-                const ctx = chartRef.current.getContext('2d');
-                window.Chart.defaults.font.family = "payda"; 
+                if (typeof window === 'undefined' || !Chart) {
+                    console.warn("Chart.js is not loaded.");
+                    return;
+                }
+
+                if (chartInstance.current) {
+                    chartInstance.current.destroy();
+                }
+
+                const ctx = chartRef.current?.getContext('2d');
+                if (!ctx) return;
+                
+                Chart.defaults.font.family = "payda"; 
 
                 const hasHistory = product.price_history && product.price_history.length > 0;
                 const labels = hasHistory 
                     ? product.price_history.map(ph => new Date(ph.created_at).toLocaleDateString('fa-IR', { month: 'short', day: 'numeric' }))
                     : ['هم‌اکنون'];
+                    
                 const dataPoints = hasHistory 
-                    ? product.price_history.map(ph => ph.price)
-                    : [product.base_price];
+                    ? product.price_history.map(ph => Number(ph.price))
+                    : [Number(product.base_price)];
 
                 const gradient = ctx.createLinearGradient(0, 0, 0, 400);
                 gradient.addColorStop(0, 'rgba(239, 64, 86, 0.4)');
                 gradient.addColorStop(1, 'rgba(239, 64, 86, 0)');
 
-                chartInstance.current = new window.Chart(ctx, {
+                chartInstance.current = new Chart(ctx, {
                     type: 'line',
                     data: {
                         labels: labels,
                         datasets: [{
-                            label: 'قیمت (تومان)',
+                            label: 'قیمت فروش (تومان)',
                             data: dataPoints,
                             borderWidth: 3,
                             borderColor: '#ef4056',
@@ -144,12 +167,52 @@ const ProductDetailPage = () => {
                             tension: 0.4,
                         }]
                     },
-                    options: { responsive: true, plugins: { legend: { display: false } } }
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: false,
+                        plugins: { 
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) label += ': ';
+                                        if (context.parsed.y !== null) {
+                                            label += new Intl.NumberFormat('fa-IR').format(context.parsed.y) + ' تومان';
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                ticks: {
+                                    callback: function(value) {
+                                        return new Intl.NumberFormat('fa-IR').format(value);
+                                    }
+                                }
+                            }
+                        }
+                    }
                 });
             };
 
+            const handleModalHidden = () => {
+                if (chartInstance.current) {
+                    chartInstance.current.destroy();
+                    chartInstance.current = null;
+                }
+            };
+
             modalElement.addEventListener('shown.bs.modal', handleModalShown);
-            return () => modalElement.removeEventListener('shown.bs.modal', handleModalShown);
+            modalElement.addEventListener('hidden.bs.modal', handleModalHidden);
+
+            return () => {
+                modalElement.removeEventListener('shown.bs.modal', handleModalShown);
+                modalElement.removeEventListener('hidden.bs.modal', handleModalHidden);
+            };
         }
     }, [product]);
 
@@ -857,7 +920,8 @@ const ProductDetailPage = () => {
                 </section>
             )}
 
-            <div className="modal fade" id="videoModal">
+            {/* Modals - Removed aria-hidden & added tabIndex="-1" */}
+            <div className="modal fade" id="videoModal" tabIndex="-1">
                 <div className="modal-dialog modal-lg modal-dialog-centered">
                     <div className="modal-content bg-dark border-0 overflow-hidden rounded-4 shadow-lg">
                         <div className="modal-header border-0 position-absolute top-0 end-0 z-3 w-100 p-3 d-flex justify-content-end bg-gradient-dark">
@@ -875,7 +939,7 @@ const ProductDetailPage = () => {
             </div>
 
             <div className="share-modal py-0">
-                <div className="modal fade" id="shareModal">
+                <div className="modal fade" id="shareModal" tabIndex="-1">
                     <div className="modal-dialog modal-sm modal-dialog-centered">
                         <div className="modal-content border-0 rounded-4 shadow-lg overflow-hidden glass-panel">
                             <div className="modal-header bg-light border-0 px-4 py-3">
@@ -897,12 +961,12 @@ const ProductDetailPage = () => {
                 </div>
             </div>
 
-            <div className="modal fade" id="chartModal">
+            <div className="modal fade" id="chartModal" tabIndex="-1" aria-labelledby="chartModalLabel">
                 <div className="modal-dialog modal-dialog-centered modal-lg">
                     <div className="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
                         <div className="modal-header bg-light border-0 px-4 py-3 d-flex align-items-start">
                             <div>
-                                <h5 className="modal-title fw-900 text-dark font-16 d-flex align-items-center gap-2"><i className="bi bi-graph-up-arrow text-danger fs-4"></i> نمودار تغییرات قیمت فروش</h5>
+                                <h5 className="modal-title fw-900 text-dark font-16 d-flex align-items-center gap-2" id="chartModalLabel"><i className="bi bi-graph-up-arrow text-danger fs-4"></i> نمودار تغییرات قیمت فروش</h5>
                                 <p className="text-muted mt-2 font-12 m-0 text-overflow-1">{product.title}</p>
                             </div>
                             <button type="button" className="btn-close shadow-none mt-1" data-bs-dismiss="modal"></button>

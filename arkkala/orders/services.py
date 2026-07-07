@@ -248,13 +248,28 @@ class OrderService:
     @transaction.atomic
     def checkout(address_data: Dict[str, Any], shipping_method_id: str, coupon_code: Optional[str] = None, user: Optional[User] = None, guest_id: Optional[str] = None, guest_phone: Optional[str] = None, guest_first_name: Optional[str] = None, guest_last_name: Optional[str] = None) -> Order:
         """
-        Creates the order, calculates everything, decrements inventory, and dispatches Celery tasks.
+        Creates the order, calculates everything, decrements inventory, and updates User Profile if missing.
         """
         cart: Cart = CartService.get_or_create_cart(user, guest_id)
         cart_items = cart.items.select_related('product', 'variant').all()
 
         if not cart_items.exists():
             raise ValueError("سبد خرید شما خالی است.")
+
+        if user and user.is_authenticated:
+            update_fields = []
+            if not user.first_name and guest_first_name:
+                user.first_name = guest_first_name
+                update_fields.append('first_name')
+            if not user.last_name and guest_last_name:
+                user.last_name = guest_last_name
+                update_fields.append('last_name')
+            if not user.phone_number and guest_phone:
+                user.phone_number = guest_phone
+                update_fields.append('phone_number')
+            
+            if update_fields:
+                user.save(update_fields=update_fields)
 
         shipping: ShippingMethod = ShippingMethod.objects.get(pk=shipping_method_id)
 
@@ -324,6 +339,7 @@ class OrderService:
                 )
             )
 
+            # Reduce Inventory
             if item.variant:
                 item.variant.inventory = F('inventory') - item.quantity
                 item.variant.save(update_fields=['inventory'])
@@ -334,9 +350,11 @@ class OrderService:
         OrderItem.objects.bulk_create(order_items_to_create)
         cart_items.delete()
 
-        if user and user.is_authenticated and user.email:
+        # Send Invoice if configured
+        if user and user.is_authenticated and getattr(user, 'email', None):
              EmailService.send_order_invoice(order=order, user_email=user.email)
 
+        # Dispatch Celery Task for Auto-Cancellation if unpaid after 30 minutes
         cancel_unpaid_order.apply_async((str(order.uuid),), countdown=1800)
 
         return order

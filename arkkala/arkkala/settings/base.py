@@ -95,9 +95,19 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 DEFAULT_FROM_EMAIL = 'noreply@arkkala.com'
 VAT_RATE = 0
 
-
 CORS_ALLOW_HEADERS = list(default_headers) + [
     'x-guest-id',
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True
+
+# Authentication Mode: 'OTP' or 'EMAIL'
+AUTH_MODE: str = os.environ.get('AUTH_MODE', 'OTP')
+
+# Kavenegar SMS Configuration
+KAVENEGAR_API_KEY: str = os.environ.get('KAVENEGAR_API_KEY', 'your_kavenegar_api_key_here')
+KAVENEGAR_OTP_TEMPLATE: str = os.environ.get('KAVENEGAR_OTP_TEMPLATE', 'verify')
+
+# Rate Limiting for SMS (Security)
+OTP_WAIT_TIME_MINUTES: int = 2
+OTP_MAX_DAILY_REQUESTS: int = 5

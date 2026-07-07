@@ -18,26 +18,57 @@ const ComparePage = () => {
     };
 
     useEffect(() => {
+        let isMounted = true;
+
         const fetchComparedProducts = async () => {
             if (compareIds.length === 0) {
-                setProducts([]);
-                setLoading(false);
+                if (isMounted) {
+                    setProducts([]);
+                    setLoading(false);
+                }
                 return;
             }
             setLoading(true);
             try {
-                const promises = compareIds.map(id => getProductDetail(id));
+                const promises = compareIds.map(id => 
+                    getProductDetail(id).catch(error => {
+                        console.warn(`Product ${id} not found or inactive.`);
+                        return { isError: true, id };
+                    })
+                );
+                
                 const results = await Promise.all(promises);
-                setProducts(results.filter(Boolean));
+                
+                const validProducts = [];
+                const invalidIds = [];
+
+                results.forEach(res => {
+                    if (res && res.isError) {
+                        invalidIds.push(res.id);
+                    } else if (res) {
+                        validProducts.push(res);
+                    }
+                });
+
+                if (isMounted) {
+                    setProducts(validProducts);
+                    if (invalidIds.length > 0) {
+                        invalidIds.forEach(id => removeFromCompare(id));
+                    }
+                }
             } catch (error) {
                 console.error("Error fetching compared products", error);
             } finally {
-                setLoading(false);
+                if (isMounted) setLoading(false);
             }
         };
+
         fetchComparedProducts();
         window.scrollTo(0, 0);
-    }, [compareIds]);
+        
+        return () => { isMounted = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [compareIds.join(',')]);
 
     const allAttributes = Array.from(new Set(
         products.flatMap(p => 

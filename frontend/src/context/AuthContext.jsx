@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect } from 'react';
-import { getUserProfile, loginUser as apiLogin } from '../api/authApi';
+import { getUserProfile, loginWithEmail as apiLoginEmail, verifyOtp as apiVerifyOtp } from '../api/authApi';
 
 export const AuthContext = createContext();
 
@@ -15,6 +15,8 @@ export const AuthProvider = ({ children }) => {
                     setUser(profile);
                 } catch (error) {
                     console.log('User not logged in or token expired');
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('refresh_token');
                 }
             }
             setLoading(false);
@@ -22,8 +24,14 @@ export const AuthProvider = ({ children }) => {
         fetchUser();
     }, []);
 
-    const login = async (email, password) => {
-        await apiLogin(email, password);
+    const loginEmail = async (email, password) => {
+        await apiLoginEmail(email, password);
+        const profile = await getUserProfile();
+        setUser(profile);
+    };
+
+    const loginOtp = async (phone, code) => {
+        await apiVerifyOtp(phone, code);
         const profile = await getUserProfile();
         setUser(profile);
     };
@@ -35,7 +43,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, loading }}>
+        <AuthContext.Provider value={{ user, loginEmail, loginOtp, logout, loading }}>
             {children}
         </AuthContext.Provider>
     );
