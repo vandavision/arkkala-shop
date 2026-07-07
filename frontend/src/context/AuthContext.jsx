@@ -1,12 +1,27 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useContext } from 'react';
 import { getUserProfile, getAuthConfig, loginWithEmail as apiLoginEmail, verifyOtp as apiVerifyOtp } from '../api/authApi';
 
 export const AuthContext = createContext();
+
+export const useAuth = () => {
+    return useContext(AuthContext);
+};
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [authMode, setAuthMode] = useState('OTP'); // Default fallback
     const [loading, setLoading] = useState(true);
+
+    const fetchProfile = async () => {
+        try {
+            const profile = await getUserProfile();
+            setUser(profile);
+            return profile;
+        } catch (error) {
+            console.error("Error fetching updated profile", error);
+            throw error;
+        }
+    };
 
     useEffect(() => {
         const initializeAuth = async () => {
@@ -34,14 +49,12 @@ export const AuthProvider = ({ children }) => {
 
     const loginEmail = async (email, password) => {
         await apiLoginEmail(email, password);
-        const profile = await getUserProfile();
-        setUser(profile);
+        await fetchProfile();
     };
 
     const loginOtp = async (phone, code) => {
         await apiVerifyOtp(phone, code);
-        const profile = await getUserProfile();
-        setUser(profile);
+        await fetchProfile();
     };
 
     const logout = () => {
@@ -51,7 +64,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, authMode, loginEmail, loginOtp, logout, loading }}>
+        <AuthContext.Provider value={{ user, authMode, loginEmail, loginOtp, logout, loading, fetchProfile }}>
             {children}
         </AuthContext.Provider>
     );

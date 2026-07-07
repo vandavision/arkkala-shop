@@ -14,14 +14,16 @@ const resolveImageUrl = (url) => {
     return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
 };
 
-const CheckoutPage = () => {
-    const { user } = useContext(AuthContext);
-    const [cartItems, setCartItems] = useState([]);
-    const [shippingMethods, setShippingMethods] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    
-    const [formData, setFormData] = useState({
+const getInitialFormData = () => {
+    const savedData = localStorage.getItem('arkkala_checkout_form');
+    if (savedData) {
+        try {
+            return JSON.parse(savedData);
+        } catch (e) {
+            console.error("Error parsing saved checkout data", e);
+        }
+    }
+    return {
         guest_first_name: '', 
         guest_last_name: '',  
         guest_phone: '',
@@ -34,9 +36,19 @@ const CheckoutPage = () => {
         building_unit: '',
         shipping_method_id: '',
         coupon_code: ''
-    });
+    };
+};
 
-    const [couponInput, setCouponInput] = useState('');
+const CheckoutPage = () => {
+    const { user } = useContext(AuthContext);
+    const [cartItems, setCartItems] = useState([]);
+    const [shippingMethods, setShippingMethods] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    
+    const [formData, setFormData] = useState(getInitialFormData);
+
+    const [couponInput, setCouponInput] = useState(formData.coupon_code || '');
     const [couponData, setCouponData] = useState(null);
     const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
     
@@ -47,12 +59,16 @@ const CheckoutPage = () => {
     };
 
     useEffect(() => {
+        localStorage.setItem('arkkala_checkout_form', JSON.stringify(formData));
+    }, [formData]);
+
+    useEffect(() => {
         if (user) {
             setFormData(prev => ({
                 ...prev,
-                guest_first_name: user.first_name || '',
-                guest_last_name: user.last_name || '',
-                guest_phone: user.phone_number || '',
+                guest_first_name: user.first_name || prev.guest_first_name,
+                guest_last_name: user.last_name || prev.guest_last_name,
+                guest_phone: user.phone_number || prev.guest_phone,
             }));
         }
     }, [user]);
@@ -66,9 +82,24 @@ const CheckoutPage = () => {
                 ]);
                 setCartItems(cartData);
                 setShippingMethods(shippingData);
+                
                 if (shippingData && shippingData.length > 0) {
-                    setFormData(prev => ({ ...prev, shipping_method_id: shippingData[0].id }));
+                    const methodExists = shippingData.find(m => m.id === formData.shipping_method_id);
+                    if (!methodExists) {
+                        setFormData(prev => ({ ...prev, shipping_method_id: shippingData[0].id }));
+                    }
                 }
+
+                if (formData.coupon_code) {
+                    try {
+                        const data = await validateCoupon(formData.coupon_code);
+                        setCouponData(data);
+                    } catch (e) {
+                        setFormData(prev => ({...prev, coupon_code: ''}));
+                        setCouponInput('');
+                    }
+                }
+
             } catch (err) {
                 console.error(err);
                 alert("خطا در دریافت اطلاعات. لطفا صفحه را مجددا بارگذاری کنید.");
@@ -78,6 +109,7 @@ const CheckoutPage = () => {
         };
         fetchData();
         window.scrollTo(0,0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const handleChange = (e) => {
@@ -118,6 +150,9 @@ const CheckoutPage = () => {
         try {
             const order = await checkout(formData);
             const payment = await requestPayment(order.id, 'zarinpal');
+            
+            // localStorage.removeItem('arkkala_checkout_form');
+
             window.location.href = payment.payment_url;
         } catch (error) {
             showToast(error.response?.data?.error || "خطا در برقراری ارتباط با سرور.", "danger");

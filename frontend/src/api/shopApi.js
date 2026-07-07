@@ -60,3 +60,25 @@ export const toggleFavorite = async (identifier) => {
         throw error;
     }
 };
+
+export const getFavoritesList = async (queryString = '') => {
+    try {
+        const url = queryString ? `/shop/products/favorites/?${queryString}` : '/shop/products/favorites/';
+        const response = await axios.get(url);
+        return response.data;
+    } catch (error) {
+        console.error("Error fetching favorites:", error);
+        throw error;
+    }
+};
+
+export const getUserComments = async (queryString = '') => {
+    try {
+        const url = queryString ? `/shop/comments/my_comments/?${queryString}` : '/shop/comments/my_comments/';
+        const response = await axios.get(url);
+        return response.data;
+    } catch (error) {
+        console.error("Error fetching user comments:", error);
+        throw error;
+    }
+};

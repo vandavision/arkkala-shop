@@ -13,8 +13,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
 
-from .models import Product
-from .serializers import ProductDetailSerializer
+from .models import Product, Comment
+from .serializers import ProductDetailSerializer, UserCommentSerializer
 from .services import ProductService, QuestionService
 from .filters import ProductFilter
 
@@ -85,6 +85,17 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
 
+    @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
+    def favorites(self, request: Request) -> Response:
+        """Returns the list of favorited products for the authenticated user."""
+        queryset = self.get_queryset().filter(favorites=request.user)
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
     @action(detail=True, methods=['post'])
     def add_comment(self, request: Request, slug=None) -> Response:
         """Action for users to submit comments using Service Layer."""
@@ -144,9 +155,33 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
             product: Product = self.get_object()
             user = request.user
             
-            # Delegate logic to ProductService
             result = ProductService.toggle_favorite(product=product, user=user)
             
             return Response(result, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CommentViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for handling user comments retrieving in dashboard.
+    """
+    queryset = Comment.objects.all()
+    serializer_class = UserCommentSerializer
+    permission_classes = [IsAuthenticated]
+
+    @action(detail=False, methods=['get'])
+    def my_comments(self, request: Request) -> Response:
+        """Return all comments posted by the authenticated user."""
+        qs = self.get_queryset().filter(user=request.user).select_related('product').order_by('-created_at')
+        
+        paginator = PageNumberPagination()
+        paginator.page_size = 10
+        page = paginator.paginate_queryset(qs, request)
+        
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return paginator.get_paginated_response(serializer.data)
+            
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)

@@ -84,7 +84,7 @@ const Header = () => {
             return () => clearTimeout(delayDebounceFn);
         } else {
             setShowSearchDropdown(false);
-            setSearchResults(null);
+            searchResults && setSearchResults(null);
         }
     }, [searchQuery]);
 
@@ -268,7 +268,7 @@ const Header = () => {
                                 </div>
                                 <div className="ms-3 flex-grow-1">
                                     <h6 className="mb-1 font-14 fw-bold">{user.first_name || 'کاربر سایت'}</h6>
-                                    <Link to="/profile" onClick={() => setIsMobileMenuOpen(false)} className="font-12 text-muted text-decoration-none">مشاهده حساب کاربری</Link>
+                                    <Link to="/dashboard/profile" onClick={() => setIsMobileMenuOpen(false)} className="font-12 text-muted text-decoration-none">مشاهده حساب کاربری</Link>
                                 </div>
                                 <button className="btn p-0 text-danger hover-lift" onClick={() => { logout(); setIsMobileMenuOpen(false); }}><i className="bi bi-box-arrow-right fs-5"></i></button>
                             </div>
@@ -367,17 +367,24 @@ const Header = () => {
                                 <ul className="d-flex align-items-center justify-content-end list-unstyled m-0 p-0 gap-3">
                                     <li className="position-relative" style={{ zIndex: 20 }}>
                                         {user ? (
-                                            <div className="dropdown profile-dropdown hover-menu">
-                                                <button className="btn border border-ui rounded-pill px-4 py-2 bg-white d-flex align-items-center gap-2 hover-shadow transition shadow-sm font-14 fw-bold text-dark">
+                                            <div className="dropdown profile-dropdown position-relative">
+                                                <Link to="/dashboard" className="btn border border-ui rounded-pill px-4 py-2 bg-white d-flex align-items-center gap-2 hover-shadow transition shadow-sm font-14 fw-bold text-dark text-decoration-none">
                                                     <i className="bi bi-person-circle fs-5 text-danger"></i>
-                                                    {user.first_name || 'حساب کاربری'}
-                                                    <i className="bi bi-chevron-down font-10 text-muted ms-1 mt-1"></i>
-                                                </button>
-                                                <ul className="dropdown-menu dropdown-menu-end shadow-xl border-0 rounded-4 mt-1 p-2" style={{ minWidth: '220px' }}>
-                                                    <li><Link className="dropdown-item py-2 font-14 rounded-3 hover-bg-light text-dark fw-bold mb-1" to="/profile"><i className="bi bi-person me-2 fs-5 text-muted"></i> پروفایل کاربری</Link></li>
-                                                    <li><Link className="dropdown-item py-2 font-14 rounded-3 hover-bg-light text-dark fw-bold mb-1" to="/orders"><i className="bi bi-box-seam me-2 fs-5 text-muted"></i> سفارشات من</Link></li>
+                                                    <span className="text-truncate" style={{maxWidth: '100px'}}>{user.first_name || 'حساب کاربری'}</span>
+                                                    <i className="bi bi-chevron-down font-10 text-muted ms-1 mt-1 transition arrow-icon"></i>
+                                                </Link>
+                                                <ul className="dropdown-menu dropdown-menu-end shadow-xl border border-light rounded-4 p-2 profile-dropdown-menu" style={{ minWidth: '240px' }}>
+                                                    <div className="p-3 mb-2 border-bottom border-light text-center bg-light rounded-3">
+                                                        <span className="d-block font-14 fw-900 text-dark mb-1 text-truncate">{user.first_name || 'کاربر عزیز'} {user.last_name || ''}</span>
+                                                        <span className="font-12 text-muted text-truncate d-block" dir="ltr">{user.phone_number || user.email || '---'}</span>
+                                                    </div>
+                                                    <li><Link className="dropdown-item py-2 px-3 font-14 rounded-3 hover-bg-light text-dark fw-bold mb-1 transition d-flex align-items-center" to="/dashboard"><i className="bi bi-grid-1x2 me-2 fs-5 text-muted"></i> پیشخوان من</Link></li>
+                                                    <li><Link className="dropdown-item py-2 px-3 font-14 rounded-3 hover-bg-light text-dark fw-bold mb-1 transition d-flex align-items-center" to="/dashboard/profile"><i className="bi bi-person-vcard me-2 fs-5 text-muted"></i> اطلاعات حساب</Link></li>
+                                                    <li><Link className="dropdown-item py-2 px-3 font-14 rounded-3 hover-bg-light text-dark fw-bold mb-1 transition d-flex align-items-center" to="/dashboard/orders"><i className="bi bi-box-seam me-2 fs-5 text-muted"></i> سفارشات من</Link></li>
+                                                    <li><Link className="dropdown-item py-2 px-3 font-14 rounded-3 hover-bg-light text-dark fw-bold mb-1 transition d-flex align-items-center" to="/dashboard/favorites"><i className="bi bi-heart me-2 fs-5 text-muted"></i> علاقه‌مندی‌ها</Link></li>
+                                                    <li><Link className="dropdown-item py-2 px-3 font-14 rounded-3 hover-bg-light text-dark fw-bold mb-1 transition d-flex align-items-center" to="/dashboard/comments"><i className="bi bi-chat-quote me-2 fs-5 text-muted"></i> دیدگاه‌های من</Link></li>
                                                     <li><hr className="dropdown-divider my-2 border-light" /></li>
-                                                    <li><button className="dropdown-item py-2 font-14 rounded-3 hover-bg-light text-danger fw-bold" onClick={logout}><i className="bi bi-box-arrow-right me-2 fs-5"></i> خروج از حساب</button></li>
+                                                    <li><button className="dropdown-item py-2 px-3 font-14 rounded-3 hover-bg-danger-light text-danger fw-bold transition d-flex align-items-center" onClick={logout}><i className="bi bi-box-arrow-right me-2 fs-5"></i> خروج از حساب</button></li>
                                                 </ul>
                                             </div>
                                         ) : (
@@ -506,7 +513,7 @@ const Header = () => {
                     .overflow-visible-custom { overflow: visible !important; }
                     .hover-shadow:hover { box-shadow: 0 .5rem 1rem rgba(0,0,0,.08)!important; transform: translateY(-1px); }
                     .hover-bg-light:hover { background-color: #f8f9fa!important; }
-                    .hover-bg-danger:hover { background-color: #ffe6e9 !important; border-color: #ef4056 !important; color: #ef4056 !important;}
+                    .hover-bg-danger-light:hover { background-color: #ffe6e9 !important; color: #ef4056 !important;}
                     .hover-text-danger:hover { color: #ef4056!important; }
                     .hover-lift { transition: transform 0.2s ease; }
                     .hover-lift:hover { transform: translateY(-2px); }
@@ -536,6 +543,34 @@ const Header = () => {
                     .custom-scrollbar::-webkit-scrollbar-thumb { background: #ddd; border-radius: 10px; }
                     .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #ccc; }
                     .rounded-circle {border-radius: 50% !important;}
+                    
+                    @media (min-width: 992px) {
+                        .profile-dropdown:hover .profile-dropdown-menu {
+                            display: block !important;
+                            animation: fadeInDropdown 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                        }
+                        .profile-dropdown:hover .arrow-icon {
+                            transform: rotate(180deg);
+                        }
+                        .profile-dropdown-menu {
+                            top: 100%;
+                            margin-top: 10px !important;
+                            box-shadow: 0 15px 35px rgba(0,0,0,0.1) !important;
+                        }
+                        .profile-dropdown-menu::before {
+                            content: '';
+                            position: absolute;
+                            top: -15px;
+                            left: 0;
+                            width: 100%;
+                            height: 15px;
+                            background: transparent;
+                        }
+                    }
+                    @keyframes fadeInDropdown {
+                        from { opacity: 0; transform: translateY(15px); }
+                        to { opacity: 1; transform: translateY(0); }
+                    }
                 `}</style>
             </header>
             <CartDrawer />

@@ -47,3 +47,11 @@ export const getUserProfile = async () => {
     const response = await axiosInstance.get('users/profile/');
     return response.data;
 };
+
+export const updateUserProfile = async (userData) => {
+    const isFormData = userData instanceof FormData;
+    const headers = isFormData ? { 'Content-Type': 'multipart/form-data' } : {};
+    
+    const response = await axiosInstance.patch('users/profile/', userData, { headers });
+    return response.data;
+};

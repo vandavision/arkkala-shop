@@ -1,7 +1,11 @@
 import React, { useEffect } from 'react';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 
-// Pages
+// Components
+import Header from './components/Header';
+import Footer from './components/Footer';
+
+// Public Pages
 import HomePage from './pages/HomePage';
 import ShopPage from './pages/ShopPage';
 import ProductDetailPage from './pages/ProductDetailPage';
@@ -16,9 +20,13 @@ import FaqPage from './pages/FaqPage';
 import AboutUsPage from './pages/AboutUsPage';
 import LoginPage from './pages/LoginPage';
 
-// Components
-import Header from './components/Header';
-import Footer from './components/Footer';
+// Dashboard Pages
+import DashboardLayout from './pages/DashboardLayout';
+import DashboardSummary from './pages/DashboardSummary';
+import ProfileInfo from './pages/ProfileInfo';
+import UserOrders from './pages/UserOrders';
+import UserFavorites from './pages/UserFavorites';
+import UserComments from './pages/UserComments';
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
@@ -41,7 +49,9 @@ function App() {
   return (
     <div className="app-wrapper bg-light">
       <ScrollToTop />
+      
       {!isAuthPage && <Header />}
+      
       <div className="main-content">
         <Routes>
           <Route path="/" element={<HomePage />} />
@@ -64,6 +74,17 @@ function App() {
           <Route path="/compare" element={<ComparePage />} />
           <Route path="/login" element={<LoginPage />} />
           
+          <Route path="/profile" element={<Navigate to="/dashboard/profile" replace />} />
+          <Route path="/orders" element={<Navigate to="/dashboard/orders" replace />} />
+          
+          <Route path="/dashboard" element={<DashboardLayout />}>
+            <Route index element={<DashboardSummary />} />
+            <Route path="profile" element={<ProfileInfo />} />
+            <Route path="orders" element={<UserOrders />} />
+            <Route path="favorites" element={<UserFavorites />} />
+            <Route path="comments" element={<UserComments />} />
+          </Route>
+
           <Route path="*" element={
             <div className="container py-5 mt-5 text-center" style={{minHeight: '50vh'}}>
                 <i className="bi bi-tools text-warning mb-3 d-block" style={{fontSize: '4rem'}}></i>
@@ -73,6 +94,7 @@ function App() {
           } />
         </Routes>
       </div>
+
       {!isAuthPage && <Footer />}
     </div>
   );

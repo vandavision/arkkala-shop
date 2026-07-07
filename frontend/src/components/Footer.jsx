@@ -87,7 +87,7 @@ const Footer = () => {
                                         <li className="nav-item"><Link to="/faq" className="nav-link text-muted font-13 hover-text-danger p-0 transition">سوالات متداول</Link></li>
                                         <li className="nav-item"><Link to="/rules" className="nav-link text-muted font-13 hover-text-danger p-0 transition">شرایط و قوانین</Link></li>
                                         <li className="nav-item"><Link to="/return" className="nav-link text-muted font-13 hover-text-danger p-0 transition">مرجوعی کالا</Link></li>
-                                        <li className="nav-item"><Link to="/profile/orders" className="nav-link text-muted font-13 hover-text-danger p-0 transition">پیگیری سفارش</Link></li>
+                                        <li className="nav-item"><Link to="/dashboard/orders" className="nav-link text-muted font-13 hover-text-danger p-0 transition">پیگیری سفارش</Link></li>
                                     </ul>
                                 </div>
                             </div>
@@ -146,7 +146,7 @@ const Footer = () => {
                         </div>
                     </li>
                     <li className="d-table-cell align-middle">
-                        <Link to="/profile/favorites" className="mf-link nav-link text-center text-muted hover-text-danger transition text-decoration-none">
+                        <Link to="/dashboard/favorites" className="mf-link nav-link text-center text-muted hover-text-danger transition text-decoration-none">
                             <div className="mf-link-icon position-relative d-table mx-auto">
                                 <i className="bi bi-heart fs-4"></i>
                             </div>

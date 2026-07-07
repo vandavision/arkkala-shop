@@ -176,3 +176,25 @@ class ProductDetailSerializer(serializers.ModelSerializer):
         """Retrieve approved questions."""
         approved_questions = obj.questions.filter(is_approved=True)
         return QuestionSerializer(approved_questions, many=True, context=self.context).data
+
+
+class UserCommentSerializer(serializers.ModelSerializer):
+    """Serializer specifically for the dashboard to show the user's comments alongside product info."""
+    product_title = serializers.CharField(source='product.title', read_only=True)
+    product_slug = serializers.CharField(source='product.slug', read_only=True)
+    product_image = serializers.SerializerMethodField()
+    id = serializers.UUIDField(source='uuid', read_only=True)
+
+    class Meta:
+        model = Comment
+        fields = ['id', 'product_title', 'product_slug', 'product_image', 'body', 'rating', 'is_approved', 'created_at']
+
+    def get_product_image(self, obj: Comment) -> Optional[str]:
+        if obj.product:
+            main_img = obj.product.gallery.filter(is_main=True).first()
+            if not main_img:
+                main_img = obj.product.gallery.first()
+            if main_img and main_img.image:
+                request: Optional[Request] = self.context.get('request')
+                return request.build_absolute_uri(main_img.image.url) if request else main_img.image.url
+        return None

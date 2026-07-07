@@ -1,7 +1,9 @@
 """
 Serializers for Orders App.
 """
+from typing import Optional
 from rest_framework import serializers
+from rest_framework.request import Request
 from .models import CartItem, Order, OrderItem, ShippingMethod, Coupon
 from shop.serializers import ProductDetailSerializer, ProductVariantSerializer
 
@@ -44,10 +46,23 @@ class OrderItemSerializer(serializers.ModelSerializer):
     """Serializer for finalized Order Items."""
     id = serializers.UUIDField(source='uuid', read_only=True)
     product_title = serializers.CharField(source='product.title', read_only=True)
+    product_slug = serializers.CharField(source='product.slug', read_only=True)
+    product_image = serializers.SerializerMethodField()
 
     class Meta:
         model = OrderItem
-        fields = ['id', 'product_title', 'quantity', 'unit_price', 'total_price']
+        fields = ['id', 'product_title', 'product_slug', 'product_image', 'quantity', 'unit_price', 'total_price']
+
+    def get_product_image(self, obj: OrderItem) -> Optional[str]:
+        """Fetch the main image of the ordered product."""
+        if obj.product:
+            main_img = obj.product.gallery.filter(is_main=True).first()
+            if not main_img:
+                main_img = obj.product.gallery.first()
+            if main_img and main_img.image:
+                request: Optional[Request] = self.context.get('request')
+                return request.build_absolute_uri(main_img.image.url) if request else main_img.image.url
+        return None
 
 
 class OrderSerializer(serializers.ModelSerializer):

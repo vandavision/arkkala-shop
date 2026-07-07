@@ -49,3 +49,9 @@ export const validateCoupon = async (code) => {
     const response = await axiosInstance.post('/orders/orders/validate_coupon_api/', { code }, getHeaders());
     return response.data;
 };
+
+export const getUserOrders = async (queryString = '') => {
+    const url = queryString ? `/orders/orders/?${queryString}` : '/orders/orders/';
+    const response = await axiosInstance.get(url, getHeaders());
+    return response.data;
+};
