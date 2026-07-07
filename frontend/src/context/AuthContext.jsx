@@ -1,14 +1,22 @@
 import React, { createContext, useState, useEffect } from 'react';
-import { getUserProfile, loginWithEmail as apiLoginEmail, verifyOtp as apiVerifyOtp } from '../api/authApi';
+import { getUserProfile, getAuthConfig, loginWithEmail as apiLoginEmail, verifyOtp as apiVerifyOtp } from '../api/authApi';
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
+    const [authMode, setAuthMode] = useState('OTP'); // Default fallback
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchUser = async () => {
+        const initializeAuth = async () => {
+            try {
+                const config = await getAuthConfig();
+                setAuthMode(config.mode);
+            } catch (error) {
+                console.error('Failed to fetch auth config, defaulting to OTP');
+            }
+
             if (localStorage.getItem('access_token')) {
                 try {
                     const profile = await getUserProfile();
@@ -21,7 +29,7 @@ export const AuthProvider = ({ children }) => {
             }
             setLoading(false);
         };
-        fetchUser();
+        initializeAuth();
     }, []);
 
     const loginEmail = async (email, password) => {
@@ -43,7 +51,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, loginEmail, loginOtp, logout, loading }}>
+        <AuthContext.Provider value={{ user, authMode, loginEmail, loginOtp, logout, loading }}>
             {children}
         </AuthContext.Provider>
     );

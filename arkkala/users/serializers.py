@@ -9,7 +9,6 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 User = get_user_model()
 
 
-
 class EmailRegisterSerializer(serializers.ModelSerializer):
     """Serializer for Email/Password registration (Mode 2)."""
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
@@ -34,7 +33,6 @@ class EmailRegisterSerializer(serializers.ModelSerializer):
             password=validated_data['password']
         )
 
-
 class EmailLoginSerializer(TokenObtainPairSerializer):
     """Custom JWT Serializer to login using Email (Mode 2)."""
     def __init__(self, *args, **kwargs):
@@ -55,12 +53,25 @@ class EmailLoginSerializer(TokenObtainPairSerializer):
             }
         raise serializers.ValidationError('ایمیل یا رمز عبور اشتباه است.')
 
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True)
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    email = serializers.EmailField(required=True)
+    code = serializers.CharField(max_length=6, required=True)
+    new_password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
+    new_password_confirm = serializers.CharField(write_only=True, required=True)
+
+    def validate(self, attrs):
+        if attrs['new_password'] != attrs['new_password_confirm']:
+            raise serializers.ValidationError({"new_password": "رمز عبور و تکرار آن مطابقت ندارند."})
+        return attrs
+
 
 
 class OTPSendSerializer(serializers.Serializer):
     """Serializer for requesting OTP SMS (Mode 1)."""
     phone_number = serializers.CharField(max_length=15, required=True)
-
 
 class OTPVerifySerializer(serializers.Serializer):
     """Serializer for verifying OTP and generating Token (Mode 1)."""

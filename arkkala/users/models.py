@@ -1,5 +1,5 @@
 """
-Custom User Model and OTP Security Models.
+Custom User Model and OTP/Reset Security Models.
 """
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
@@ -53,9 +53,9 @@ class User(AbstractUser):
 
 
 class OTPRequest(models.Model):
-    """Model to track OTP requests and prevent SMS Bombing."""
+    """Model to track OTP requests (both SMS and Email Reset) and prevent Bombing."""
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-    phone_number = models.CharField(max_length=15, verbose_name=_('شماره تماس'))
+    identifier = models.CharField(max_length=255, verbose_name=_('شناسه (تلفن/ایمیل)'))
     code = models.CharField(max_length=6, verbose_name=_('کد تایید'))
     ip_address = models.GenericIPAddressField(verbose_name=_('آدرس IP'))
     is_used = models.BooleanField(default=False, verbose_name=_('استفاده شده؟'))
@@ -64,8 +64,8 @@ class OTPRequest(models.Model):
     expires_at = models.DateTimeField()
 
     class Meta:
-        verbose_name = _('درخواست پیامک')
-        verbose_name_plural = _('درخواست‌های پیامک')
+        verbose_name = _('درخواست کد یکبار مصرف')
+        verbose_name_plural = _('درخواست‌های کدهای یکبار مصرف')
         ordering = ['-created_at']
 
     def save(self, *args, **kwargs):

@@ -11,12 +11,12 @@ from django.contrib.auth import get_user_model
 
 from .serializers import (
     EmailRegisterSerializer, EmailLoginSerializer, 
+    PasswordResetRequestSerializer, PasswordResetConfirmSerializer,
     OTPSendSerializer, OTPVerifySerializer, UserProfileSerializer
 )
 from .services import OTPAuthService
 
 User = get_user_model()
-
 
 def get_client_ip(request: Request) -> str:
     """Helper to extract real IP from request to prevent abuse."""
@@ -24,6 +24,14 @@ def get_client_ip(request: Request) -> str:
     if x_forwarded_for:
         return x_forwarded_for.split(',')[0]
     return request.META.get('REMOTE_ADDR')
+
+
+class AuthConfigView(APIView):
+    """Provides the frontend with the active authentication mode."""
+    permission_classes = [AllowAny]
+    def get(self, request: Request) -> Response:
+        mode = getattr(settings, 'AUTH_MODE', 'OTP')
+        return Response({"mode": mode}, status=status.HTTP_200_OK)
 
 
 
@@ -42,11 +50,10 @@ class OTPSendView(APIView):
         ip_address = get_client_ip(request)
         
         try:
-            OTPAuthService.generate_and_send_otp(phone_number, ip_address)
+            OTPAuthService.generate_and_send_otp(identifier=phone_number, ip_address=ip_address, is_email_reset=False)
             return Response({"message": "کد تایید با موفقیت ارسال شد."}, status=status.HTTP_200_OK)
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
 
 class OTPVerifyView(APIView):
     """Verify OTP and return JWT Tokens."""
@@ -71,7 +78,6 @@ class OTPVerifyView(APIView):
 
 
 class EmailRegisterView(generics.CreateAPIView):
-    """Register User with Email and Password."""
     queryset = User.objects.all()
     permission_classes = [AllowAny]
     serializer_class = EmailRegisterSerializer
@@ -79,29 +85,61 @@ class EmailRegisterView(generics.CreateAPIView):
     def post(self, request: Request, *args, **kwargs) -> Response:
         if getattr(settings, 'AUTH_MODE', 'OTP') != 'EMAIL':
             return Response({"error": "ثبت‌نام ایمیلی غیرفعال است."}, status=status.HTTP_403_FORBIDDEN)
-            
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response({"message": "ثبت نام با موفقیت انجام شد."}, status=status.HTTP_201_CREATED)
 
-
 class EmailLoginView(APIView):
-    """Login User with Email and Password returning JWT."""
     permission_classes = [AllowAny]
-
     def post(self, request: Request) -> Response:
         if getattr(settings, 'AUTH_MODE', 'OTP') != 'EMAIL':
             return Response({"error": "ورود ایمیلی غیرفعال است."}, status=status.HTTP_403_FORBIDDEN)
-            
         serializer = EmailLoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         return Response(serializer.validated_data, status=status.HTTP_200_OK)
 
+class PasswordResetRequestView(APIView):
+    permission_classes = [AllowAny]
+    def post(self, request: Request) -> Response:
+        if getattr(settings, 'AUTH_MODE', 'OTP') != 'EMAIL':
+            return Response({"error": "این امکان فقط در حالت ایمیل فعال است."}, status=status.HTTP_403_FORBIDDEN)
+        
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        email = serializer.validated_data['email']
+        ip_address = get_client_ip(request)
+        
+        if not User.objects.filter(email=email).exists():
+            return Response({"error": "کاربری با این ایمیل یافت نشد."}, status=status.HTTP_404_NOT_FOUND)
+            
+        try:
+            OTPAuthService.generate_and_send_otp(identifier=email, ip_address=ip_address, is_email_reset=True)
+            return Response({"message": "کد بازیابی رمز عبور به ایمیل شما ارسال شد."}, status=status.HTTP_200_OK)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+class PasswordResetConfirmView(APIView):
+    permission_classes = [AllowAny]
+    def post(self, request: Request) -> Response:
+        if getattr(settings, 'AUTH_MODE', 'OTP') != 'EMAIL':
+            return Response({"error": "این امکان فقط در حالت ایمیل فعال است."}, status=status.HTTP_403_FORBIDDEN)
+            
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            OTPAuthService.verify_reset_code_and_set_password(
+                email=serializer.validated_data['email'],
+                code=serializer.validated_data['code'],
+                new_password=serializer.validated_data['new_password']
+            )
+            return Response({"message": "رمز عبور با موفقیت تغییر کرد. اکنون وارد شوید."}, status=status.HTTP_200_OK)
+        except ValueError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 class UserProfileView(generics.RetrieveUpdateAPIView):
-    """Retrieve or Update User Profile details."""
     permission_classes = [IsAuthenticated]
     serializer_class = UserProfileSerializer
 

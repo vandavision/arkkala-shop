@@ -102,7 +102,7 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
 CORS_ALLOW_ALL_ORIGINS = True
 
 # Authentication Mode: 'OTP' or 'EMAIL'
-AUTH_MODE: str = os.environ.get('AUTH_MODE', 'OTP')
+AUTH_MODE: str = os.environ.get('AUTH_MODE', 'EMAIL')  # Default to EMAIL if not set
 
 # Kavenegar SMS Configuration
 KAVENEGAR_API_KEY: str = os.environ.get('KAVENEGAR_API_KEY', 'your_kavenegar_api_key_here')
