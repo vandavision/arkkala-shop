@@ -17,6 +17,7 @@ class BlogCategoryViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Category.objects.filter(is_active=True)
     serializer_class = BlogCategorySerializer
     pagination_class = None
+    lookup_field = 'slug'
 
 
 class PostViewSet(viewsets.ReadOnlyModelViewSet):
@@ -24,6 +25,8 @@ class PostViewSet(viewsets.ReadOnlyModelViewSet):
     ViewSet for retrieving and filtering blog posts.
     """
     queryset = Post.objects.filter(is_published=True).select_related('category', 'author').prefetch_related('tags')
+    
+    lookup_field = 'slug'
     
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['category__slug', 'tags__slug']
@@ -45,7 +48,7 @@ class PostViewSet(viewsets.ReadOnlyModelViewSet):
         return Response(serializer.data)
 
     @action(detail=True, methods=['post'])
-    def add_comment(self, request: Request, pk=None) -> Response:
+    def add_comment(self, request: Request, slug=None) -> Response:
         """Action for users to submit comments on a post."""
         try:
             post: Post = self.get_object()

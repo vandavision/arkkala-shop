@@ -3,8 +3,17 @@ import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-do
 import { AuthContext } from '../context/AuthContext';
 import { CartContext } from '../context/CartContext';
 import { CompareContext } from '../context/CompareContext';
+import { SiteContext } from '../context/SiteContext';
 import { getCategoryTree, globalSearch } from '../api/searchApi';
 import CartDrawer from './CartDrawer';
+
+const resolveImageUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith('http') || url.startsWith('data:')) return url;
+    let baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+    baseUrl = baseUrl.replace(/\/api\/?$/, '');
+    return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+};
 
 const Header = () => {
     const navigate = useNavigate();
@@ -14,8 +23,12 @@ const Header = () => {
     const { user, logout } = useContext(AuthContext);
     const { cartItems } = useContext(CartContext);
     const { compareIds } = useContext(CompareContext);
+    const { settings } = useContext(SiteContext);
 
-    const initialSearch = searchParams.get('search') || searchParams.get('q') || '';
+    const initialSearch = (location.pathname === '/shop' || location.pathname.includes('/category/')) 
+        ? (searchParams.get('search') || searchParams.get('q') || '') 
+        : '';
+        
     const [searchQuery, setSearchQuery] = useState(initialSearch);
     
     const [searchResults, setSearchResults] = useState(null);
@@ -46,8 +59,12 @@ const Header = () => {
     }, [location]);
 
     useEffect(() => {
-        setSearchQuery(searchParams.get('search') || searchParams.get('q') || '');
-    }, [searchParams]);
+        if (location.pathname === '/shop' || location.pathname.includes('/category/')) {
+            setSearchQuery(searchParams.get('search') || searchParams.get('q') || '');
+        } else {
+            setSearchQuery(''); 
+        }
+    }, [searchParams, location.pathname]);
 
     useEffect(() => {
         if (searchQuery.trim().length >= 2) {
@@ -104,8 +121,7 @@ const Header = () => {
     const hasResults = searchResults && (
         searchResults.products?.length > 0 || 
         searchResults.categories?.length > 0 || 
-        searchResults.brands?.length > 0 || 
-        searchResults.posts?.length > 0
+        searchResults.brands?.length > 0
     );
 
     const renderSearchBar = () => (
@@ -114,7 +130,7 @@ const Header = () => {
                 <input 
                     type="text" 
                     className="form-control bg-light border-0 shadow-none ps-4 pe-5 text-dark font-13 search-input py-3" 
-                    placeholder="جستجو در محصولات، برندها..." 
+                    placeholder="جستجو در محصولات، برندها و دسته‌بندی‌ها..." 
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onFocus={() => searchQuery.trim().length >= 2 && setShowSearchDropdown(true)}
@@ -148,11 +164,11 @@ const Header = () => {
                                             <div className="col-md-6 col-12" key={`search-prod-${product.uuid}`}>
                                                 <Link to={`/product/${product.slug}`} className="d-flex align-items-center p-2 text-decoration-none text-dark hover-bg-light rounded-3 transition border border-light h-100" onClick={() => setShowSearchDropdown(false)}>
                                                     <img 
-                                                        src={product.image_url || '/assets/image/product/logo.png'} 
+                                                        src={product.image_url ? resolveImageUrl(product.image_url) : '/assets/image/product/logo.png'} 
                                                         alt={product.title} 
                                                         className="rounded-3 shadow-sm object-fit-cover bg-white" 
                                                         style={{ width: '60px', height: '60px', border: '1px solid #eee' }} 
-                                                        onError={(e) => { e.target.src = '/assets/image/product/logo.png'; }} 
+                                                        onError={(e) => { e.target.onerror = null; e.target.src = '/assets/image/product/logo.png'; }} 
                                                     />
                                                     <div className="ms-3 flex-grow-1 text-end">
                                                         <div className="font-13 fw-bold text-overflow-2 mb-1" style={{ lineHeight: '1.4' }}>{product.title}</div>
@@ -187,22 +203,8 @@ const Header = () => {
                                         <div className="d-flex flex-wrap gap-2">
                                             {searchResults.brands.map(brand => (
                                                 <Link to={`/shop?brands=${brand.slug}`} key={`search-brand-${brand.uuid}`} className="d-flex align-items-center badge bg-white text-dark border border-ui px-2 py-1 fw-normal hover-bg-danger text-decoration-none shadow-sm transition" onClick={() => setShowSearchDropdown(false)}>
-                                                    {brand.logo && <img src={brand.logo} alt={brand.title} width="16" height="16" className="me-2 object-fit-contain" onError={(e) => { e.target.style.display = 'none'; }} />}
+                                                    {brand.logo && <img src={resolveImageUrl(brand.logo)} alt={brand.title} width="16" height="16" className="me-2 object-fit-contain" onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }} />}
                                                     <span className="font-12">{brand.title}</span>
-                                                </Link>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {searchResults.posts?.length > 0 && (
-                                    <div className="mb-2 text-end">
-                                        <h6 className="font-13 fw-bold text-dark mb-3"><i className="bi bi-journal-text text-primary me-1"></i> در مجله آبتین بخوانید</h6>
-                                        <div className="d-flex flex-column gap-2">
-                                            {searchResults.posts.map(post => (
-                                                <Link to={`/blog/${post.slug}`} key={`search-post-${post.uuid}`} className="d-flex align-items-center text-decoration-none text-secondary hover-text-danger transition" onClick={() => setShowSearchDropdown(false)}>
-                                                    <i className="bi bi-dot"></i>
-                                                    <span className="font-12 text-overflow-1">{post.title}</span>
                                                 </Link>
                                             ))}
                                         </div>
@@ -213,8 +215,8 @@ const Header = () => {
                     ) : (
                         <div className="p-5 text-center text-muted">
                             <i className="bi bi-search fs-1 text-muted opacity-25 d-block mb-3"></i>
-                            <h6 className="font-14 fw-bold">نتیجه‌ای برای "{searchQuery}" پیدا نشد!</h6>
-                            <p className="font-12 mt-2">لطفاً املای کلمه را بررسی کنید یا کلمه دیگری را امتحان کنید.</p>
+                            <h6 className="font-14 fw-bold">نتیجه‌ای برای "{searchQuery}" در فروشگاه پیدا نشد!</h6>
+                            <p className="font-12 mt-2">لطفاً املای کلمه را بررسی کنید یا محصول دیگری را امتحان کنید.</p>
                         </div>
                     )}
                 </div>
@@ -229,30 +231,20 @@ const Header = () => {
                 <div className="d-lg-none bg-white w-100" style={{ position: 'relative', zIndex: 10 }}>
                     <div className="container-fluid px-3 pt-3 pb-3">
                         <div className="row align-items-center pb-3 m-0 w-100">
-                            
                             <div className="col-auto p-0">
                                 <button className="btn border-0 p-0 text-dark hover-lift shadow-none" onClick={() => setIsMobileMenuOpen(true)}>
                                     <i className="bi bi-list" style={{ fontSize: '32px' }}></i>
                                 </button>
                             </div>
-                            
                             <div className="col text-center p-0">
                                 <Link to="/" className="d-inline-block text-center w-100">
-                                    <img src="/assets/image/logo.png" alt="آبتین" className="img-fluid" style={{ maxHeight: '38px', objectFit: 'contain' }} />
+                                    <img src={settings?.logo_url || "/assets/image/logo.png"} alt={settings?.site_name} className="img-fluid" style={{ maxHeight: '38px', objectFit: 'contain' }} />
                                 </Link>
                             </div>
-                            
                             <div className="col-auto text-end p-0">
-                                <ul className="d-flex align-items-center justify-content-end list-unstyled m-0 p-0 gap-3">
-                                    
-
-
-                                 
-
-                                </ul>
+                                <ul className="d-flex align-items-center justify-content-end list-unstyled m-0 p-0 gap-3"></ul>
                             </div>
                         </div>
-
                         <div className="w-100 overflow-visible-custom">
                             {renderSearchBar()}
                         </div>
@@ -262,7 +254,7 @@ const Header = () => {
                 <div className={`mobile-overlay ${isMobileMenuOpen ? 'show' : ''}`} onClick={() => setIsMobileMenuOpen(false)}></div>
                 <div className={`mobile-sidebar bg-white ${isMobileMenuOpen ? 'open' : ''}`}>
                     <div className="d-flex justify-content-between align-items-center p-3 border-bottom border-light">
-                        <img src="/assets/image/logo.png" alt="آبتین" style={{ maxHeight: '35px' }} />
+                        <img src={settings?.logo_url || "/assets/image/logo.png"} alt={settings?.site_name} style={{ maxHeight: '35px' }} />
                         <button className="btn border-0 text-muted p-1 hover-lift" onClick={() => setIsMobileMenuOpen(false)}>
                             <i className="bi bi-x-lg fs-4"></i>
                         </button>
@@ -301,7 +293,10 @@ const Header = () => {
                                                 onClick={() => toggleAccordion(cat.uuid)}
                                                 style={{ cursor: 'pointer' }}
                                             >
-                                                <span className="text-dark flex-grow-1">{cat.title}</span>
+                                                <div className="d-flex align-items-center gap-2 flex-grow-1">
+                                                    {cat.image && <img src={resolveImageUrl(cat.image)} alt={cat.title} width="24" height="24" className="object-fit-contain rounded-circle" onError={(e)=>{e.target.onerror = null; e.target.style.display='none'}} />}
+                                                    <span className="text-dark">{cat.title}</span>
+                                                </div>
                                                 <i className={`bi bi-chevron-down transition ${expandedCategory === cat.uuid ? 'rotate-180 text-danger' : 'text-muted'}`}></i>
                                             </div>
                                         ) : (
@@ -310,7 +305,10 @@ const Header = () => {
                                                 onClick={() => setIsMobileMenuOpen(false)}
                                                 className="d-flex justify-content-between align-items-center w-100 text-dark text-decoration-none"
                                             >
-                                                <span className="flex-grow-1">{cat.title}</span>
+                                                <div className="d-flex align-items-center gap-2 flex-grow-1">
+                                                    {cat.image && <img src={resolveImageUrl(cat.image)} alt={cat.title} width="24" height="24" className="object-fit-contain rounded-circle" onError={(e)=>{e.target.onerror = null; e.target.style.display='none'}} />}
+                                                    <span>{cat.title}</span>
+                                                </div>
                                             </Link>
                                         )}
                                     </div>
@@ -319,24 +317,14 @@ const Header = () => {
                                         <div className={`mobile-submenu overflow-hidden transition-all ${expandedCategory === cat.uuid ? 'open' : 'closed'}`}>
                                             <ul className="list-unstyled bg-light rounded-3 mt-2 p-2 ps-2 pe-3 border-end border-3 border-danger">
                                                 <li className="mb-1">
-                                                    <Link 
-                                                        to={`/category/${cat.slug}`} 
-                                                        onClick={() => setIsMobileMenuOpen(false)} 
-                                                        className="d-flex align-items-center py-2 px-2 font-13 text-dark text-decoration-none border-bottom border-white transition hover-text-danger fw-bold"
-                                                    >
-                                                        <span className="me-2 text-danger fw-bold fs-5 lh-1">•</span>
-                                                        همه محصولات {cat.title}
+                                                    <Link to={`/category/${cat.slug}`} onClick={() => setIsMobileMenuOpen(false)} className="d-flex align-items-center py-2 px-2 font-13 text-dark text-decoration-none border-bottom border-white transition hover-text-danger fw-bold">
+                                                        <span className="me-2 text-danger fw-bold fs-5 lh-1">•</span> همه محصولات {cat.title}
                                                     </Link>
                                                 </li>
                                                 {cat.children.map(subCat => (
                                                     <li key={`mob-subcat-${subCat.uuid}`}>
-                                                        <Link 
-                                                            to={`/category/${subCat.slug}`} 
-                                                            onClick={() => setIsMobileMenuOpen(false)} 
-                                                            className="d-flex align-items-center py-2 px-2 font-13 text-secondary text-decoration-none border-bottom border-white transition hover-text-danger"
-                                                        >
-                                                            <span className="me-2 text-danger fw-bold fs-5 lh-1">•</span>
-                                                            {subCat.title}
+                                                        <Link to={`/category/${subCat.slug}`} onClick={() => setIsMobileMenuOpen(false)} className="d-flex align-items-center py-2 px-2 font-13 text-secondary text-decoration-none border-bottom border-white transition hover-text-danger">
+                                                            <span className="me-2 text-danger fw-bold fs-5 lh-1">•</span> {subCat.title}
                                                         </Link>
                                                     </li>
                                                 ))}
@@ -348,11 +336,16 @@ const Header = () => {
                         </ul>
 
                         <h6 className="font-13 fw-bold text-muted mb-3 mt-4">دسترسی سریع</h6>
-                        <ul className="list-unstyled mobile-menu-list">
+                        <ul className="list-unstyled mobile-menu-list pb-5">
+                            <li><Link to="/" onClick={() => setIsMobileMenuOpen(false)} className="d-block py-3 border-bottom border-light font-14 fw-bold text-dark text-decoration-none hover-text-danger transition"><i className="bi bi-house-door text-primary me-2 fs-5"></i> صفحه اصلی فروشگاه</Link></li>
                             <li><Link to="/compare" onClick={() => setIsMobileMenuOpen(false)} className="d-block py-3 border-bottom border-light font-14 fw-bold text-dark text-decoration-none hover-text-danger transition"><i className="bi bi-shuffle text-warning me-2 fs-5"></i> مقایسه محصولات</Link></li>
                             <li><Link to="/special-offers" onClick={() => setIsMobileMenuOpen(false)} className="d-block py-3 border-bottom border-light font-14 fw-bold text-dark text-decoration-none hover-text-danger transition"><i className="bi bi-percent text-danger me-2 fs-5"></i> پیشنهادهای ویژه</Link></li>
                             <li><Link to="/best-sellers" onClick={() => setIsMobileMenuOpen(false)} className="d-block py-3 border-bottom border-light font-14 fw-bold text-dark text-decoration-none hover-text-danger transition"><i className="bi bi-fire text-warning me-2 fs-5"></i> پرفروش‌ترین‌ها</Link></li>
-                            <li><Link to="/blog" onClick={() => setIsMobileMenuOpen(false)} className="d-block py-3 font-14 fw-bold text-dark text-decoration-none hover-text-danger transition"><i className="bi bi-journal-text text-primary me-2 fs-5"></i> مجله آبتین</Link></li>
+                            <li><Link to="/brands" onClick={() => setIsMobileMenuOpen(false)} className="d-block py-3 border-bottom border-light font-14 fw-bold text-dark text-decoration-none hover-text-danger transition"><i className="bi bi-stars text-primary me-2 fs-5"></i> برندهای برتر</Link></li>
+                            <li><Link to="/blog" onClick={() => setIsMobileMenuOpen(false)} className="d-block py-3 border-bottom border-light font-14 fw-bold text-dark text-decoration-none hover-text-danger transition"><i className="bi bi-journal-text text-success me-2 fs-5"></i> مجله {settings?.site_name}</Link></li>
+                            <li><Link to="/faq" onClick={() => setIsMobileMenuOpen(false)} className="d-block py-3 border-bottom border-light font-14 fw-bold text-dark text-decoration-none hover-text-danger transition"><i className="bi bi-patch-question text-info me-2 fs-5"></i> سوالات متداول</Link></li>
+                            <li><Link to="/about" onClick={() => setIsMobileMenuOpen(false)} className="d-block py-3 border-bottom border-light font-14 fw-bold text-dark text-decoration-none hover-text-danger transition"><i className="bi bi-info-circle text-secondary me-2 fs-5"></i> درباره ما</Link></li>
+                            <li><Link to="/rules" onClick={() => setIsMobileMenuOpen(false)} className="d-block py-3 font-14 fw-bold text-dark text-decoration-none hover-text-danger transition"><i className="bi bi-shield-check text-dark me-2 fs-5"></i> شرایط و قوانین</Link></li>
                         </ul>
                     </div>
                 </div>
@@ -360,10 +353,9 @@ const Header = () => {
                 <div className="d-none d-lg-block pb-1">
                     <div className="container-fluid py-3">
                         <div className="row align-items-center m-0 w-100">
-                            
                             <div className="col-lg-2 p-0">
                                 <Link to="/" className="d-inline-block hover-lift transition">
-                                    <img src="/assets/image/logo.png" alt="فروشگاه آبتین" className="img-fluid" style={{ maxHeight: '55px', objectFit: 'contain' }} />
+                                    <img src={settings?.logo_url || "/assets/image/logo.png"} alt={settings?.site_name} className="img-fluid" style={{ maxHeight: '55px', objectFit: 'contain' }} />
                                 </Link>
                             </div>
 
@@ -373,7 +365,6 @@ const Header = () => {
 
                             <div className="col-lg-4 p-0 d-flex justify-content-end align-items-center">
                                 <ul className="d-flex align-items-center justify-content-end list-unstyled m-0 p-0 gap-3">
-                                    
                                     <li className="position-relative" style={{ zIndex: 20 }}>
                                         {user ? (
                                             <div className="dropdown profile-dropdown hover-menu">
@@ -417,7 +408,7 @@ const Header = () => {
                                                 <i className="bi bi-cart3 fs-5 text-dark"></i>
                                                 {cartItems?.length > 0 && (
                                                     <span className="position-absolute bg-danger text-white shadow-sm fw-bold d-flex align-items-center justify-content-center" 
-                                                          style={{ top: '-10px', right: '-12px', minWidth: '22px', height: '22px', fontSize: '11px', border: '2px solid #fff', borderRadius: '50rem' }}>
+                                                          style={{ top: '-10px', right: '-12px', minWidth: '22px', height: '22px', fontSize: '11px', border: '2px solid #fff', borderRadius: '50rem', lineHeight: 1 }}>
                                                         {cartItems.length}
                                                     </span>
                                                 )}
@@ -425,7 +416,6 @@ const Header = () => {
                                             <span className="font-14 fw-bold text-dark ms-1">سبد خرید</span>
                                         </button>
                                     </li>
-
                                 </ul>
                             </div>
                         </div>
@@ -449,7 +439,11 @@ const Header = () => {
                                                         className="d-flex justify-content-between align-items-center py-3 px-4 font-14 fw-bold text-dark transition menu-link text-decoration-none"
                                                     >
                                                         <span className="d-flex align-items-center gap-2">
-                                                            <span className="cat-bullet"></span>
+                                                            {cat.image ? (
+                                                                <img src={resolveImageUrl(cat.image)} alt={cat.title} width="20" height="20" className="object-fit-contain rounded-circle" />
+                                                            ) : (
+                                                                <span className="cat-bullet"></span>
+                                                            )}
                                                             {cat.title}
                                                         </span>
                                                         {cat.children?.length > 0 && <i className="bi bi-chevron-left font-12 text-muted transition arrow-icon"></i>}
@@ -498,7 +492,7 @@ const Header = () => {
                             </li>
                             <li key="nav-links" className="ms-auto">
                                 <div className="d-flex gap-4">
-                                    <Link to="/blog" className="text-muted font-13 text-decoration-none fw-semibold hover-text-danger transition">وبلاگ</Link>
+                                    <Link to="/blog" className="text-muted font-13 text-decoration-none fw-semibold hover-text-danger transition">مجله {settings?.site_name}</Link>
                                     <Link to="/faq" className="text-muted font-13 text-decoration-none fw-semibold hover-text-danger transition">سوالات متداول</Link>
                                     <Link to="/about" className="text-muted font-13 text-decoration-none fw-semibold hover-text-danger transition">درباره ما</Link>
                                 </div>
@@ -541,11 +535,9 @@ const Header = () => {
                     .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
                     .custom-scrollbar::-webkit-scrollbar-thumb { background: #ddd; border-radius: 10px; }
                     .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #ccc; }
-                    .rounded-circle {border-radius: 11% !important;}
-
+                    .rounded-circle {border-radius: 50% !important;}
                 `}</style>
             </header>
-
             <CartDrawer />
         </>
     );

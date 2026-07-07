@@ -2,6 +2,16 @@ import React, { useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { CartContext } from '../context/CartContext';
 
+const resolveImageUrl = (url) => {
+    if (!url) return '/assets/image/product/product-no-bg.png';
+    if (url.startsWith('http') || url.startsWith('data:')) return url;
+    
+    let baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+    baseUrl = baseUrl.replace(/\/api\/?$/, '');
+    
+    return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+};
+
 const CartDrawer = () => {
     const { cartItems, removeFromCart, updateQuantity } = useContext(CartContext);
     const navigate = useNavigate();
@@ -26,7 +36,7 @@ const CartDrawer = () => {
 
     const totalItemsCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
     const totalPayableAmount = cartItems.reduce((acc, item) => acc + Number(item.total_price), 0);
-    const totalRealValue = cartItems.reduce((acc, item) => acc + (Number(item.product_details.base_price) * item.quantity), 0);
+    const totalRealValue = cartItems.reduce((acc, item) => acc + (Number(item.product_details?.base_price || 0) * item.quantity), 0);
     const totalDiscount = totalRealValue > totalPayableAmount ? totalRealValue - totalPayableAmount : 0;
 
     return (
@@ -48,10 +58,14 @@ const CartDrawer = () => {
                         </div>
                     ) : (
                         cartItems.map((item, index) => {
-                            const product = item.product_details;
+                            const product = item.product_details || {};
                             const variant = item.variant_details;
-                            const maxInventory = variant ? variant.inventory : product.base_inventory;
-                            const hasDiscount = Number(product.base_price) > Number(item.unit_price);
+                            const maxInventory = variant ? variant.inventory : product.base_inventory || 0;
+                            const hasDiscount = Number(product.base_price || 0) > Number(item.unit_price || 0);
+                            
+                            const mainImageObj = product?.gallery?.find(img => img.is_main) || product?.gallery?.[0];
+                            const rawUrl = mainImageObj?.url || product?.image_url || product?.image;
+                            const imageUrl = resolveImageUrl(rawUrl);
 
                             return (
                                 <li className={`nav-item bg-white p-3 rounded-4 shadow-sm border border-ui ${index !== cartItems.length - 1 ? 'mb-3' : ''}`} key={item.id}>
@@ -59,7 +73,13 @@ const CartDrawer = () => {
                                         <div className="row align-items-start">
                                             <div className="col-4 ps-0 text-center">
                                                 <Link to={`/product/${product.slug}`} onClick={closeOffcanvas}>
-                                                    <img src={product.gallery?.[0]?.url || '/assets/image/product/product-no-bg.png'} alt={product.title} className="img-thumbnail border-ui rounded-4 w-100 object-fit-contain shadow-sm p-2 bg-light mb-3" style={{height: '110px'}} />
+                                                    <img 
+                                                        src={imageUrl} 
+                                                        alt={product.title || 'تصویر کالا'} 
+                                                        className="img-thumbnail border-ui rounded-4 w-100 object-fit-contain shadow-sm p-2 bg-light mb-3 hover-lift transition" 
+                                                        style={{height: '110px'}} 
+                                                        onError={(e) => { e.target.onerror = null; e.target.src = '/assets/image/product/product-no-bg.png'; }} 
+                                                    />
                                                 </Link>
                                             </div>
                                             <div className="col-8 pe-2">
@@ -72,7 +92,7 @@ const CartDrawer = () => {
                                                 <div className="cart-item-feature d-flex flex-column align-items-start mt-2 mb-3 gap-1">
                                                     <div className="font-11 text-muted d-flex align-items-center"><i className="bi bi-shield-check text-success me-1 fs-6"></i> گارانتی اصالت کالا</div>
                                                     
-                                                    {variant && variant.attributes.map((attr, idx) => {
+                                                    {variant && variant.attributes && variant.attributes.map((attr, idx) => {
                                                         const isColor = attr.attribute_name.includes('رنگ');
                                                         return (
                                                             <div key={idx} className="font-12 text-muted d-flex align-items-center mt-1">
@@ -129,16 +149,16 @@ const CartDrawer = () => {
                             </div>
                             <div className="col-6">
                                 <div className="cart-canvas-foot-link text-end">
-                                    <button onClick={() => { closeOffcanvas(); navigate('/checkout'); }} className="btn border-0 main-color-two-bg text-white fw-bold font-14 px-4 rounded-pill py-3 shadow-sm w-100 d-flex justify-content-center align-items-center gap-2 hover-lift">
-                                        <i className="bi bi-bag-check-fill fs-5"></i> تکمیل خرید
+                                    <button onClick={() => { closeOffcanvas(); navigate('/checkout'); }} className="btn border-0 main-color-two-bg text-white fw-bold font-14 px-3 rounded-pill py-2 shadow-sm w-100 d-flex justify-content-center align-items-center gap-2 hover-lift">
+                                        تکمیل خرید <i className="bi bi-arrow-left fs-5"></i>
                                     </button>
                                 </div>
                             </div>
                         </div>
                         {totalDiscount > 0 && (
-                            <div className="bg-success bg-opacity-10 border border-success border-opacity-25 rounded-pill p-2 text-center mt-2 d-flex justify-content-center align-items-center gap-2">
-                                <i className="bi bi-stars text-success fs-5"></i>
-                                <span className="font-12 fw-bold text-success pt-1">سود شما از خرید: {totalDiscount.toLocaleString()} تومان</span>
+                            <div className="bg-danger bg-opacity-10 border border-danger border-opacity-25 rounded-pill p-2 text-center mt-2 d-flex justify-content-center align-items-center gap-2">
+                                <i className="bi bi-tags text-danger"></i>
+                                <span className="font-12 fw-bold text-danger">شما در این خرید {totalDiscount.toLocaleString()} تومان سود کردید!</span>
                             </div>
                         )}
                     </div>

@@ -19,6 +19,7 @@ class QuestionSerializer(serializers.ModelSerializer):
         fields = ['uuid', 'user_name', 'text', 'answer_text', 'created_at']
 
     def get_user_name(self, obj: Question) -> str:
+        """Returns the full name of the user or a guest name."""
         if obj.user and obj.user.get_full_name():
             return obj.user.get_full_name()
         return obj.name or "کاربر مهمان"
@@ -126,11 +127,16 @@ class ProductVideoSerializer(serializers.ModelSerializer):
 
 
 class PriceHistorySerializer(serializers.ModelSerializer):
+    """Serializer for historical prices to build the chart."""
     class Meta:
         model = PriceHistory
         fields = ['price', 'created_at']
 
+
 class ProductDetailSerializer(serializers.ModelSerializer):
+    """
+    Main Product Serializer for detailed view.
+    """
     brand = BrandSerializer(read_only=True)
     variants = ProductVariantSerializer(many=True, read_only=True)
     comments = serializers.SerializerMethodField()
@@ -139,7 +145,8 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     videos = ProductVideoSerializer(many=True, read_only=True)
     questions = serializers.SerializerMethodField()
     price_history = PriceHistorySerializer(many=True, read_only=True)
-    is_favorite = serializers.SerializerMethodField() # 🔴 اضافه شد
+    is_favorite = serializers.SerializerMethodField()
+    is_special_offer = serializers.BooleanField(source='is_special_offer_active', read_only=True)
 
     class Meta:
         model = Product
@@ -147,6 +154,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
             'uuid', 'title', 'english_title', 'slug', 'brand', 'short_description', 'description', 
             'base_price', 'base_inventory', 'weight', 'volume',
             'is_wholesale', 'wholesale_min_quantity', 'wholesale_base_price',
+            'special_discount_percent', 'special_offer_end', 'is_special_offer',
             'sold_count', 'view_count', 'average_rating',
             'is_variable', 'gallery', 'videos', 'variants', 'comments', 'seo', 'created_at', 
             'questions', 'price_history', 'is_favorite'
@@ -160,9 +168,11 @@ class ProductDetailSerializer(serializers.ModelSerializer):
         return False
 
     def get_comments(self, obj: Product) -> List[Dict[str, Any]]:
+        """Retrieve approved comments."""
         approved_comments = obj.comments.filter(is_approved=True)
         return CommentSerializer(approved_comments, many=True).data
-    
-    def get_questions(self, obj: Product) -> list:
+
+    def get_questions(self, obj: Product) -> List[Dict[str, Any]]:
+        """Retrieve approved questions."""
         approved_questions = obj.questions.filter(is_approved=True)
         return QuestionSerializer(approved_questions, many=True, context=self.context).data

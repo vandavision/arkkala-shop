@@ -6,7 +6,7 @@ const CartPage = () => {
     const navigate = useNavigate();
     const { cartItems, cartLoading, updateQuantity, removeFromCart } = useContext(CartContext);
     
-    const [activeTab, setActiveTab] = useState('cart'); // 'cart' or 'next'
+    const [activeTab, setActiveTab] = useState('cart');
     
     const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
     const showToast = (message, type = 'success') => {

@@ -7,6 +7,7 @@ import { CartContext } from '../context/CartContext';
 import { AuthContext } from '../context/AuthContext';
 import { CompareContext } from '../context/CompareContext';
 import SeoMeta from '../components/SeoMeta';
+import CountdownTimer from '../components/CountdownTimer';
 
 import 'swiper/css';
 import 'swiper/css/free-mode';
@@ -14,6 +15,16 @@ import 'swiper/css/navigation';
 import 'swiper/css/thumbs';
 import 'swiper/css/zoom';
 import 'swiper/css/effect-fade';
+
+const resolveImageUrl = (url) => {
+    if (!url) return '/assets/image/product/product-no-bg.png';
+    if (url.startsWith('http') || url.startsWith('data:')) return url;
+    
+    let baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+    baseUrl = baseUrl.replace(/\/api\/?$/, '');
+    
+    return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+};
 
 const ProductDetailPage = () => {
     const { slug, id } = useParams();
@@ -244,27 +255,39 @@ const ProductDetailPage = () => {
     if (loading) return <div className="text-center py-5 my-5 min-vh-100 d-flex align-items-center justify-content-center"><div className="spinner-border text-danger" style={{width: '4rem', height:'4rem', borderWidth:'0.3rem'}}></div></div>;
     if (error || !product) return <div className="text-center py-5 my-5 text-danger min-vh-100 d-flex flex-column align-items-center justify-content-center"><i className="bi bi-exclamation-triangle fs-1 mb-3"></i><h2 className="fw-bold mb-4">{error}</h2><Link to="/shop" className="btn btn-danger rounded-pill px-5 py-3 shadow-sm hover-lift fw-bold">بازگشت به فروشگاه</Link></div>;
 
-    const allImages = product.gallery?.length ? product.gallery : [{ url: '/assets/image/product/product-no-bg.png', is_main: true }];
-    const mainVideo = product.videos?.length ? product.videos[0] : null;
+    const allImages = product.gallery && product.gallery.length > 0 
+        ? product.gallery.map(img => ({ ...img, url: resolveImageUrl(img.url) }))
+        : [{ url: resolveImageUrl(product.image_url || product.image), is_main: true }];
+        
+    const mainVideo = product.videos?.length 
+        ? { ...product.videos[0], url: resolveImageUrl(product.videos[0].url) } 
+        : null;
 
-    let currentPrice = product.base_price || 0;
-    let currentInventory = product.base_inventory || 0;
-    let oldPrice = 0;
+    let originalPrice = product.is_variable && selectedVariant ? selectedVariant.price : product.base_price;
+    let currentInventory = product.is_variable && selectedVariant ? selectedVariant.inventory : product.base_inventory || 0;
+    
+    let currentPrice = originalPrice;
+    let hasDiscount = false;
+    let discountPercent = 0;
     let isWholesaleActive = false;
 
-    if (product.is_variable && selectedVariant) {
-        currentPrice = selectedVariant.price;
-        currentInventory = selectedVariant.inventory;
-        if (product.is_wholesale && quantity >= product.wholesale_min_quantity && selectedVariant.wholesale_price) {
-            oldPrice = currentPrice;
-            currentPrice = selectedVariant.wholesale_price;
+    if (product.is_wholesale && quantity >= product.wholesale_min_quantity) {
+        let wholesalePr = product.is_variable && selectedVariant ? selectedVariant.wholesale_price : product.wholesale_base_price;
+        if (wholesalePr) {
+            currentPrice = wholesalePr;
             isWholesaleActive = true;
+            hasDiscount = true;
+            discountPercent = Math.round(((originalPrice - wholesalePr) / originalPrice) * 100);
         }
-    } else if (!product.is_variable) {
-        if (product.is_wholesale && quantity >= product.wholesale_min_quantity && product.wholesale_base_price) {
-            oldPrice = currentPrice;
-            currentPrice = product.wholesale_base_price;
-            isWholesaleActive = true;
+    }
+
+    if (product.is_special_offer && product.special_discount_percent > 0) {
+        let specialPriceCalculated = originalPrice * (1 - (product.special_discount_percent / 100));
+        if (specialPriceCalculated < currentPrice) {
+            currentPrice = specialPriceCalculated;
+            isWholesaleActive = false; 
+            hasDiscount = true;
+            discountPercent = product.special_discount_percent;
         }
     }
 
@@ -280,7 +303,7 @@ const ProductDetailPage = () => {
 
     return (
         <React.Fragment>
-            {product.seo && <SeoMeta seoData={product.seo} title={product.title} />}
+            {product.seo && <SeoMeta seoData={product.seo} title={product.title} price={currentPrice} />}
 
             <div className={`custom-toast ${toast.show ? 'show' : ''} bg-${toast.type} shadow-lg d-flex align-items-center gap-3`}>
                 <i className={`bi ${toast.type === 'success' ? 'bi-check-circle-fill' : toast.type === 'warning' ? 'bi-exclamation-triangle-fill' : 'bi-x-circle-fill'} fs-3 text-white`}></i>
@@ -332,7 +355,8 @@ const ProductDetailPage = () => {
                                     </div>
 
                                     <div className="position-absolute z-3 top-0 start-0 mt-4 ms-4 d-flex flex-column gap-2">
-                                        {isWholesaleActive && <span className="badge bg-danger shadow-sm px-3 py-2 rounded-pill font-13 fw-bold animate-pulse">قیمت عمده فعال</span>}
+                                        {product.is_special_offer && <span className="badge bg-danger shadow-sm px-3 py-2 rounded-pill font-13 fw-bold animate-pulse d-flex align-items-center gap-1"><i className="bi bi-lightning-charge-fill text-warning fs-6"></i> پیشنهاد شگفت‌انگیز</span>}
+                                        {isWholesaleActive && !product.is_special_offer && <span className="badge bg-info text-dark shadow-sm px-3 py-2 rounded-pill font-13 fw-bold">قیمت عمده فعال</span>}
                                         {currentInventory === 0 && <span className="badge bg-secondary shadow-sm px-3 py-2 rounded-pill font-13 fw-bold">ناموجود</span>}
                                     </div>
 
@@ -344,12 +368,12 @@ const ProductDetailPage = () => {
                                         modules={[FreeMode, Navigation, Thumbs, Zoom, EffectFade]}
                                         effect="fade"
                                         zoom={true}
-                                        className="product-gallery mb-3 rounded-4"
+                                        className="product-gallery mb-3 rounded-4 mt-3"
                                     >
                                         {allImages.map((img, idx) => (
                                             <SwiperSlide key={idx} title="برای بزرگنمایی دابل کلیک کنید">
                                                 <div className="swiper-zoom-container bg-white">
-                                                    <img src={img.url} alt={product.title} className="img-fluid object-fit-contain main-gallery-img" />
+                                                    <img src={img.url} alt={product.title} className="img-fluid object-fit-contain main-gallery-img" onError={(e) => { e.target.src = '/assets/image/product/product-no-bg.png'; }} />
                                                 </div>
                                             </SwiperSlide>
                                         ))}
@@ -366,7 +390,7 @@ const ProductDetailPage = () => {
                                     >
                                         {allImages.map((img, idx) => (
                                             <SwiperSlide key={idx} className="cursor-pointer bg-white rounded-3 border border-ui p-1 hover-shadow transition">
-                                                <img src={img.url} alt={`thumb-${idx}`} className="img-fluid object-fit-contain rounded-2" style={{height:'75px', width:'100%'}} />
+                                                <img src={img.url} alt={`thumb-${idx}`} className="img-fluid object-fit-contain rounded-2" style={{height:'75px', width:'100%'}} onError={(e) => { e.target.src = '/assets/image/product/product-no-bg.png'; }} />
                                             </SwiperSlide>
                                         ))}
                                     </Swiper>
@@ -461,14 +485,23 @@ const ProductDetailPage = () => {
                                         )
                                     })}
 
-                                    <div className="text-start my-4 bg-light p-3 rounded-4 border border-light">
-                                        <div className="text-muted font-13 mb-2 d-flex align-items-center justify-content-between">
+                                    <div className="text-start my-4 bg-light p-3 rounded-4 border border-light position-relative overflow-hidden">
+                                        {product.is_special_offer && product.special_offer_end && (
+                                            <div className="position-absolute top-0 start-0 w-100 bg-danger text-center p-1 d-flex justify-content-center">
+                                                <CountdownTimer endTime={product.special_offer_end} />
+                                            </div>
+                                        )}
+
+                                        <div className={`text-muted font-13 mb-2 d-flex align-items-center justify-content-between ${product.is_special_offer ? 'mt-4 pt-3' : ''}`}>
                                             <span>قیمت کالا:</span>
-                                            {isWholesaleActive && oldPrice > 0 && <del className="text-danger">{Number(oldPrice).toLocaleString()}</del>}
+                                            {hasDiscount && <del className="text-danger">{Number(originalPrice).toLocaleString()}</del>}
                                         </div>
                                         <strong className="fs-3 fw-900 text-dark d-flex align-items-center justify-content-between m-0">
                                             <span>مبلغ نهایی</span>
-                                            <span className="text-success">{Number(currentPrice).toLocaleString()} <span className="text-muted font-13 fw-normal ms-1">تومان</span></span>
+                                            <span className="text-success d-flex align-items-center gap-2">
+                                                {hasDiscount && <span className="badge bg-danger rounded-pill font-13 px-2 py-1 align-middle">{discountPercent}%</span>}
+                                                {Number(currentPrice).toLocaleString()} <span className="text-muted font-13 fw-normal ms-1">تومان</span>
+                                            </span>
                                         </strong>
                                     </div>
                                     
@@ -804,7 +837,7 @@ const ProductDetailPage = () => {
                                         <div className="product-box border border-ui shadow-sm rounded-4 p-3 p-md-4 bg-white hover-shadow transition h-100 d-flex flex-column position-relative">
                                             {prod.is_wholesale && <span className="position-absolute top-0 start-0 badge bg-danger text-white rounded-end-pill py-1 px-2 mt-3 shadow-sm font-11 z-1">فروش عمده</span>}
                                             <div className="text-center mb-3 pt-2">
-                                                <img src={prod.image_url || '/assets/image/product/product-no-bg.png'} alt={prod.title} className="img-fluid object-fit-contain transition hover-lift" style={{height: '140px'}} onError={(e)=>{e.target.src='/assets/image/product/product-no-bg.png';}} />
+                                                <img src={resolveImageUrl(prod.image_url || prod.image || (prod.gallery && prod.gallery.length > 0 ? prod.gallery[0].url : ''))} alt={prod.title} className="img-fluid object-fit-contain transition hover-lift" style={{height: '140px'}} onError={(e)=>{e.target.src='/assets/image/product/product-no-bg.png';}} />
                                             </div>
                                             <h6 className="font-13 text-dark lh-lg text-overflow-2 fw-bold mb-3">{prod.title}</h6>
                                             <div className="mt-auto d-flex justify-content-between align-items-center">

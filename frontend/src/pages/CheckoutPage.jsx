@@ -4,6 +4,16 @@ import { AuthContext } from '../context/AuthContext';
 import { getCart, getShippingMethods, checkout, validateCoupon } from '../api/cartApi';
 import { requestPayment } from '../api/paymentApi';
 
+const resolveImageUrl = (url) => {
+    if (!url) return '/assets/image/product/product-no-bg.png';
+    if (url.startsWith('http') || url.startsWith('data:')) return url;
+    
+    let baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+    baseUrl = baseUrl.replace(/\/api\/?$/, '');
+    
+    return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
+};
+
 const CheckoutPage = () => {
     const { user } = useContext(AuthContext);
     const [cartItems, setCartItems] = useState([]);
@@ -262,20 +272,28 @@ const CheckoutPage = () => {
                                 <h5 className="fw-900 text-dark border-bottom border-light pb-3 mb-4 d-flex align-items-center gap-2"><i className="bi bi-receipt text-danger fs-4"></i> صورتحساب نهایی</h5>
                                 
                                 <div className="d-flex flex-column gap-3 mb-4 overflow-auto custom-scrollbar pe-2" style={{maxHeight: '220px'}}>
-                                    {cartItems.map(item => (
-                                        <div key={item.id} className="d-flex align-items-center gap-3 border-bottom border-light pb-3">
-                                            <div className="bg-light rounded-3 p-1 border border-ui">
-                                                <img src={item.product_details.gallery[0]?.url || '/assets/image/product/product-no-bg.png'} alt={item.product_details.title} style={{width:'45px', height:'45px', objectFit:'contain'}} />
-                                            </div>
-                                            <div className="flex-grow-1">
-                                                <h6 className="font-13 fw-bold text-dark text-overflow-1 m-0 mb-1">{item.product_details.title}</h6>
-                                                <div className="d-flex align-items-center justify-content-between">
-                                                    <span className="font-12 text-muted px-2 py-1 bg-light rounded-pill border">{item.quantity} عدد</span>
-                                                    <span className="font-13 fw-bold text-dark">{Number(item.total_price).toLocaleString()} تومان</span>
+                                    {cartItems.map(item => {
+                                        const product = item.product_details || {};
+                                        
+                                        const mainImageObj = product?.gallery?.find(img => img.is_main) || product?.gallery?.[0];
+                                        const rawUrl = mainImageObj?.url || product?.image_url || product?.image;
+                                        const imageUrl = resolveImageUrl(rawUrl);
+                                        
+                                        return (
+                                            <div key={item.id} className="d-flex align-items-center gap-3 border-bottom border-light pb-3">
+                                                <div className="bg-light rounded-3 p-1 border border-ui">
+                                                    <img src={imageUrl} alt={product.title || 'محصول'} style={{width:'45px', height:'45px', objectFit:'contain'}} onError={(e) => { e.target.src = '/assets/image/product/product-no-bg.png'; }} />
+                                                </div>
+                                                <div className="flex-grow-1">
+                                                    <h6 className="font-13 fw-bold text-dark text-overflow-1 m-0 mb-1">{product.title}</h6>
+                                                    <div className="d-flex align-items-center justify-content-between">
+                                                        <span className="font-12 text-muted px-2 py-1 bg-light rounded-pill border">{item.quantity} عدد</span>
+                                                        <span className="font-13 fw-bold text-dark">{Number(item.total_price).toLocaleString()} تومان</span>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
 
                                 <ul className="list-unstyled p-0 m-0 border-top border-light pt-4">

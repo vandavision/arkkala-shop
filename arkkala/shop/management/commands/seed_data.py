@@ -10,7 +10,11 @@ from django.contrib.auth import get_user_model
 from django.utils.text import slugify
 from faker import Faker
 
-from shop.models import Category as ShopCategory, Brand, Product, Attribute, AttributeValue, ProductVariant, ProductGallery, ProductVideo, Comment as ShopComment
+from shop.models import (
+    Category as ShopCategory, Brand, Product, Attribute, AttributeValue, 
+    ProductVariant, ProductGallery, ProductVideo, Comment as ShopComment,
+    Question, PriceHistory
+)
 from blog.models import Category as BlogCategory, Tag, Post
 from home.models import Story, Slider, Banner, StoreReview
 from orders.models import ShippingMethod, Coupon
@@ -131,7 +135,14 @@ class Command(BaseCommand):
             StoreReview.objects.create(user_name=fake.name(), body=fake.paragraph(nb_sentences=2))
 
         self.stdout.write('Seeding Shop Categories & Brands...')
-        shop_cats = [ShopCategory.objects.create(title=fake.word() + f" دسته {i}", slug=slugify(fake.word() + str(i), allow_unicode=True)) for i in range(5)]
+        shop_cats = []
+        for i in range(5):
+            cat = ShopCategory.objects.create(
+                title=fake.word() + f" دسته {i}", 
+                slug=slugify(fake.word() + str(i), allow_unicode=True)
+            )
+            cat.image.save(f"category_{i}.jpg", self._get_realistic_image('category', 200, 200, i), save=True)
+            shop_cats.append(cat)
 
         brands = []
         for i in range(8):
@@ -149,11 +160,16 @@ class Command(BaseCommand):
             AttributeValue.objects.get_or_create(attribute=size_attr, value="512GB")[0]
         ]
 
-        self.stdout.write('Seeding Products, Galleries, Videos & Variants...')
+        self.stdout.write('Seeding Products, Galleries, Videos, Variants, Comments & Questions...')
         for i in range(records_count):
             is_variable = random.choice([True, False])
             base_price = random.randint(50000, 5000000) * 10
             title = fake.sentence(nb_words=3) + f" مدل {i}"
+            
+            # Setting up special offer logic
+            is_special = random.choice([True, False])
+            special_percent = random.randint(5, 40) if is_special else 0
+            special_end = timezone.now() + timedelta(days=random.randint(1, 10)) if is_special else None
 
             product = Product.objects.create(
                 title=title,
@@ -165,13 +181,26 @@ class Command(BaseCommand):
                 description=fake.paragraph(nb_sentences=6),
                 base_price=base_price,
                 base_inventory=random.randint(0, 50) if not is_variable else 0,
+                weight=random.randint(100, 5000),
+                volume=random.randint(500, 5000),
                 is_wholesale=random.choice([True, False]),
                 wholesale_min_quantity=random.randint(5, 15),
                 wholesale_base_price=base_price * 0.8,
+                special_discount_percent=special_percent,
+                special_offer_end=special_end,
                 is_variable=is_variable,
                 view_count=random.randint(10, 5000),
                 sold_count=random.randint(0, 100)
             )
+
+            # Generate Price History (Chart data)
+            for days_ago in range(6, 0, -1):
+                past_date = timezone.now() - timedelta(days=days_ago)
+                history = PriceHistory.objects.create(
+                    product=product,
+                    price=base_price * random.uniform(0.8, 1.2)
+                )
+                PriceHistory.objects.filter(pk=history.pk).update(created_at=past_date)
 
             gallery = ProductGallery(product=product, is_main=True)
             gallery.image.save(f"product_{i}.jpg", self._get_realistic_image('product', 600, 600, i), save=True)
@@ -190,10 +219,23 @@ class Command(BaseCommand):
                     )
                     var.attribute_values.add(random.choice(attr_vals))
 
+            # Generate Comments
             for _ in range(random.randint(0, 3)):
                 ShopComment.objects.create(
                     product=product, user=random.choice(users), body=fake.paragraph(nb_sentences=2),
                     rating=random.randint(3, 5), is_approved=True
+                )
+                
+            # Generate Questions
+            for _ in range(random.randint(0, 2)):
+                has_answer = random.choice([True, False])
+                Question.objects.create(
+                    product=product,
+                    user=random.choice([random.choice(users), None]),
+                    name=fake.name() if random.choice([True, False]) else None,
+                    text=fake.sentence(nb_words=10) + "؟",
+                    answer_text=fake.paragraph(nb_sentences=2) if has_answer else None,
+                    is_approved=True
                 )
 
         self.stdout.write('Seeding Blog Posts...')

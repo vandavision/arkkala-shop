@@ -31,3 +31,40 @@
     border-color: #ef4056 !important;
     outline: none !important;
 }
+
+.breadcrumb {
+    display: flex !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    margin-bottom: 0 !important;
+}
+
+.breadcrumb-item {
+    display: flex !important;
+    align-items: center !important;
+}
+
+.breadcrumb-item a {
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px;
+}
+
+.breadcrumb-item a i {
+    display: flex !important;
+    align-items: center !important;
+    margin-top: -3px;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding-top: 1px;
+}
+
+.breadcrumb-item.active {
+    display: flex !important;
+    align-items: center !important;
+    padding-top: 2px;
+}

@@ -52,6 +52,7 @@ class BrandBrowseView(generics.ListAPIView):
     """
     permission_classes = [AllowAny]
     serializer_class = BrandBrowseSerializer
+    pagination_class = None
 
     def get_queryset(self):
         return SearchService.get_brands_with_product_count()

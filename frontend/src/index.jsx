@@ -7,6 +7,7 @@ import App from './App';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { CompareProvider } from './context/CompareContext';
+import { SiteProvider } from './context/SiteContext'; 
 import './styles/main.css';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
@@ -15,11 +16,13 @@ root.render(
     <HelmetProvider>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AuthProvider>
-          <CartProvider>
-            <CompareProvider>
-              <App />
-            </CompareProvider>
-          </CartProvider>
+          <SiteProvider> 
+            <CartProvider>
+              <CompareProvider>
+                <App />
+              </CompareProvider>
+            </CartProvider>
+          </SiteProvider>
         </AuthProvider>
       </BrowserRouter>
     </HelmetProvider>

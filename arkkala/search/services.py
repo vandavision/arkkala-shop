@@ -6,7 +6,6 @@ from typing import Dict, Any
 from django.db.models import Q, Count, QuerySet
 
 from shop.models import Product, Category, Brand
-from blog.models import Post
 
 
 class SearchService:
@@ -15,7 +14,7 @@ class SearchService:
     @staticmethod
     def global_search(query: str, limit: int = 5) -> Dict[str, QuerySet]:
         """
-        Perform a global search across Products, Posts, Brands, and Categories.
+        Perform a global search strictly across store items: Products, Brands, and Categories.
         
         Args:
             query (str): The search term.
@@ -25,16 +24,11 @@ class SearchService:
             Dict containing querysets for each model.
         """
         if not query:
-            return {'products': [], 'posts': [], 'brands': [], 'categories': []}
+            return {'products': [], 'brands': [], 'categories': []}
 
         products = Product.objects.filter(
             Q(title__icontains=query) | Q(english_title__icontains=query),
             is_active=True
-        )[:limit]
-        
-        posts = Post.objects.filter(
-            Q(title__icontains=query) | Q(short_description__icontains=query),
-            is_published=True
         )[:limit]
         
         brands = Brand.objects.filter(
@@ -49,7 +43,6 @@ class SearchService:
 
         return {
             'products': products,
-            'posts': posts,
             'brands': brands,
             'categories': categories
         }

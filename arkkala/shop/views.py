@@ -9,7 +9,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.request import Request
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -17,7 +17,7 @@ from .models import Product
 from .serializers import ProductDetailSerializer
 from .services import ProductService, QuestionService
 from .filters import ProductFilter
-from rest_framework.permissions import IsAuthenticated
+
 
 class MaxPriceAPIView(APIView):
     """
@@ -138,17 +138,15 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
     def toggle_favorite(self, request: Request, slug=None) -> Response:
         """
-        API Action to add/remove a product from user's favorites.
+        API Action to add/remove a product from user's favorites completely via Service Layer.
         """
         try:
             product: Product = self.get_object()
             user = request.user
             
-            if product.favorites.filter(id=user.id).exists():
-                product.favorites.remove(user)
-                return Response({"is_favorite": False, "message": "کالا از علاقه‌مندی‌های شما حذف شد."}, status=status.HTTP_200_OK)
-            else:
-                product.favorites.add(user)
-                return Response({"is_favorite": True, "message": "کالا به لیست علاقه‌مندی‌های شما اضافه شد."}, status=status.HTTP_200_OK)
+            # Delegate logic to ProductService
+            result = ProductService.toggle_favorite(product=product, user=user)
+            
+            return Response(result, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)

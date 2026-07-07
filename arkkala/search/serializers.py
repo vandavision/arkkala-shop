@@ -2,21 +2,33 @@
 Serializers for the Search App APIs.
 """
 from rest_framework import serializers
+from django.db.models import Q
 from shop.models import Category, Brand, Product
-from blog.models import Post
+from shop.serializers import ProductDetailSerializer
+
 
 class CategoryTreeSerializer(serializers.ModelSerializer):
     """Recursive serializer to build a category tree (Parent -> Children)."""
     children = serializers.SerializerMethodField()
+    products = serializers.SerializerMethodField()
 
     class Meta:
         model = Category
-        fields = ['uuid', 'title', 'slug', 'children']
+        fields = ['uuid', 'title', 'slug', 'image', 'children', 'products']
 
     def get_children(self, obj: Category):
         if obj.children.exists():
             active_children = obj.children.filter(is_active=True)
             return CategoryTreeSerializer(active_children, many=True, context=self.context).data
+        return []
+
+    def get_products(self, obj: Category):
+        if obj.parent is None:
+            products = Product.objects.filter(
+                Q(category=obj) | Q(category__parent=obj),
+                is_active=True
+            ).distinct().order_by('-view_count')[:4]
+            return ProductDetailSerializer(products, many=True, context=self.context).data
         return []
 
 class BrandBrowseSerializer(serializers.ModelSerializer):
@@ -46,15 +58,10 @@ class SearchProductItemSerializer(serializers.ModelSerializer):
             return main_image.image.url
         return None
 
-class SearchPostItemSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Post
-        fields = ['uuid', 'title', 'slug', 'image']
-
 class SearchCategoryItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ['uuid', 'title', 'slug']
+        fields = ['uuid', 'title', 'slug', 'image', 'children']
 
 class SearchBrandItemSerializer(serializers.ModelSerializer):
     class Meta:
@@ -62,8 +69,7 @@ class SearchBrandItemSerializer(serializers.ModelSerializer):
         fields = ['uuid', 'title', 'slug', 'logo']
 
 class GlobalSearchResponseSerializer(serializers.Serializer):
-    """Aggregates all search results into one clean JSON response."""
+    """Aggregates all store search results into one clean JSON response."""
     products = SearchProductItemSerializer(many=True, read_only=True)
-    posts = SearchPostItemSerializer(many=True, read_only=True)
     brands = SearchBrandItemSerializer(many=True, read_only=True)
     categories = SearchCategoryItemSerializer(many=True, read_only=True)

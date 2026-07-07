@@ -71,3 +71,91 @@ class StoreReview(UUIDBaseModel, TimeStampMixin):
 
     def __str__(self):
         return self.user_name
+
+
+class SiteSetting(models.Model):
+    site_name = models.CharField(max_length=255, default="ارک کالا", verbose_name="نام سایت")
+    logo = models.ImageField(upload_to="site/logo/", null=True, blank=True, verbose_name="لوگوی اصلی")
+    about_us_footer = models.TextField(default="توضیحات کوتاه درباره فروشگاه شما...", verbose_name="متن فوتر")
+    phone_number = models.CharField(max_length=50, default="12345678 - 021", verbose_name="شماره پشتیبانی")
+    working_hours = models.CharField(max_length=255, default="۲۴ ساعته شبانه روز", verbose_name="ساعات پاسخگویی")
+    
+    telegram = models.URLField(blank=True, null=True, verbose_name="لینک تلگرام")
+    instagram = models.URLField(blank=True, null=True, verbose_name="لینک اینستاگرام")
+    whatsapp = models.URLField(blank=True, null=True, verbose_name="لینک واتساپ")
+    linkedin = models.URLField(blank=True, null=True, verbose_name="لینک لینکدین")
+    twitter = models.URLField(blank=True, null=True, verbose_name="لینک توییتر")
+    
+    namad_1_img = models.ImageField(upload_to="site/namad/", blank=True, null=True, verbose_name="عکس نماد 1")
+    namad_1_link = models.URLField(blank=True, null=True, verbose_name="لینک نماد 1")
+    
+    namad_2_img = models.ImageField(upload_to="site/namad/", blank=True, null=True, verbose_name="عکس نماد 2")
+    namad_2_link = models.URLField(blank=True, null=True, verbose_name="لینک نماد 2")
+    
+    namad_3_img = models.ImageField(upload_to="site/namad/", blank=True, null=True, verbose_name="عکس نماد 3")
+    namad_3_link = models.URLField(blank=True, null=True, verbose_name="لینک نماد 3")
+    
+    namad_4_img = models.ImageField(upload_to="site/namad/", blank=True, null=True, verbose_name="عکس نماد 4")
+    namad_4_link = models.URLField(blank=True, null=True, verbose_name="لینک نماد 4")
+    
+    namad_5_img = models.ImageField(upload_to="site/namad/", blank=True, null=True, verbose_name="عکس نماد 5")
+    namad_5_link = models.URLField(blank=True, null=True, verbose_name="لینک نماد 5")
+    
+    namad_6_img = models.ImageField(upload_to="site/namad/", blank=True, null=True, verbose_name="عکس نماد 6")
+    namad_6_link = models.URLField(blank=True, null=True, verbose_name="لینک نماد 6")
+    
+    namad_7_img = models.ImageField(upload_to="site/namad/", blank=True, null=True, verbose_name="عکس نماد 7")
+    namad_7_link = models.URLField(blank=True, null=True, verbose_name="لینک نماد 7")
+
+    copyright_text = models.CharField(max_length=255, default="کلیه حقوق این سایت محفوظ است.", verbose_name="متن کپی‌رایت")
+
+    class Meta:
+        verbose_name = "تنظیمات پایه سایت"
+        verbose_name_plural = "تنظیمات پایه سایت"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1  
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def load(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+        
+    def __str__(self):
+        return "تنظیمات عمومی سایت"
+
+
+class FAQ(UUIDBaseModel, TimeStampMixin):
+    """
+    Model for managing Frequently Asked Questions (FAQs).
+    """
+    question: str = models.CharField(max_length=255, verbose_name=_('پرسش'))
+    answer: str = models.TextField(verbose_name=_('پاسخ'))
+    order: int = models.PositiveIntegerField(default=0, verbose_name=_('ترتیب نمایش'))
+    is_active: bool = models.BooleanField(default=True, verbose_name=_('فعال'))
+
+    class Meta:
+        verbose_name = _('سوال متداول')
+        verbose_name_plural = _('سوالات متداول')
+        ordering = ['order', '-created_at']
+
+    def __str__(self) -> str:
+        return self.question
+
+
+class AboutPage(UUIDBaseModel, TimeStampMixin):
+    """
+    Model for managing dynamic content of the About Us page.
+    """
+    title: str = models.CharField(max_length=255, verbose_name=_('عنوان صفحه'))
+    content: str = models.TextField(verbose_name=_('محتوای متنی اصلی'))
+    image = models.ImageField(upload_to='site/about/', null=True, blank=True, verbose_name=_('تصویر شاخص صفحه'))
+    is_active: bool = models.BooleanField(default=True, verbose_name=_('فعال'))
+
+    class Meta:
+        verbose_name = _('محتوای درباره ما')
+        verbose_name_plural = _('محتوای درباره ما')
+
+    def __str__(self) -> str:
+        return self.title
