@@ -34,3 +34,13 @@ export const getAboutUsData = async () => {
         return null;
     }
 };
+
+export const getStaticPageSeo = async (viewName) => {
+    try {
+        const response = await axiosInstance.get(`platform_seo/api/static-seo/?view_name=${viewName}`);
+        return response.data;
+    } catch (error) {
+        console.error(`Error fetching SEO for ${viewName}:`, error);
+        return null;
+    }
+};

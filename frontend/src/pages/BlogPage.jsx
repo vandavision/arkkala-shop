@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { getPostsList, getBlogCategories } from '../api/blogApi';
+import { getStaticPageSeo } from '../api/homeApi';
 import { SiteContext } from '../context/SiteContext';
+import SeoMeta from '../components/SeoMeta';
 
 const resolveImageUrl = (url) => {
     if (!url) return '/assets/image/blog/blog-1.jpg';
@@ -27,6 +29,7 @@ const BlogPage = () => {
     const [categories, setCategories] = useState([]);
     const [pagination, setPagination] = useState({ count: 0, next: null, previous: null });
     const [loading, setLoading] = useState(true);
+    const [seoData, setSeoData] = useState(null);
 
     const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
     const [activeCategory, setActiveCategory] = useState(searchParams.get('category__slug') || '');
@@ -35,7 +38,19 @@ const BlogPage = () => {
     const filterTimeoutRef = useRef(null);
 
     useEffect(() => {
-        getBlogCategories().then(data => setCategories(data.results || data || []));
+        const fetchInitialData = async () => {
+            try {
+                const [catsData, meta] = await Promise.all([
+                    getBlogCategories(),
+                    getStaticPageSeo('BlogPage')
+                ]);
+                setCategories(catsData.results || catsData || []);
+                setSeoData(meta);
+            } catch (error) {
+                console.error("Error fetching initial blog data", error);
+            }
+        };
+        fetchInitialData();
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }, []);
 
@@ -94,6 +109,8 @@ const BlogPage = () => {
 
     return (
         <main className="blog-page-wrapper bg-light min-vh-100 pb-5">
+            <SeoMeta seoData={seoData} fallbackTitle={`مجله اینترنتی ${siteName}`} />
+
             <section className="bread-crumb py-3 bg-white shadow-sm border-bottom border-light mb-4">
                 <div className="container-fluid container-xl">
                     <nav aria-label="breadcrumb">

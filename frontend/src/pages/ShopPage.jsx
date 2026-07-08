@@ -7,8 +7,10 @@ import { FreeMode } from 'swiper/modules';
 
 import { getProductsList, getMaxPrice } from '../api/shopApi';
 import { getCategoryTree, getBrandsList } from '../api/searchApi';
+import { getStaticPageSeo } from '../api/homeApi';
 import ProductCard from '../components/ProductCard';
 import { SiteContext } from '../context/SiteContext';
+import SeoMeta from '../components/SeoMeta';
 
 const MAX_PRICE_LIMIT = 50000000; 
 
@@ -46,6 +48,7 @@ const ShopPage = () => {
     const [totalCount, setTotalCount] = useState(0);
     const [categories, setCategories] = useState([]);
     const [brands, setBrands] = useState([]);
+    const [seoData, setSeoData] = useState(null);
     
     const [loading, setLoading] = useState(true);
     const [filtersLoading, setFiltersLoading] = useState(true);
@@ -71,14 +74,16 @@ const ShopPage = () => {
         const fetchFiltersData = async () => {
             try {
                 setFiltersLoading(true);
-                const [catsData, brandsData, fetchedMaxPrice] = await Promise.all([
+                const [catsData, brandsData, fetchedMaxPrice, meta] = await Promise.all([
                     getCategoryTree(),
                     getBrandsList(),
-                    getMaxPrice()
+                    getMaxPrice(),
+                    getStaticPageSeo('ShopPage')
                 ]);
                 
                 setCategories(catsData || []);
                 setBrands(brandsData?.results || brandsData || []);
+                setSeoData(meta);
                 
                 const finalMaxPrice = fetchedMaxPrice > 0 ? fetchedMaxPrice : MAX_PRICE_LIMIT;
                 setMaxPriceLimit(finalMaxPrice);
@@ -347,7 +352,8 @@ const ShopPage = () => {
 
     return (
         <main className="shop-page-wrapper py-4 bg-light" ref={topRef}>
-            
+            <SeoMeta seoData={seoData} fallbackTitle={`${pageTitleText} ${pageTitleHighlight}`} />
+
             <section className="card-categories site-slider bg-white pt-4 pb-2 border-bottom mb-4 shadow-sm">
                 <div className="container-fluid container-xl">
                     <div className="section-title mb-4">

@@ -6,7 +6,8 @@ from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import FileExtensionValidator
 from django.utils import timezone
-
+from typing import Dict, Any, List
+from django.conf import settings
 from platform_tools.mixins.models.base import UUIDBaseModel, TimeStampMixin, TitleSlugMixin
 from platform_seo.models.mixins.seo import SEOMixin, ProductDetailJsonLdMixin
 
@@ -106,6 +107,63 @@ class Product(UUIDBaseModel, TimeStampMixin, TitleSlugMixin, SEOMixin, ProductDe
         if self.special_discount_percent > 0 and self.special_offer_end:
             return self.special_offer_end > timezone.now()
         return False
+    
+    def generate_json_ld(self) -> Dict[str, Any]:
+        """
+        Generates comprehensive JSON-LD including Product Schema and BreadcrumbList.
+        Designed specifically for Headless SEO.
+        
+        Returns:
+            Dict[str, Any]: A dictionary containing the structured JSON-LD data.
+        """
+        frontend_domain: str = getattr(settings, 'FRONTEND_URL', 'https://arkkala.com').rstrip('/')
+        product_url: str = f"{frontend_domain}/product/{self.slug}/"
+        
+        json_ld: Dict[str, Any] = {
+            "@context": "https://schema.org",
+            "@graph": [
+                {
+                    "@type": "Product",
+                    "name": self.title,
+                    "image": [self.gallery.first().image.url if self.gallery.exists() else ""],
+                    "description": self.meta_description or self.short_description or self.title,
+                    "sku": str(self.sku) if hasattr(self, 'sku') else str(self.uuid),
+                    "brand": {
+                        "@type": "Brand",
+                        "name": self.brand.title if self.brand else getattr(settings, 'SITE_NAME', 'ارک کالا')
+                    },
+                    "offers": {
+                        "@type": "Offer",
+                        "url": product_url,
+                        "priceCurrency": "IRT",
+                        "price": str(self.base_price),
+                        "availability": "https://schema.org/InStock" if self.base_inventory > 0 else "https://schema.org/OutOfStock",
+                        "itemCondition": "https://schema.org/NewCondition"
+                    }
+                }
+            ]
+        }
+
+        if getattr(self, 'average_rating', 0) > 0 and self.comments.filter(is_approved=True).exists():
+            json_ld["@graph"][0]["aggregateRating"] = {
+                "@type": "AggregateRating",
+                "ratingValue": str(round(self.average_rating, 1)),
+                "reviewCount": str(self.comments.filter(is_approved=True).count())
+            }
+
+        if getattr(self, 'category', None):
+            breadcrumbs: List[Dict[str, Any]] = [
+                {"@type": "ListItem", "position": 1, "name": "خانه", "item": f"{frontend_domain}/"},
+                {"@type": "ListItem", "position": 2, "name": "فروشگاه", "item": f"{frontend_domain}/shop/"},
+                {"@type": "ListItem", "position": 3, "name": self.category.title, "item": f"{frontend_domain}/category/{self.category.slug}/"},
+                {"@type": "ListItem", "position": 4, "name": self.title, "item": product_url}
+            ]
+            json_ld["@graph"].append({
+                "@type": "BreadcrumbList",
+                "itemListElement": breadcrumbs
+            })
+
+        return json_ld
 
 
 class ProductGallery(UUIDBaseModel):

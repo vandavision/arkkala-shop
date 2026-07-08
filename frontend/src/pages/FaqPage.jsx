@@ -1,22 +1,35 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
-import { getFaqsList } from '../api/homeApi';
+import { getFaqsList, getStaticPageSeo } from '../api/homeApi';
 import { SiteContext } from '../context/SiteContext';
+import SeoMeta from '../components/SeoMeta';
 
 const FaqPage = () => {
     const { settings } = useContext(SiteContext);
     const [faqs, setFaqs] = useState([]);
     const [filteredFaqs, setFilteredFaqs] = useState([]);
+    const [seoData, setSeoData] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(true);
     const [activeIndex, setActiveIndex] = useState(null);
 
     useEffect(() => {
-        getFaqsList().then(data => {
-            setFaqs(data || []);
-            setFilteredFaqs(data || []);
-            setLoading(false);
-        });
+        const fetchData = async () => {
+            try {
+                const [faqData, meta] = await Promise.all([
+                    getFaqsList(),
+                    getStaticPageSeo('FaqPage')
+                ]);
+                setFaqs(faqData || []);
+                setFilteredFaqs(faqData || []);
+                setSeoData(meta);
+            } catch (error) {
+                console.error(error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }, []);
 
@@ -49,6 +62,8 @@ const FaqPage = () => {
 
     return (
         <main className="faq-page pb-5 bg-light min-vh-100">
+            <SeoMeta seoData={seoData} fallbackTitle="سوالات متداول" />
+            
             <section className="bread-crumb py-3 mb-4 bg-white shadow-sm border-bottom border-light">
                 <div className="container-fluid container-xl">
                     <nav aria-label="breadcrumb">

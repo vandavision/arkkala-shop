@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 from rest_framework import serializers
 from rest_framework.request import Request
 from .models import Brand, Product, ProductVariant, AttributeValue, Comment, ProductGallery, ProductVideo, Question, PriceHistory
-
+from platform_seo.serializers import BaseSeoSerializer
 
 class QuestionSerializer(serializers.ModelSerializer):
     """
@@ -38,41 +38,19 @@ class BrandSerializer(serializers.ModelSerializer):
         return obj.products.filter(is_active=True).count()
 
 
-class ProductSeoSerializer(serializers.ModelSerializer):
-    """
-    Serializer for handling SEO-related fields of the Product model.
-    Utilizes platform_seo package features.
-    """
-    json_ld = serializers.SerializerMethodField()
-    og_image_url = serializers.SerializerMethodField()
-    meta_keywords = serializers.JSONField(source='keywords', read_only=True)
-    canonical_url = serializers.SerializerMethodField()
-
+class ProductSeoSerializer(BaseSeoSerializer):
+    """SEO fields Serializer for Product."""
+    
     class Meta:
         model = Product
-        fields = ['meta_keywords', 'meta_description', 'canonical_url', 'og_image_url', 'json_ld']
+        fields = [
+            'seo_keywords', 'meta_description', 'canonical_url', 'og_image_url', 'schema_markup',
+            'og_title', 'og_type', 'og_description', 'og_url', 'og_site_name', 'og_locale'
+        ]
 
-    def get_json_ld(self, obj: Product) -> Dict[str, Any]:
-        """Get generated JSON-LD from Product model for rich snippets."""
-        return obj.generate_json_ld() if hasattr(obj, 'generate_json_ld') else {}
-
-    def get_og_image_url(self, obj: Product) -> Optional[str]:
-        """Construct the absolute URL for the OpenGraph image."""
-        if hasattr(obj, 'og_image') and obj.og_image:
-            request: Optional[Request] = self.context.get('request')
-            return request.build_absolute_uri(obj.og_image.url) if request else obj.og_image.url
-        return None
-        
     def get_canonical_url(self, obj: Product) -> str:
-        """
-        Construct the canonical URL for the product.
-        Uses 'slug' instead of 'id' for better SEO standards.
-        """
-        request: Optional[Request] = self.context.get('request')
-        path: str = f"/product/{obj.slug}/"
-        if request:
-            return request.build_absolute_uri(path)
-        return path
+        """Override to provide frontend product path."""
+        return self.get_frontend_url(f"/product/{obj.slug}/")
 
 
 class AttributeValueSerializer(serializers.ModelSerializer):

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getBrandsList } from '../api/searchApi';
+import { getStaticPageSeo } from '../api/homeApi';
+import SeoMeta from '../components/SeoMeta';
 
 const resolveImageUrl = (url) => {
     if (!url) return '/assets/image/brand/brand1-1.png';
@@ -24,16 +26,21 @@ const resolveImageUrl = (url) => {
 const BrandsPage = () => {
     const [brands, setBrands] = useState([]);
     const [filteredBrands, setFilteredBrands] = useState([]);
+    const [seoData, setSeoData] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchBrands = async () => {
             try {
-                const data = await getBrandsList();
+                const [data, meta] = await Promise.all([
+                    getBrandsList(),
+                    getStaticPageSeo('BrandsPage')
+                ]);
                 const brandsData = data.results || data || [];
                 setBrands(brandsData);
                 setFilteredBrands(brandsData);
+                setSeoData(meta);
             } catch (error) {
                 console.error("Error fetching brands:", error);
             } finally {
@@ -77,6 +84,8 @@ const BrandsPage = () => {
 
     return (
         <main className="brands-page pb-5 bg-light min-vh-100">
+            <SeoMeta seoData={seoData} fallbackTitle="برندهای برتر" />
+
             <section className="bread-crumb py-3 mb-4 bg-white shadow-sm border-bottom border-light position-relative z-3">
                 <div className="container-fluid container-xl">
                     <nav aria-label="breadcrumb">

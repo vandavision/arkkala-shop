@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 from rest_framework import serializers
 from rest_framework.request import Request
 from .models import Category, Tag, Post, Comment
-
+from platform_seo.serializers import BaseSeoSerializer
 
 class BlogCategorySerializer(serializers.ModelSerializer):
     """Serializer for the Blog Category model."""
@@ -24,41 +24,20 @@ class TagSerializer(serializers.ModelSerializer):
         fields = ['uuid', 'title', 'slug']
 
 
-class PostSeoSerializer(serializers.ModelSerializer):
-    """
-    SEO fields Serializer for Blog Post.
-    Utilizes platform_seo package features for rich snippets and OpenGraph.
-    """
-    json_ld = serializers.SerializerMethodField()
-    og_image_url = serializers.SerializerMethodField()
-    meta_keywords = serializers.JSONField(source='keywords', read_only=True)
-    canonical_url = serializers.SerializerMethodField()
-
+class PostSeoSerializer(BaseSeoSerializer):
+    """SEO fields Serializer for Blog Post."""
+    
     class Meta:
         model = Post
-        fields = ['meta_keywords', 'meta_description', 'canonical_url', 'og_image_url', 'json_ld']
+        fields = [
+            'seo_keywords', 'meta_description', 'canonical_url', 'og_image_url', 'schema_markup',
+            'og_title', 'og_type', 'og_description', 'og_url', 'og_site_name', 'og_locale', 'article_author'
+        ]
 
-    def get_json_ld(self, obj: Post) -> Dict[str, Any]:
-        """Get generated JSON-LD from Post model."""
-        return obj.generate_json_ld() if hasattr(obj, 'generate_json_ld') else {}
-
-    def get_og_image_url(self, obj: Post) -> Optional[str]:
-        """Construct the absolute URL for the OpenGraph image."""
-        if hasattr(obj, 'og_image') and obj.og_image:
-            request: Optional[Request] = self.context.get('request')
-            return request.build_absolute_uri(obj.og_image.url) if request else obj.og_image.url
-        return None
-        
     def get_canonical_url(self, obj: Post) -> str:
-        """
-        Construct the canonical URL for the post.
-        Uses 'slug' instead of 'id' for SEO standard compliance.
-        """
-        request: Optional[Request] = self.context.get('request')
-        path: str = f"/blog/{obj.slug}/"
-        if request:
-            return request.build_absolute_uri(path)
-        return path
+        """Override to provide frontend blog path."""
+        return self.get_frontend_url(f"/blog/{obj.slug}/")
+
 
 
 class BlogCommentSerializer(serializers.ModelSerializer):

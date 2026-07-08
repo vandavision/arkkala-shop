@@ -7,9 +7,10 @@ import 'swiper/css/pagination';
 import 'swiper/css/navigation';
 import 'swiper/css/free-mode';
 
-import { getHomePageData } from '../api/homeApi';
+import { getHomePageData, getStaticPageSeo } from '../api/homeApi';
 import ProductCard from '../components/ProductCard';
 import CountdownTimer from '../components/CountdownTimer';
+import SeoMeta from '../components/SeoMeta';
 
 const resolveImageUrl = (url) => {
     if (!url) return null;
@@ -465,13 +466,18 @@ const BlogSection = ({ posts }) => {
 
 const HomePage = () => {
     const [data, setData] = useState(null);
+    const [seoData, setSeoData] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const response = await getHomePageData();
-                setData(response);
+                const [homeData, metaData] = await Promise.all([
+                    getHomePageData(),
+                    getStaticPageSeo('HomePage')
+                ]);
+                setData(homeData);
+                setSeoData(metaData);
             } catch (error) {
                 console.error("Error fetching home data:", error);
             } finally {
@@ -498,6 +504,8 @@ const HomePage = () => {
 
     return (
         <main>
+            <SeoMeta seoData={seoData} fallbackTitle="فروشگاه اینترنتی ارک کالا" />
+            
             <StorySection stories={data.stories} />
             <MainSlider sliders={data.sliders} />
             <CategoriesSection categories={data.categories} />

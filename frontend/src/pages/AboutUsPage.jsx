@@ -1,18 +1,31 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Link } from 'react-router-dom';
-import { getAboutUsData } from '../api/homeApi';
+import { getAboutUsData, getStaticPageSeo } from '../api/homeApi';
 import { SiteContext } from '../context/SiteContext';
+import SeoMeta from '../components/SeoMeta';
 
 const AboutUsPage = () => {
     const { settings } = useContext(SiteContext);
     const [aboutData, setAboutUsData] = useState(null);
+    const [seoData, setSeoData] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        getAboutUsData().then(data => {
-            setAboutUsData(data);
-            setLoading(false);
-        });
+        const fetchData = async () => {
+            try {
+                const [about, meta] = await Promise.all([
+                    getAboutUsData(),
+                    getStaticPageSeo('AboutUsPage')
+                ]);
+                setAboutUsData(about);
+                setSeoData(meta);
+            } catch (error) {
+                console.error(error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchData();
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }, []);
 
@@ -31,6 +44,8 @@ const AboutUsPage = () => {
 
     return (
         <main className="about-us-page bg-light min-vh-100 pb-5">
+            <SeoMeta seoData={seoData} fallbackTitle={title} />
+            
             <section className="bread-crumb py-3 mb-5 bg-white shadow-sm border-bottom border-light">
                 <div className="container-fluid container-xl">
                     <nav aria-label="breadcrumb">

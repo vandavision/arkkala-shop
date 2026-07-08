@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { getPostDetail, getPostsList, submitPostComment } from '../api/blogApi';
 import { AuthContext } from '../context/AuthContext';
 import { SiteContext } from '../context/SiteContext'; 
+import SeoMeta from '../components/SeoMeta';
 
 const resolveImageUrl = (url) => {
     if (!url) return '/assets/image/blog/blog-1.jpg';
@@ -110,6 +111,8 @@ const BlogDetailPage = () => {
 
     return (
         <main className="blog-detail-page bg-light min-vh-100 pb-5">
+            {post && <SeoMeta seoData={post.seo || post} fallbackTitle={post.title} isArticle={true} />}
+
             <div className={`custom-toast ${toast.show ? 'show' : ''} bg-${toast.type} shadow-lg d-flex align-items-center gap-3`}>
                 <i className={`bi ${toast.type === 'success' ? 'bi-check-circle-fill' : toast.type === 'warning' ? 'bi-exclamation-triangle-fill' : 'bi-x-circle-fill'} fs-3 text-white`}></i>
                 <span className="font-14 fw-bold text-white lh-base">{toast.message}</span>

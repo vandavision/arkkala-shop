@@ -366,7 +366,7 @@ const ProductDetailPage = () => {
 
     return (
         <React.Fragment>
-            {product.seo && <SeoMeta seoData={product.seo} title={product.title} price={currentPrice} />}
+            {product && <SeoMeta seoData={product} fallbackTitle={product.title} price={currentPrice} inventory={currentInventory} />}
 
             <div className={`custom-toast ${toast.show ? 'show' : ''} bg-${toast.type} shadow-lg d-flex align-items-center gap-3`}>
                 <i className={`bi ${toast.type === 'success' ? 'bi-check-circle-fill' : toast.type === 'warning' ? 'bi-exclamation-triangle-fill' : 'bi-x-circle-fill'} fs-3 text-white`}></i>
@@ -920,7 +920,6 @@ const ProductDetailPage = () => {
                 </section>
             )}
 
-            {/* Modals - Removed aria-hidden & added tabIndex="-1" */}
             <div className="modal fade" id="videoModal" tabIndex="-1">
                 <div className="modal-dialog modal-lg modal-dialog-centered">
                     <div className="modal-content bg-dark border-0 overflow-hidden rounded-4 shadow-lg">

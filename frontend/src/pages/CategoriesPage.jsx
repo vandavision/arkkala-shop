@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getCategoryTree } from '../api/searchApi';
+import { getStaticPageSeo } from '../api/homeApi';
 import ProductCard from '../components/ProductCard';
+import SeoMeta from '../components/SeoMeta';
 
 const resolveImageUrl = (url) => {
     if (!url) return null;
@@ -24,13 +26,18 @@ const resolveImageUrl = (url) => {
 
 const CategoriesPage = () => {
     const [categories, setCategories] = useState([]);
+    const [seoData, setSeoData] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchCategories = async () => {
             try {
-                const data = await getCategoryTree();
+                const [data, meta] = await Promise.all([
+                    getCategoryTree(),
+                    getStaticPageSeo('CategoriesPage')
+                ]);
                 setCategories(data);
+                setSeoData(meta);
             } catch (error) {
                 console.error("Error fetching categories:", error);
             } finally {
@@ -52,6 +59,8 @@ const CategoriesPage = () => {
 
     return (
         <main className="categories-page pb-5 bg-light min-vh-100">
+            <SeoMeta seoData={seoData} fallbackTitle="دسته‌بندی کالاها" />
+
             <section className="bread-crumb py-3 mb-4 bg-white shadow-sm border-bottom border-light">
                 <div className="container-fluid container-xl">
                     <nav aria-label="breadcrumb">

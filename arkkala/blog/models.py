@@ -7,7 +7,8 @@ from django.utils.translation import gettext_lazy as _
 
 from platform_tools.mixins.models.base import UUIDBaseModel, TimeStampMixin, TitleSlugMixin
 from platform_seo.models.mixins.seo import SEOMixin, BlogDetailJsonLdMixin
-
+from typing import Dict, Any, List
+from django.conf import settings
 User = get_user_model()
 
 
@@ -46,6 +47,62 @@ class Post(UUIDBaseModel, TimeStampMixin, TitleSlugMixin, SEOMixin, BlogDetailJs
         verbose_name = _('مقاله')
         verbose_name_plural = _('مقالات')
         ordering = ['-created_at']
+
+
+    def generate_json_ld(self) -> Dict[str, Any]:
+        """
+        Generates comprehensive JSON-LD including Article Schema and BreadcrumbList.
+        
+        Returns:
+            Dict[str, Any]: A dictionary containing the structured JSON-LD data.
+        """
+        frontend_domain: str = getattr(settings, 'FRONTEND_URL', 'https://arkkala.com').rstrip('/')
+        post_url: str = f"{frontend_domain}/blog/{self.slug}/"
+        author_name: str = self.article_author or (self.author.get_full_name() if self.author else getattr(settings, 'SITE_NAME', 'ارک کالا'))
+
+        json_ld: Dict[str, Any] = {
+            "@context": "https://schema.org",
+            "@graph": [
+                {
+                    "@type": "Article",
+                    "headline": self.title,
+                    "image": [self.image.url if self.image else ""],
+                    "datePublished": self.created_at.isoformat(),
+                    "dateModified": self.modified_at.isoformat(),
+                    "author": {
+                        "@type": "Person",
+                        "name": author_name
+                    },
+                    "publisher": {
+                        "@type": "Organization",
+                        "name": getattr(settings, 'SITE_NAME', 'ارک کالا'),
+                        "logo": {
+                            "@type": "ImageObject",
+                            "url": f"{frontend_domain}/assets/image/logo.png"
+                        }
+                    },
+                    "description": self.meta_description or self.short_description or self.title,
+                    "mainEntityOfPage": {
+                        "@type": "WebPage",
+                        "@id": post_url
+                    }
+                }
+            ]
+        }
+
+        if getattr(self, 'category', None):
+            breadcrumbs: List[Dict[str, Any]] = [
+                {"@type": "ListItem", "position": 1, "name": "خانه", "item": f"{frontend_domain}/"},
+                {"@type": "ListItem", "position": 2, "name": "مجله", "item": f"{frontend_domain}/blog/"},
+                {"@type": "ListItem", "position": 3, "name": self.category.title, "item": f"{frontend_domain}/blog?category__slug={self.category.slug}"},
+                {"@type": "ListItem", "position": 4, "name": self.title, "item": post_url}
+            ]
+            json_ld["@graph"].append({
+                "@type": "BreadcrumbList",
+                "itemListElement": breadcrumbs
+            })
+
+        return json_ld
 
 
 class Comment(UUIDBaseModel, TimeStampMixin):

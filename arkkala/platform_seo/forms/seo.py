@@ -1,21 +1,36 @@
 from django import forms
 from django.conf import settings
-from django.urls import get_resolver
-
-from platform_seo.funcs import collect_view_names
+from platform_seo.models import MetaInformation
 
 
 class MetaInformationForm(forms.ModelForm):
     """
-    Meta Information of pages
+    Form for MetaInformation tailored for Headless (Django + React) Architecture.
+    Provides a predefined list of React static pages instead of scraping Django URLs.
     """
 
-    view_name = forms.ChoiceField(choices=[])
+    DEFAULT_REACT_PAGES = [
+        ('HomePage', 'Home Page (خانه)'),
+        ('AboutUsPage', 'About Us Page (درباره ما)'),
+        ('FaqPage', 'FAQ Page (سوالات متداول)'),
+        ('ContactPage', 'Contact Page (تماس با ما)'),
+        ('BlogPage', 'Blog Page (مجله)'),
+        ('ShopPage', 'Shop Page (فروشگاه)'),
+        ('BrandsPage', 'Brands Page (برندها)'),
+        ('CategoriesPage', 'Categories Page (دسته‌بندی‌ها)'),
+    ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        urlpatterns = get_resolver(None).url_patterns
-        # Retrieve the relevant apps from Django settings
-        relevant_apps = getattr(settings, "META_INFORMATION_APPS", [])
-        view_names = collect_view_names(urlpatterns, relevant_apps)
-        self.fields["view_name"].choices = [(name, name) for name in view_names]
+        
+        react_pages = getattr(settings, "REACT_STATIC_PAGES", self.DEFAULT_REACT_PAGES)
+        
+        self.fields['view_name'] = forms.ChoiceField(
+            choices=react_pages,
+            label="نام صفحه (React Component)",
+            help_text="صفحه‌ای در فرانت‌اند (React) که می‌خواهید این تنظیمات سئو روی آن اعمال شود را انتخاب کنید."
+        )
+
+    class Meta:
+        model = MetaInformation
+        fields = '__all__'
