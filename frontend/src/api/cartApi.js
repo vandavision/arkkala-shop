@@ -55,3 +55,8 @@ export const getUserOrders = async (queryString = '') => {
     const response = await axiosInstance.get(url, getHeaders());
     return response.data;
 };
+
+export const getOrderDetail = async (orderId) => {
+    const response = await axiosInstance.get(`/orders/orders/${orderId}/`, getHeaders());
+    return response.data;
+};

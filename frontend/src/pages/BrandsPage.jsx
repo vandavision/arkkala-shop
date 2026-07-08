@@ -113,7 +113,7 @@ const BrandsPage = () => {
                             </div>
                             
                             <h1 className="fw-900 text-dark display-6 mb-3 lh-base">
-                                برترین <span className="text-danger position-relative d-inline-block">برندهای<svg className="position-absolute bottom-0 start-0 w-100 translate-middle-y" style={{ zIndex: -1, marginBottom: '-8px' }} height="12" viewBox="0 0 200 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 10C68 -2 134 -2 198 10" stroke="#ffc107" strokeWidth="4" strokeLinecap="round"/></svg></span> جهان در آبتین
+                                برترین <span className="text-danger position-relative d-inline-block">برندهای<svg className="position-absolute bottom-0 start-0 w-100 translate-middle-y" style={{ zIndex: -1, marginBottom: '-8px' }} height="12" viewBox="0 0 200 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 10C68 -2 134 -2 198 10" stroke="#ffc107" strokeWidth="4" strokeLinecap="round"/></svg></span> جهان در آرک کالا
                             </h1>
                             <p className="text-muted font-15 mb-5 lh-lg px-md-4">
                                 مجموعه‌ای بی‌نظیر از محصولات اورجینال محبوب‌ترین برندهای داخلی و بین‌المللی را با اطمینان کامل خریداری کنید.

@@ -19,7 +19,8 @@ import BlogDetailPage from './pages/BlogDetailPage';
 import FaqPage from './pages/FaqPage';
 import AboutUsPage from './pages/AboutUsPage';
 import LoginPage from './pages/LoginPage';
-
+import PaymentResultPage from './pages/PaymentResultPage';
+import OrderInvoicePage from './pages/OrderInvoicePage';
 // Dashboard Pages
 import DashboardLayout from './pages/DashboardLayout';
 import DashboardSummary from './pages/DashboardSummary';
@@ -44,13 +45,13 @@ const ScrollToTop = () => {
 
 function App() {
   const location = useLocation();
-  const isAuthPage = location.pathname === '/login';
+  const isIsolatedPage = location.pathname === '/login' || location.pathname === '/payment/result';
 
   return (
     <div className="app-wrapper bg-light">
       <ScrollToTop />
       
-      {!isAuthPage && <Header />}
+      {!isIsolatedPage && <Header />}
       
       <div className="main-content">
         <Routes>
@@ -73,6 +74,7 @@ function App() {
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/compare" element={<ComparePage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/payment/result" element={<PaymentResultPage />} />
           
           <Route path="/profile" element={<Navigate to="/dashboard/profile" replace />} />
           <Route path="/orders" element={<Navigate to="/dashboard/orders" replace />} />
@@ -81,6 +83,7 @@ function App() {
             <Route index element={<DashboardSummary />} />
             <Route path="profile" element={<ProfileInfo />} />
             <Route path="orders" element={<UserOrders />} />
+            <Route path="orders/:id" element={<OrderInvoicePage />} />
             <Route path="favorites" element={<UserFavorites />} />
             <Route path="comments" element={<UserComments />} />
           </Route>
@@ -95,7 +98,7 @@ function App() {
         </Routes>
       </div>
 
-      {!isAuthPage && <Footer />}
+      {!isIsolatedPage && <Footer />}
     </div>
   );
 }

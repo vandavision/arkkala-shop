@@ -23,13 +23,8 @@ logger = logging.getLogger(__name__)
 
 
 class ExternalShippingAPI:
-    """Helper class for fallback algorithmic shipping cost calculation."""
-
     @staticmethod
     def calculate_post_cost(total_weight_grams: int, origin_province: str, dest_province: str) -> Decimal:
-        """
-        Calculates shipping cost locally if external API fails.
-        """
         base_post_cost: int = 35000
         weight_penalty: int = (total_weight_grams // 500) * 5000
         distance_multiplier: float = 1.0 if origin_province == dest_province else 1.35
@@ -38,17 +33,12 @@ class ExternalShippingAPI:
 
 
 class PostexShippingService:
-    """Service to connect to Postex API for dynamic shipping costs."""
-
     BASE_URL: str = getattr(settings, 'POSTEX_BASE_URL', 'https://api.postex.ir')
     API_KEY: str = getattr(settings, 'POSTEX_API_KEY', '')
     FROM_CITY_CODE: int = getattr(settings, 'POSTEX_FROM_CITY_CODE', 1)
 
     @classmethod
     def calculate_shipping_cost(cls, cart_items: List[CartItem], dest_province: str, total_weight_grams: int) -> Decimal:
-        """
-        Connects to Postex to get the exact cost. Uses fallback if it fails.
-        """
         parcels_payload: List[Dict[str, Any]] = []
 
         for item in cart_items:
@@ -122,11 +112,8 @@ class PostexShippingService:
 
 
 class CartService:
-    """Business logic for Cart management."""
-
     @staticmethod
     def get_or_create_cart(user: Optional[User] = None, guest_id: Optional[str] = None) -> Cart:
-        """Fetch existing cart or create a new one based on user or guest session."""
         if user and user.is_authenticated:
             cart, _ = Cart.objects.get_or_create(user=user)
             if guest_id:
@@ -145,7 +132,6 @@ class CartService:
 
     @staticmethod
     def add_to_cart(product_id: str, variant_id: Optional[str] = None, quantity: int = 1, user: Optional[User] = None, guest_id: Optional[str] = None) -> CartItem:
-        """Adds a specific product/variant to cart."""
         cart: Cart = CartService.get_or_create_cart(user, guest_id)
         item: Optional[CartItem] = CartItem.objects.filter(cart=cart, product_id=product_id, variant_id=variant_id).first()
 
@@ -163,7 +149,6 @@ class CartService:
 
     @staticmethod
     def update_item_quantity(item_id: str, quantity: int, user: Optional[User] = None, guest_id: Optional[str] = None) -> CartItem:
-        """Updates the exact quantity of an existing cart item."""
         cart: Cart = CartService.get_or_create_cart(user, guest_id)
         item: CartItem = CartItem.objects.get(pk=item_id, cart=cart)
         item.quantity = quantity
@@ -172,13 +157,11 @@ class CartService:
 
     @staticmethod
     def remove_item(item_id: str, user: Optional[User] = None, guest_id: Optional[str] = None) -> None:
-        """Removes an item completely from the cart."""
         cart: Cart = CartService.get_or_create_cart(user, guest_id)
         CartItem.objects.filter(pk=item_id, cart=cart).delete()
 
     @staticmethod
     def calculate_item_price(item: CartItem) -> Decimal:
-
         product: Product = item.product
         variant: Optional[ProductVariant] = item.variant
         qty: int = item.quantity
@@ -202,7 +185,6 @@ class CartService:
 
     @staticmethod
     def calculate_item_weight(item: CartItem) -> int:
-        """Calculate weight intelligently by parsing attributes if present."""
         product: Product = item.product
         variant: Optional[ProductVariant] = item.variant
         weight: int = getattr(product, 'weight', 500)
@@ -226,11 +208,8 @@ class CartService:
 
 
 class OrderService:
-    """Business logic for Checkout and Orders validation."""
-
     @staticmethod
     def validate_coupon(code: str) -> Coupon:
-        """Validates coupon dates, limits, and statuses."""
         now = timezone.now()
         coupon: Optional[Coupon] = Coupon.objects.filter(
             code__iexact=code,
@@ -246,17 +225,53 @@ class OrderService:
 
     @staticmethod
     @transaction.atomic
-    def checkout(address_data: Dict[str, Any], shipping_method_id: str, coupon_code: Optional[str] = None, user: Optional[User] = None, guest_id: Optional[str] = None, guest_phone: Optional[str] = None, guest_first_name: Optional[str] = None, guest_last_name: Optional[str] = None) -> Order:
-        """
-        Creates the order, calculates everything, decrements inventory, and updates User Profile if missing.
-        """
+    def checkout(
+        address_data: Dict[str, Any], 
+        shipping_method_id: str, 
+        coupon_code: Optional[str] = None, 
+        user: Optional[User] = None, 
+        guest_id: Optional[str] = None, 
+        guest_phone: Optional[str] = None, 
+        guest_first_name: Optional[str] = None, 
+        guest_last_name: Optional[str] = None,
+        guest_email: Optional[str] = None,
+        guest_password: Optional[str] = None 
+    ) -> Order:
+        
         cart: Cart = CartService.get_or_create_cart(user, guest_id)
         cart_items = cart.items.select_related('product', 'variant').all()
 
         if not cart_items.exists():
             raise ValueError("سبد خرید شما خالی است.")
 
-        if user and user.is_authenticated:
+
+        if not user:
+            if guest_email and guest_password:
+                user, created = User.objects.get_or_create(
+                    email=guest_email,
+                    defaults={
+                        'username': guest_email,
+                        'first_name': guest_first_name or '',
+                        'last_name': guest_last_name or '',
+                        'is_active': True
+                    }
+                )
+                if created:
+                    user.set_password(guest_password)
+                    user.save()
+            elif guest_phone:
+                user, created = User.objects.get_or_create(
+                    phone_number=guest_phone,
+                    defaults={
+                        'username': guest_phone,
+                        'first_name': guest_first_name or '',
+                        'last_name': guest_last_name or '',
+                        'is_active': True
+                    }
+                )
+        
+        # Update names if they were missing for existing users
+        if user:
             update_fields = []
             if not user.first_name and guest_first_name:
                 user.first_name = guest_first_name
@@ -311,7 +326,7 @@ class OrderService:
         payable_amount: Decimal = subtotal + tax_amount + shipping_cost
 
         order: Order = Order.objects.create(
-            user=user if user and user.is_authenticated else None,
+            user=user,
             guest_first_name=guest_first_name,
             guest_last_name=guest_last_name,
             guest_phone=guest_phone,
@@ -339,7 +354,6 @@ class OrderService:
                 )
             )
 
-            # Reduce Inventory
             if item.variant:
                 item.variant.inventory = F('inventory') - item.quantity
                 item.variant.save(update_fields=['inventory'])
@@ -350,11 +364,9 @@ class OrderService:
         OrderItem.objects.bulk_create(order_items_to_create)
         cart_items.delete()
 
-        # Send Invoice if configured
         if user and user.is_authenticated and getattr(user, 'email', None):
              EmailService.send_order_invoice(order=order, user_email=user.email)
 
-        # Dispatch Celery Task for Auto-Cancellation if unpaid after 30 minutes
-        cancel_unpaid_order.apply_async((str(order.uuid),), countdown=1800)
+        cancel_unpaid_order.apply_async((str(order.uuid),), countdown=7200)
 
         return order

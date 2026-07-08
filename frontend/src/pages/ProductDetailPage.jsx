@@ -512,7 +512,7 @@ const ProductDetailPage = () => {
                                         <div className="d-flex align-items-center gap-2">
                                             <i className="bi bi-shop fs-4 text-primary"></i>
                                             <div>
-                                                <strong className="d-block font-14 text-dark">فروشگاه رسمی آبتین</strong>
+                                                <strong className="d-block font-14 text-dark">فروشگاه رسمی آرک کالا</strong>
                                                 <span className="font-12 text-success">تضمین کیفیت</span>
                                             </div>
                                         </div>
@@ -848,7 +848,7 @@ const ProductDetailPage = () => {
                                                                         <div className="bg-success rounded-circle d-flex align-items-center justify-content-center mx-auto shadow-sm" style={{width:'35px', height:'35px'}}><i className="bi bi-headset text-white font-16"></i></div>
                                                                     </div>
                                                                     <div className="col-10 col-lg-10 bq2 ps-2 ps-md-4 d-flex flex-column justify-content-center">
-                                                                        <span className="span1 font-12 fw-bold text-success d-block mb-2">پشتیبانی آبتین</span>
+                                                                        <span className="span1 font-12 fw-bold text-success d-block mb-2">پشتیبانی آرک کالا</span>
                                                                         <p className="font-14 text-dark lh-lg text-justify m-0 bg-success bg-opacity-10 border border-success border-opacity-25 p-2 p-md-3 rounded-3">{q.answer_text}</p>
                                                                     </div>
                                                                 </div>

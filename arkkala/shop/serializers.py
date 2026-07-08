@@ -40,14 +40,14 @@ class BrandSerializer(serializers.ModelSerializer):
 
 class ProductSeoSerializer(BaseSeoSerializer):
     """SEO fields Serializer for Product."""
-    
     class Meta:
         model = Product
         fields = [
             'seo_keywords', 'meta_description', 'canonical_url', 'og_image_url', 'schema_markup',
-            'og_title', 'og_type', 'og_description', 'og_url', 'og_site_name', 'og_locale'
+            'og_title', 'og_type', 'og_description', 'og_url', 'og_site_name', 'og_locale',
+            'twitter_card', 'twitter_site', 'twitter_creator'
         ]
-
+        
     def get_canonical_url(self, obj: Product) -> str:
         """Override to provide frontend product path."""
         return self.get_frontend_url(f"/product/{obj.slug}/")

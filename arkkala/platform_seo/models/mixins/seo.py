@@ -142,6 +142,41 @@ class OGMixin(models.Model):
         abstract = True
 
 
+class TwitterMixin(models.Model):
+    """
+    TwitterMixin provides fields for Twitter Cards.
+    Twitter cards ensure rich media snippets when links are shared on Twitter/X or other apps reading twitter tags.
+    """
+    twitter_card = models.CharField(
+        max_length=50,
+        default="summary_large_image",
+        verbose_name=_("Twitter Card Type"),
+        help_text=_("e.g. summary, summary_large_image, app, player"),
+        db_comment="Type of Twitter card."
+    )
+    
+    twitter_site = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        verbose_name=_("Twitter Site Account"),
+        help_text=_("e.g. @arkkala"),
+        db_comment="The Twitter @username the card should be attributed to."
+    )
+    
+    twitter_creator = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        verbose_name=_("Twitter Creator Account"),
+        help_text=_("e.g. @arkkala_admin"),
+        db_comment="@username of content creator."
+    )
+
+    class Meta:
+        abstract = True
+
+
 class BasicJsonLdMixin(models.Model):
     json_ld = models.JSONField(blank=True, null=True)
 
@@ -201,6 +236,6 @@ class BlogDetailJsonLdMixin(BasicJsonLdMixin):
         abstract = True
 
 
-class SEOMixin(MetaKeyMixin, OGMixin):
+class SEOMixin(MetaKeyMixin, OGMixin, TwitterMixin):
     class Meta:
         abstract = True

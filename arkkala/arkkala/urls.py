@@ -9,6 +9,7 @@ from django.contrib.sitemaps.views import sitemap
 from typing import Any
 
 from platform_seo.sitemaps import ProductSitemap, ShopCategorySitemap, PostSitemap, StaticPagesSitemap
+from platform_seo.views.robot import RobotsTxtView
 
 sitemaps: dict[str, Any] = {
     'static': StaticPagesSitemap,
@@ -30,6 +31,8 @@ urlpatterns: list[Any] = [
     
     # Sitemap Route
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),
+    path(
+        "robots.txt", RobotsTxtView.as_view(), name="robots_txt"),
 ]
 
 if settings.DEBUG:

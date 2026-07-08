@@ -39,7 +39,7 @@ class ZarinpalGateway(BaseGateway):
     """Zarinpal Gateway Implementation."""
     
     def __init__(self) -> None:
-        self.merchant_id = getattr(settings, 'ZARINPAL_MERCHANT_ID', '00000000-0000-0000-0000-000000000000')
+        self.merchant_id = getattr(settings, 'ZARINPAL_MERCHANT_ID', "2c86f44c-1b94-41eb-8b88-6f12971c639a")
         self.sandbox = getattr(settings, 'ZARINPAL_SANDBOX', True)
         subdomain = "sandbox" if self.sandbox else "api"
         self.request_url = f"https://{subdomain}.zarinpal.com/pg/v4/payment/request.json"

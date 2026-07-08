@@ -31,6 +31,7 @@ class PaymentViewSet(viewsets.GenericViewSet):
     def request_payment(self, request: Request) -> Response:
         """
         API to initiate a payment. Returns the Gateway redirect URL.
+        Allows multiple retries as long as the order status is 'pending'.
         """
         serializer = PaymentRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -39,16 +40,18 @@ class PaymentViewSet(viewsets.GenericViewSet):
         gateway = serializer.validated_data['gateway']
 
         try:
-            if request.user.is_authenticated:
-                order = Order.objects.get(id=order_id, user=request.user)
-            else:
-                order = Order.objects.get(id=order_id, user__isnull=True)
+            # Secure lookup by UUID (Un-guessable identifier)
+            order = Order.objects.get(uuid=order_id)
+            
+            # Security Check: If a logged-in user tries to pay for someone else's order
+            if request.user.is_authenticated and order.user and order.user != request.user:
+                return Response({"error": "این سفارش متعلق به شما نیست."}, status=status.HTTP_403_FORBIDDEN)
 
             payment_url = PaymentService.initiate_payment(order, gateway, request)
             return Response({"payment_url": payment_url}, status=status.HTTP_200_OK)
             
         except Order.DoesNotExist:
-            return Response({"error": "سفارش یافت نشد یا متعلق به شما نیست."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "سفارش یافت نشد."}, status=status.HTTP_404_NOT_FOUND)
         except ValueError as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
@@ -76,7 +79,7 @@ class PaymentViewSet(viewsets.GenericViewSet):
             )
             
             frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
-            redirect_url = f"{frontend_url}/payment/result?status={transaction.status}&ref_id={transaction.ref_id or ''}"
+            redirect_url = f"{frontend_url}/payment/result?status={transaction.status}&ref_id={transaction.ref_id or ''}&order_id={transaction.order.uuid}"
             return redirect(redirect_url)
             
         except Transaction.DoesNotExist:

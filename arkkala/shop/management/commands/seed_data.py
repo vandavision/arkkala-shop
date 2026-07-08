@@ -1,340 +1,217 @@
-import random
+"""
+Seed Data Command for Arkkala E-Commerce.
+Populates the database with initial categories, brands, products, blog posts,
+and complete Headless SEO configurations (MetaInformation, OpenGraph, Twitter Cards, JSON-LD).
+"""
+import logging
 from typing import Any, Dict, List
-from datetime import timedelta
 
-import requests
-from django.utils import timezone
-from django.core.files.base import ContentFile
-from django.core.management.base import BaseCommand, CommandParser
+from django.core.management.base import BaseCommand
+from django.db import transaction
+from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.utils.text import slugify
-from faker import Faker
 
-from shop.models import (
-    Category as ShopCategory, Brand, Product, Attribute, AttributeValue,
-    ProductVariant, ProductGallery, ProductVideo, Comment as ShopComment,
-    Question, PriceHistory
-)
-from blog.models import Category as BlogCategory, Tag, Post, Comment as BlogComment
-from home.models import Story, Slider, Banner, StoreReview, SiteSetting, FAQ, AboutPage
-from orders.models import ShippingMethod, Coupon, Order, OrderItem
-from payments.models import Transaction
+from shop.models import Category as ShopCategory, Brand, Product
+from blog.models import Category as BlogCategory, Post
+from platform_seo.models import MetaInformation, RobotsTxt
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-    """
-    Command to populate the database with comprehensive test data for the Arkkala project.
-    Seeds all sections including Home, Shop, Blog, Orders, and Payments.
-    """
-    help = 'Seeds the database with fake data for all sections of the site.'
-
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
-        super().__init__(*args, **kwargs)
-        self.image_cache: Dict[str, bytes] = {}
-        self.video_cache: bytes | None = None
-
-    def add_arguments(self, parser: CommandParser) -> None:
-        parser.add_argument('--records', type=int, default=15, help='Number of primary records to generate')
-        parser.add_argument('--clear', action='store_true', help='Clear existing data before seeding')
-
-    def _get_realistic_image(self, category: str, width: int, height: int, index: int) -> ContentFile:
-        cache_key: str = f"{category}_{index % 5}"
-
-        if cache_key not in self.image_cache:
-            self.stdout.write(f"Downloading image for {cache_key} ({width}x{height})...")
-            url: str = f"https://picsum.photos/seed/{cache_key}/{width}/{height}"
-            try:
-                response: requests.Response = requests.get(url, timeout=10)
-                response.raise_for_status()
-                self.image_cache[cache_key] = response.content
-            except requests.RequestException:
-                self.stdout.write(self.style.WARNING(f"Failed to fetch {url}. Using empty image."))
-                return ContentFile(b"", name=f"empty_{cache_key}.jpg")
-
-        return ContentFile(self.image_cache[cache_key], name=f"{cache_key}.jpg")
-
-    def _get_realistic_video(self) -> ContentFile:
-        if self.video_cache is None:
-            self.stdout.write("Downloading sample video for products...")
-            url: str = "https://www.w3schools.com/html/mov_bbb.mp4"
-            try:
-                response: requests.Response = requests.get(url, timeout=15)
-                response.raise_for_status()
-                self.video_cache = response.content
-            except requests.RequestException:
-                self.stdout.write(self.style.WARNING(f"Failed to fetch video from {url}. Using empty video."))
-                self.video_cache = b""
-
-        return ContentFile(self.video_cache, name="sample_video.mp4")
+    help = "Seed database with initial data including complete SEO meta parameters for Headless architecture."
 
     def handle(self, *args: Any, **options: Any) -> None:
-        fake: Faker = Faker(['fa_IR'])
-        records_count: int = options['records']
+        self.stdout.write(self.style.WARNING("Starting database seeding process..."))
 
-        if options['clear']:
-            self.stdout.write(self.style.WARNING('Clearing all old data...'))
-            User.objects.exclude(is_superuser=True).delete()
-            ShopCategory.objects.all().delete()
-            Brand.objects.all().delete()
-            Product.objects.all().delete()
-            Attribute.objects.all().delete()
-            BlogCategory.objects.all().delete()
-            Tag.objects.all().delete()
-            Post.objects.all().delete()
-            Story.objects.all().delete()
-            Slider.objects.all().delete()
-            Banner.objects.all().delete()
-            StoreReview.objects.all().delete()
-            ShippingMethod.objects.all().delete()
-            Coupon.objects.all().delete()
-            Order.objects.all().delete()
-            Transaction.objects.all().delete()
-            FAQ.objects.all().delete()
-            AboutPage.objects.all().delete()
-            self.stdout.write(self.style.SUCCESS('All data cleared.'))
+        try:
+            with transaction.atomic():
+                self._seed_robots_txt()
+                self._seed_static_pages_seo()
+                self._seed_shop_data()
+                self._seed_blog_data()
 
-        self.stdout.write('Seeding Users...')
-        users: List[User] = []
-        for _ in range(5):
-            email = fake.unique.email()
-            user: User = User.objects.create_user(
-                username=email,
-                email=email,
-                password='password123',
-                first_name=fake.first_name(),
-                last_name=fake.last_name(),
-                phone_number=fake.unique.msisdn()
-            )
-            users.append(user)
+            self.stdout.write(self.style.SUCCESS("Database seeded successfully with 100% Complete SEO Metadata!"))
+        except Exception as e:
+            logger.error(f"Seeding failed: {e}", exc_info=True)
+            self.stdout.write(self.style.ERROR(f"Error during seeding: {e}"))
 
-        self.stdout.write('Seeding Home Page CMS...')
-        SiteSetting.objects.update_or_create(
-            pk=1,
+    def _seed_robots_txt(self) -> None:
+        """Seeds the standard Robots.txt."""
+        self.stdout.write("Seeding RobotsTxt...")
+        RobotsTxt.objects.update_or_create(
+            id=1,
             defaults={
-                'site_name': 'فروشگاه تستی ارک کالا',
-                'about_us_footer': fake.paragraph(nb_sentences=2),
-                'phone_number': fake.phone_number(),
-                'telegram': 'https://t.me/arkkala',
-                'instagram': 'https://instagram.com/arkkala'
+                "content": "User-agent: *\nDisallow: /admin/\nDisallow: /checkout/\nAllow: /\n"
             }
         )
 
-        for i in range(5):
-            FAQ.objects.create(
-                question=fake.sentence(nb_words=6) + "؟",
-                answer=fake.paragraph(nb_sentences=3),
-                order=i,
-                is_active=True
-            )
+    def _seed_static_pages_seo(self) -> None:
+        """Seeds MetaInformation for React static routes with complete Schema and OG metadata."""
+        self.stdout.write("Seeding Static Pages SEO (MetaInformation)...")
+        
+        frontend_url: str = getattr(settings, 'FRONTEND_URL', 'https://arkkala.com').rstrip('/')
 
-        AboutPage.objects.create(
-            title="درباره فروشگاه ما",
-            content=fake.text(max_nb_chars=1000),
-            is_active=True
-        )
-
-        for i in range(6):
-            story: Story = Story(title=fake.word() + f" {i}", is_active=True)
-            story.image.save(f"story_{i}.jpg", self._get_realistic_image('story', 400, 400, i), save=True)
-
-        for i in range(3):
-            slider: Slider = Slider(title=fake.sentence(nb_words=3) + f" {i}", order=i, is_active=True)
-            slider.image.save(f"slider_{i}.jpg", self._get_realistic_image('slider', 1600, 500, i), save=True)
-
-        banners_data: List[tuple[str, str]] = [("بنر راست", "top_left"), ("بنر میانی", "middle_row")]
-        for i, (title, pos) in enumerate(banners_data):
-            banner: Banner = Banner(title=f"{title} {i}", position=pos)
-            banner.image.save(f"banner_{i}.jpg", self._get_realistic_image('banner', 800, 400, i), save=True)
-
-        for _ in range(5):
-            StoreReview.objects.create(user_name=fake.name(), body=fake.paragraph(nb_sentences=2), is_active=True)
-
-        self.stdout.write('Seeding Shop Categories, Brands & Attributes...')
-        shop_cats: List[ShopCategory] = []
-        for i in range(5):
-            cat: ShopCategory = ShopCategory.objects.create(
-                title=fake.word() + f" دسته {i}",
-                slug=slugify(fake.word() + str(i), allow_unicode=True)
-            )
-            cat.image.save(f"category_{i}.jpg", self._get_realistic_image('category', 200, 200, i), save=True)
-            shop_cats.append(cat)
-
-        brands: List[Brand] = []
-        for i in range(8):
-            brand: Brand = Brand(title=fake.company() + f" برند {i}", slug=slugify(fake.company() + str(i), allow_unicode=True))
-            brand.logo.save(f"brand_{i}.jpg", self._get_realistic_image('logo', 200, 200, i), save=True)
-            brands.append(brand)
-
-        color_attr, _ = Attribute.objects.get_or_create(title="رنگ", defaults={"slug": "color"})
-        size_attr, _ = Attribute.objects.get_or_create(title="سایز", defaults={"slug": "size"})
-
-        attr_vals: List[AttributeValue] = [
-            AttributeValue.objects.get_or_create(attribute=color_attr, value="مشکی")[0],
-            AttributeValue.objects.get_or_create(attribute=color_attr, value="سفید")[0],
-            AttributeValue.objects.get_or_create(attribute=size_attr, value="M")[0],
-            AttributeValue.objects.get_or_create(attribute=size_attr, value="L")[0]
+        meta_pages: List[Dict[str, Any]] = [
+            {
+                "view_name": "HomePage",
+                "title": "فروشگاه اینترنتی ارک کالا | بررسی، انتخاب و خرید آنلاین",
+                "canonical_url": f"{frontend_url}/",
+                "description": "ارک کالا، مرجع تخصصی نقد و بررسی و فروش اینترنتی کالا در ایران. با ضمانت اصالت کالا، ارسال سریع و پشتیبانی ۲۴ ساعته، خریدی مطمئن را تجربه کنید.",
+                "keywords": ["فروشگاه اینترنتی", "خرید آنلاین", "خرید موبایل", "خرید لپ تاپ", "ارک کالا"],
+                "index_page": True,
+                "follow_page_links": True,
+                "json_ld": {
+                    "@context": "https://schema.org",
+                    "@type": "WebPage",
+                    "name": "فروشگاه اینترنتی ارک کالا",
+                    "url": f"{frontend_url}/",
+                    "description": "ارک کالا، مرجع تخصصی نقد و بررسی و فروش اینترنتی کالا در ایران.",
+                    "image": f"{frontend_url}/assets/image/logo.png",
+                    "mainEntity": {
+                        "@type": "Organization",
+                        "name": "ارک کالا (Arkkala)",
+                        "url": f"{frontend_url}/",
+                        "logo": f"{frontend_url}/assets/image/logo.png",
+                        "sameAs": ["https://instagram.com/arkkala", "https://twitter.com/arkkala"],
+                        "contactPoint": {
+                            "@type": "ContactPoint",
+                            "telephone": "+982155555555",
+                            "contactType": "Customer Support",
+                            "areaServed": "IR",
+                            "availableLanguage": "Persian"
+                        }
+                    }
+                }
+            },
+            {
+                "view_name": "ShopPage",
+                "title": "فروشگاه | تمامی محصولات ارک کالا",
+                "canonical_url": f"{frontend_url}/shop/",
+                "description": "خرید انواع محصولات دیجیتال، لوازم خانگی و پوشاک با بهترین قیمت در ارک کالا. جستجو و فیلتر پیشرفته محصولات برای تجربه خریدی هوشمندانه.",
+                "keywords": ["محصولات ارک کالا", "فروشگاه کالا", "قیمت روز کالا", "خرید اینترنتی کالا"],
+                "index_page": True,
+                "follow_page_links": True,
+                "json_ld": {
+                    "@context": "https://schema.org",
+                    "@type": "CollectionPage",
+                    "name": "فروشگاه تمامی محصولات ارک کالا",
+                    "url": f"{frontend_url}/shop/"
+                }
+            },
+            {
+                "view_name": "BlogPage",
+                "title": "مجله اینترنتی ارک کالا | مقالات و اخبار تکنولوژی",
+                "canonical_url": f"{frontend_url}/blog/",
+                "description": "جدیدترین اخبار تکنولوژی، نقد و بررسی تخصصی گجت‌ها، و راهنمای جامع خرید محصولات دیجیتال را در مجله اینترنتی ارک کالا مطالعه کنید.",
+                "keywords": ["مجله تکنولوژی", "اخبار فناوری", "راهنمای خرید موبایل", "وبلاگ ارک کالا"],
+                "index_page": True,
+                "follow_page_links": True,
+                "json_ld": {
+                    "@context": "https://schema.org",
+                    "@type": "Blog",
+                    "name": "مجله اینترنتی ارک کالا",
+                    "url": f"{frontend_url}/blog/",
+                    "publisher": {
+                        "@type": "Organization",
+                        "name": "ارک کالا",
+                        "logo": {
+                            "@type": "ImageObject",
+                            "url": f"{frontend_url}/assets/image/logo.png"
+                        }
+                    }
+                }
+            }
         ]
 
-        self.stdout.write('Seeding Products...')
-        products: List[Product] = []
-        for i in range(records_count):
-            is_variable: bool = random.choice([True, False])
-            base_price: int = random.randint(50000, 5000000) * 10
-            title: str = fake.sentence(nb_words=3) + f" مدل {i}"
-
-            is_special: bool = random.choice([True, False])
-            special_percent: int = random.randint(5, 40) if is_special else 0
-            special_end = timezone.now() + timedelta(days=random.randint(1, 10)) if is_special else None
-
-            product: Product = Product.objects.create(
-                title=title,
-                slug=slugify(title, allow_unicode=True),
-                english_title=fake.word() + f" model {i}",
-                category=random.choice(shop_cats),
-                brand=random.choice(brands),
-                short_description=fake.text(max_nb_chars=120),
-                description=fake.paragraph(nb_sentences=6),
-                base_price=base_price,
-                base_inventory=random.randint(0, 50) if not is_variable else 0,
-                weight=random.randint(100, 5000),
-                volume=random.randint(500, 5000),
-                is_wholesale=random.choice([True, False]),
-                wholesale_min_quantity=random.randint(5, 15),
-                wholesale_base_price=base_price * 0.8,
-                special_discount_percent=special_percent,
-                special_offer_end=special_end,
-                is_variable=is_variable,
-                view_count=random.randint(10, 5000),
-                sold_count=random.randint(0, 100),
-                is_active=True
+        for page_data in meta_pages:
+            MetaInformation.objects.update_or_create(
+                view_name=page_data["view_name"],
+                defaults=page_data
             )
-            products.append(product)
 
-            for days_ago in range(6, 0, -1):
-                past_date = timezone.now() - timedelta(days=days_ago)
-                history: PriceHistory = PriceHistory.objects.create(
-                    product=product,
-                    price=base_price * random.uniform(0.8, 1.2)
-                )
-                PriceHistory.objects.filter(pk=history.pk).update(created_at=past_date)
+    def _seed_shop_data(self) -> None:
+        """Seeds Brands, Categories, and Products with full SEOMixin parameters."""
+        self.stdout.write("Seeding Shop Data (Brands, Categories, Products)...")
+        frontend_url: str = getattr(settings, 'FRONTEND_URL', 'https://arkkala.com').rstrip('/')
 
-            gallery: ProductGallery = ProductGallery(product=product, is_main=True)
-            gallery.image.save(f"product_{i}.jpg", self._get_realistic_image('product', 600, 600, i), save=True)
+        apple, _ = Brand.objects.update_or_create(title="اپل", defaults={"slug": "apple"})
+        samsung, _ = Brand.objects.update_or_create(title="سامسونگ", defaults={"slug": "samsung"})
 
-            if random.choice([True, False]):
-                video: ProductVideo = ProductVideo(product=product, title=f"ویدیو {title}")
-                video.video_file.save(f"video_{i}.mp4", self._get_realistic_video(), save=True)
+        digital_cat, _ = ShopCategory.objects.update_or_create(title="کالای دیجیتال", defaults={"slug": "digital"})
+        mobile_cat, _ = ShopCategory.objects.update_or_create(title="موبایل", defaults={"slug": "mobile", "parent": digital_cat})
 
-            if is_variable:
-                for _ in range(2):
-                    var: ProductVariant = ProductVariant.objects.create(
-                        product=product,
-                        price=base_price + random.randint(10000, 500000),
-                        inventory=random.randint(5, 20),
-                        wholesale_price=base_price * 0.75
-                    )
-                    var.attribute_values.add(random.choice(attr_vals))
-
-            for _ in range(random.randint(0, 3)):
-                ShopComment.objects.create(
-                    product=product, user=random.choice(users), body=fake.paragraph(nb_sentences=2),
-                    rating=random.randint(3, 5), is_approved=True
-                )
-
-            for _ in range(random.randint(0, 2)):
-                has_answer: bool = random.choice([True, False])
-                Question.objects.create(
-                    product=product,
-                    user=random.choice([random.choice(users), None]),
-                    name=fake.name() if random.choice([True, False]) else None,
-                    text=fake.sentence(nb_words=10) + "؟",
-                    answer_text=fake.paragraph(nb_sentences=2) if has_answer else None,
-                    is_approved=True
-                )
-
-        self.stdout.write('Seeding Blog Posts...')
-        blog_cats: List[BlogCategory] = [BlogCategory.objects.create(title=fake.word() + f" بلاگ {i}", slug=slugify(fake.word() + str(i), allow_unicode=True)) for i in range(4)]
-        tags: List[Tag] = [Tag.objects.create(title=fake.word() + f" تگ {i}", slug=slugify(fake.word() + str(i), allow_unicode=True)) for i in range(6)]
-
-        for i in range(records_count // 2):
-            post_title: str = fake.sentence(nb_words=4) + f" {i}"
-            post: Post = Post(
-                title=post_title,
-                slug=slugify(post_title, allow_unicode=True),
-                author=random.choice(users),
-                category=random.choice(blog_cats),
-                short_description=fake.text(max_nb_chars=100),
-                body=fake.paragraph(nb_sentences=15),
-                view_count=random.randint(50, 2000),
-                read_time=random.randint(3, 12),
-                is_published=True
-            )
-            post.image.save(f"post_{i}.jpg", self._get_realistic_image('blog', 800, 600, i), save=False)
-            post.save()
-            post.tags.add(*random.sample(tags, 2))
-            
-            for _ in range(random.randint(0, 3)):
-                BlogComment.objects.create(
-                    post=post, user=random.choice(users), body=fake.paragraph(nb_sentences=1), is_approved=True
-                )
-
-        self.stdout.write('Seeding Orders & Payments...')
-        ship_method1, _ = ShippingMethod.objects.get_or_create(name="پست پیشتاز", defaults={"base_cost": 45000, "is_pay_on_delivery": False})
-        ship_method2, _ = ShippingMethod.objects.get_or_create(name="تیپاکس", defaults={"base_cost": 0, "is_pay_on_delivery": True})
+        prod_title = "گوشی موبایل اپل مدل iPhone 15 Pro Max"
+        prod_slug = "apple-iphone-15-pro-max"
         
-        coupon, _ = Coupon.objects.get_or_create(
-            code="SPRING1403",
+        Product.objects.update_or_create(
+            slug=prod_slug,
             defaults={
-                "discount_percent": 15,
-                "max_discount_amount": 100000,
-                "valid_from": timezone.now(),
-                "valid_to": timezone.now() + timedelta(days=30),
-                "usage_limit": 100
+                "title": prod_title,
+                "category": mobile_cat,
+                "brand": apple,
+                "base_price": 85000000,
+                "base_inventory": 15,
+                "short_description": "پرچمدار جدید اپل با بدنه تیتانیومی مقاوم، پردازنده فوق سریع و دوربین پریسکوپی ۵ برابری برای عکاسی حرفه‌ای.",
+                "description": "گوشی iPhone 15 Pro Max با پردازنده قدرتمند A17 Pro و پورت Type-C روانه بازار شده است. این محصول با کیفیت ساخت بسیار بالا و سیستم عامل روان iOS، تجربه‌ای بی‌نظیر از دنیای دیجیتال را برای شما رقم می‌زند و بهترین انتخاب برای کاربران حرفه‌ای است.",
+                "is_active": True,
+                
+                "meta_description": "خرید گوشی آیفون 15 پرو مکس (iPhone 15 Pro Max) با بهترین قیمت و گارانتی 18 ماهه شرکتی از فروشگاه اینترنتی ارک کالا. ارسال فوری به سراسر کشور.",
+                "keywords": ["آیفون 15 پرو مکس", "خرید iphone 15 pro max", "قیمت آیفون 15", "خرید گوشی اپل"],
+                
+                "og_title": f"خرید و قیمت {prod_title} | ارک کالا",
+                "og_type": "product",
+                "og_description": "بررسی مشخصات فنی و خرید آیفون 15 پرو مکس با تضمین رجیستری معتبر، گارانتی معتبر و بهترین قیمت در بازار ایران.",
+                "og_url": f"{frontend_url}/product/{prod_slug}/",
+                "og_site_name": "ارک کالا",
+                "og_locale": "fa_IR",
+                
+                "twitter_card": "summary_large_image",
+                "twitter_site": "@arkkala",
+                "twitter_creator": "@arkkala_store",
             }
         )
 
-        for i in range(10):
-            selected_product: Product = random.choice(products)
-            order_cost: int = int(selected_product.base_price)
-            shipping_cost: int = int(ship_method1.base_cost)
-            total_payable: int = order_cost + shipping_cost
+    def _seed_blog_data(self) -> None:
+        """Seeds Blog Posts with full SEOMixin parameters."""
+        self.stdout.write("Seeding Blog Data (Posts)...")
+        frontend_url: str = getattr(settings, 'FRONTEND_URL', 'https://arkkala.com').rstrip('/')
 
-            order: Order = Order.objects.create(
-                user=random.choice(users),
-                status=random.choice(['paid', 'shipped', 'delivered']),
-                shipping_method=ship_method1,
-                coupon=None,
-                total_items_amount=order_cost,
-                discount_amount=0,
-                shipping_cost=shipping_cost,
-                payable_amount=total_payable,
-                is_paid=True,
-                country="ایران",
-                province=fake.state(),
-                city=fake.city(),
-                postal_address=fake.address(),
-                postal_code=fake.postcode(),
-                plaque=str(random.randint(1, 100)),
-                building_unit=str(random.randint(1, 10))
-            )
+        author, _ = User.objects.get_or_create(
+            phone_number="09120000000",
+            defaults={"first_name": "مدیر", "last_name": "ارشد", "is_staff": True, "is_superuser": True}
+        )
 
-            OrderItem.objects.create(
-                order=order,
-                product=selected_product,
-                quantity=1,
-                unit_price=order_cost,
-                total_price=order_cost
-            )
+        tech_cat, _ = BlogCategory.objects.update_or_create(title="تکنولوژی", defaults={"slug": "technology"})
 
-            Transaction.objects.create(
-                user=order.user,
-                order=order,
-                amount=total_payable,
-                gateway='zarinpal',
-                status='successful',
-                ref_id=fake.bban()
-            )
+        post_title = "راهنمای جامع خرید گوشی موبایل در سال ۲۰۲۶"
+        post_slug = "smartphone-buying-guide-2026"
 
-        self.stdout.write(self.style.SUCCESS(f'Successfully seeded complete records for all sections! 🚀'))
+        Post.objects.update_or_create(
+            slug=post_slug,
+            defaults={
+                "title": post_title,
+                "category": tech_cat,
+                "author": author,
+                "body": "<p>در این مقاله به بررسی برترین گوشی‌های بازار در بازه‌های قیمتی مختلف می‌پردازیم. انتخاب گوشی مناسب نیازمند شناخت دقیق پردازنده‌ها، کیفیت دوربین، میزان شارژدهی باتری و نیازهای شخصی شما است تا بتوانید بهترین ارزش خرید را تجربه کنید.</p>",
+                "short_description": "جامع‌ترین راهنمای خرید اسمارت‌فون، از گوشی‌های اقتصادی تا پرچمداران سال ۲۰۲۶ را در این مطلب تخصصی بخوانید.",
+                "read_time": 8,
+                "is_published": True,
+
+                "meta_description": "راهنمای خرید بهترین گوشی‌های موبایل در سال ۲۰۲۶. مشاوره تخصصی برای انتخاب اسمارت‌فون بر اساس بودجه و نیاز شما (عمر باتری، دوربین حرفه‌ای، گیمینگ و کاربری روزمره).",
+                "keywords": ["راهنمای خرید گوشی", "بهترین گوشی 2026", "خرید موبایل", "مشاوره خرید گوشی", "ارک کالا مگ"],
+
+                "og_title": post_title,
+                "og_type": "article",
+                "og_description": "قصد خرید گوشی جدید دارید؟ در این مقاله کاربردی تمامی گوشی‌های ارزشمند بازار را زیر ذره‌بین برده‌ایم تا خریدی هوشمندانه داشته باشید.",
+                "og_url": f"{frontend_url}/blog/{post_slug}/",
+                "og_site_name": "مجله ارک کالا",
+                "og_locale": "fa_IR",
+                "article_author": "تیم تحریریه ارک کالا",
+
+                "twitter_card": "summary_large_image",
+                "twitter_site": "@arkkala_mag",
+                "twitter_creator": "@arkkala_mag",
+            }
+        )

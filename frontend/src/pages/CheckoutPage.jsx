@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { getCart, getShippingMethods, checkout, validateCoupon } from '../api/cartApi';
 import { requestPayment } from '../api/paymentApi';
@@ -15,19 +15,14 @@ const resolveImageUrl = (url) => {
 };
 
 const getInitialFormData = () => {
-    const savedData = localStorage.getItem('arkkala_checkout_form');
-    if (savedData) {
-        try {
-            return JSON.parse(savedData);
-        } catch (e) {
-            console.error("Error parsing saved checkout data", e);
-        }
-    }
-    return {
+    const defaultData = {
         guest_first_name: '', 
         guest_last_name: '',  
         guest_phone: '',
+        guest_email: '',    
+        guest_password: '', 
         title: 'خانه',
+        country: 'ایران',
         province: '',
         city: '',
         postal_address: '',
@@ -37,10 +32,24 @@ const getInitialFormData = () => {
         shipping_method_id: '',
         coupon_code: ''
     };
+
+    const savedData = localStorage.getItem('arkkala_checkout_form');
+    if (savedData) {
+        try {
+            const parsedData = JSON.parse(savedData);
+            return { ...defaultData, ...parsedData, country: 'ایران', title: 'خانه' };
+        } catch (e) {
+            console.error("Error parsing saved checkout data", e);
+        }
+    }
+    return defaultData;
 };
 
 const CheckoutPage = () => {
-    const { user } = useContext(AuthContext);
+    const navigate = useNavigate();
+    const { user, authMode } = useContext(AuthContext);
+    const isEmailMode = authMode === 'EMAIL';
+
     const [cartItems, setCartItems] = useState([]);
     const [shippingMethods, setShippingMethods] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -69,6 +78,7 @@ const CheckoutPage = () => {
                 guest_first_name: user.first_name || prev.guest_first_name,
                 guest_last_name: user.last_name || prev.guest_last_name,
                 guest_phone: user.phone_number || prev.guest_phone,
+                guest_email: user.email || prev.guest_email,
             }));
         }
     }, [user]);
@@ -102,13 +112,12 @@ const CheckoutPage = () => {
 
             } catch (err) {
                 console.error(err);
-                alert("خطا در دریافت اطلاعات. لطفا صفحه را مجددا بارگذاری کنید.");
+                showToast("خطا در دریافت اطلاعات اولیه سیستم.", "danger");
             } finally {
                 setLoading(false);
             }
         };
         fetchData();
-        window.scrollTo(0,0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -136,26 +145,50 @@ const CheckoutPage = () => {
     const handleCheckout = async (e) => {
         e.preventDefault();
         
-        if (!user && (!formData.guest_phone || !formData.guest_first_name || !formData.guest_last_name)) {
-            return showToast("لطفا نام، نام خانوادگی و شماره موبایل خود را وارد کنید.", "warning");
+        if (!user) {
+            if (isEmailMode && (!formData.guest_email || !formData.guest_password || !formData.guest_first_name || !formData.guest_last_name)) {
+                return showToast("لطفاً نام، نام خانوادگی، ایمیل و رمز عبور خود را برای ساخت حساب وارد کنید.", "warning");
+            } else if (!isEmailMode && (!formData.guest_phone || !formData.guest_first_name || !formData.guest_last_name)) {
+                return showToast("لطفاً نام، نام خانوادگی و شماره موبایل خود را وارد کنید.", "warning");
+            }
         }
 
         if (user) {
             if (!user.first_name && !formData.guest_first_name) return showToast("لطفاً نام خود را وارد کنید.", "warning");
             if (!user.last_name && !formData.guest_last_name) return showToast("لطفاً نام خانوادگی خود را وارد کنید.", "warning");
-            if (!user.phone_number && !formData.guest_phone) return showToast("لطفاً شماره موبایل خود را وارد کنید.", "warning");
+            if (!user.phone_number && !isEmailMode && !formData.guest_phone) return showToast("لطفاً شماره موبایل خود را وارد کنید.", "warning");
         }
+
+        if (!formData.shipping_method_id) {
+            return showToast("لطفاً یک روش ارسال انتخاب کنید.", "danger");
+        }
+
+        const finalSubmissionData = {
+            ...formData,
+            country: 'ایران',
+            title: 'خانه'
+        };
 
         setIsSubmitting(true);
         try {
-            const order = await checkout(formData);
+            const order = await checkout(finalSubmissionData);
             const payment = await requestPayment(order.id, 'zarinpal');
             
-            // localStorage.removeItem('arkkala_checkout_form');
-
+            localStorage.removeItem('arkkala_checkout_form');
             window.location.href = payment.payment_url;
         } catch (error) {
-            showToast(error.response?.data?.error || "خطا در برقراری ارتباط با سرور.", "danger");
+            const resData = error.response?.data;
+            let errorMsg = "خطا در ارتباط با سرور.";
+            
+            if (resData) {
+                if (resData.error) errorMsg = resData.error;
+                else if (typeof resData === 'object') {
+                    const firstKey = Object.keys(resData)[0];
+                    errorMsg = `خطا در فیلد (${firstKey}): ${resData[firstKey][0]}`;
+                }
+            }
+            
+            showToast(errorMsg, "danger");
             setIsSubmitting(false);
         }
     };
@@ -183,9 +216,7 @@ const CheckoutPage = () => {
         const weightPenalty = Math.floor(totalWeight / 500) * 5000;
         const isTehran = formData.province.includes('تهران');
         const distanceMultiplier = isTehran ? 1.0 : 1.35;
-        const estimatedDynamicCost = Math.floor((basePostCost + weightPenalty) * distanceMultiplier);
-        
-        shippingCost = methodBaseCost + estimatedDynamicCost;
+        shippingCost = methodBaseCost + Math.floor((basePostCost + weightPenalty) * distanceMultiplier);
     }
     
     let discountAmount = 0;
@@ -203,7 +234,6 @@ const CheckoutPage = () => {
 
     const showFirstNameInput = !user || !user.first_name;
     const showLastNameInput = !user || !user.last_name;
-    const showPhoneInput = !user || !user.phone_number;
 
     return (
         <section className="checkout-page py-5 bg-light min-vh-100">
@@ -214,20 +244,48 @@ const CheckoutPage = () => {
 
             <div className="container-fluid">
                 <div className="row gy-4">
-                    
                     <div className="col-lg-8">
                         <div className="bg-white p-4 p-md-5 rounded-4 shadow-sm border border-ui h-100">
                             <div className="border-bottom border-light pb-3 mb-4">
                                 <h3 className="fw-900 text-dark d-flex align-items-center gap-2 m-0"><i className="bi bi-geo-alt-fill text-danger fs-3"></i> اطلاعات ارسال</h3>
-                                {!user && <p className="text-muted mt-3 font-13 bg-info bg-opacity-10 border border-info border-opacity-25 rounded-3 p-3 mb-0"><i className="bi bi-info-circle-fill text-info me-1 fs-5 align-middle"></i> شما به عنوان <strong>مهمان</strong> در حال خرید هستید. جهت ارسال و پیگیری سفارش، پر کردن مشخصات الزامی است.</p>}
-                                {user && (showFirstNameInput || showLastNameInput || showPhoneInput) && (
-                                    <p className="text-muted mt-3 font-13 bg-warning bg-opacity-10 border border-warning border-opacity-25 rounded-3 p-3 mb-0"><i className="bi bi-exclamation-circle-fill text-warning me-1 fs-5 align-middle"></i> مشخصات پروفایل شما کامل نیست. لطفاً برای ثبت سفارش اطلاعات زیر را تکمیل کنید.</p>
-                                )}
+                                {!user && <p className="text-muted mt-3 font-13 bg-info bg-opacity-10 border border-info border-opacity-25 rounded-3 p-3 mb-0"><i className="bi bi-info-circle-fill text-info me-1 fs-5 align-middle"></i> شما به عنوان <strong>مهمان</strong> در حال خرید هستید. سیستم به صورت خودکار یک حساب کاربری برای خریدهای بعدی شما ایجاد خواهد کرد.</p>}
                             </div>
 
                             <form id="checkoutForm" onSubmit={handleCheckout}>
                                 <div className="row gy-4">
-                                    {(showFirstNameInput || showLastNameInput || showPhoneInput) && (
+                                    {!user && (
+                                        <>
+                                            <div className="col-md-6">
+                                                <label className="fw-bold font-13 text-dark mb-2">نام <span className="text-danger">*</span></label>
+                                                <input type="text" name="guest_first_name" value={formData.guest_first_name} onChange={handleChange} className="form-control border-ui py-3 font-13 rounded-3 shadow-sm bg-light focus-white" placeholder="نام خود را وارد کنید" required />
+                                            </div>
+                                            <div className="col-md-6">
+                                                <label className="fw-bold font-13 text-dark mb-2">نام خانوادگی <span className="text-danger">*</span></label>
+                                                <input type="text" name="guest_last_name" value={formData.guest_last_name} onChange={handleChange} className="form-control border-ui py-3 font-13 rounded-3 shadow-sm bg-light focus-white" placeholder="نام خانوادگی خود را وارد کنید" required />
+                                            </div>
+                                            
+                                            {isEmailMode ? (
+                                                <>
+                                                    <div className="col-md-6">
+                                                        <label className="fw-bold font-13 text-dark mb-2">آدرس ایمیل حساب کاربری <span className="text-danger">*</span></label>
+                                                        <input type="email" name="guest_email" value={formData.guest_email} onChange={handleChange} className="form-control border-ui py-3 font-14 rounded-3 text-start shadow-sm bg-light focus-white" placeholder="email@domain.com" dir="ltr" required />
+                                                    </div>
+                                                    <div className="col-md-6">
+                                                        <label className="fw-bold font-13 text-dark mb-2">تعیین رمز عبور برای حساب جدید <span className="text-danger">*</span></label>
+                                                        <input type="password" name="guest_password" value={formData.guest_password} onChange={handleChange} className="form-control border-ui py-3 font-14 rounded-3 text-start shadow-sm bg-light focus-white" placeholder="حداقل ۸ کاراکتر" dir="ltr" required />
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <div className="col-12">
+                                                    <label className="fw-bold font-13 text-dark mb-2">شماره تلفن همراه <span className="text-danger">*</span></label>
+                                                    <input type="text" name="guest_phone" value={formData.guest_phone} onChange={handleChange} className="form-control border-ui py-3 font-14 rounded-3 text-start shadow-sm bg-light focus-white" placeholder="09123456789" dir="ltr" required />
+                                                </div>
+                                            )}
+                                            <div className="col-12"><hr className="border-light m-0"/></div>
+                                        </>
+                                    )}
+
+                                    {user && (showFirstNameInput || showLastNameInput) && (
                                         <>
                                             {showFirstNameInput && (
                                                 <div className="col-md-6">
@@ -241,12 +299,6 @@ const CheckoutPage = () => {
                                                     <input type="text" name="guest_last_name" value={formData.guest_last_name} onChange={handleChange} className="form-control border-ui py-3 font-13 rounded-3 shadow-sm bg-light focus-white" placeholder="نام خانوادگی خود را وارد کنید" required />
                                                 </div>
                                             )}
-                                            {showPhoneInput && (
-                                                <div className="col-12">
-                                                    <label className="fw-bold font-13 text-dark mb-2">شماره موبایل <span className="text-danger">*</span></label>
-                                                    <input type="text" name="guest_phone" value={formData.guest_phone} onChange={handleChange} className="form-control border-ui py-3 font-14 rounded-3 text-start shadow-sm bg-light focus-white" placeholder="09123456789" required />
-                                                </div>
-                                            )}
                                             <div className="col-12"><hr className="border-light m-0"/></div>
                                         </>
                                     )}
@@ -257,19 +309,19 @@ const CheckoutPage = () => {
                                     </div>
                                     <div className="col-md-6">
                                         <label className="fw-bold font-13 text-dark mb-2">شهر <span className="text-danger">*</span></label>
-                                        <input type="text" name="city" value={formData.city} onChange={handleChange} className="form-control border-ui py-3 font-13 rounded-3 shadow-sm bg-light focus-white" placeholder="مثال: تهران" required />
+                                        <input type="text" name="city" value={formData.city} onChange={handleChange} className="form-control border-ui py-3 font-13 rounded-3 shadow-sm bg-light focus-white" placeholder="مثال: دزفول" required />
                                     </div>
                                     <div className="col-12">
-                                        <label className="fw-bold font-13 text-dark mb-2">آدرس دقیق پستی <span className="text-danger">*</span></label>
-                                        <textarea name="postal_address" value={formData.postal_address} onChange={handleChange} className="form-control border-ui py-3 font-13 rounded-4 shadow-sm bg-light focus-white lh-lg" rows="3" placeholder="محله، خیابان اصلی، کوچه..." required></textarea>
+                                        <label className="fw-bold font-13 text-dark mb-2">آدرس دقیق پستی تحویل‌گیرنده <span className="text-danger">*</span></label>
+                                        <textarea name="postal_address" value={formData.postal_address} onChange={handleChange} className="form-control border-ui py-3 font-13 rounded-4 shadow-sm bg-light focus-white lh-lg" rows="3" placeholder="نام خیابان، کوچه، فرعی، پلاک..." required></textarea>
                                     </div>
                                     <div className="col-md-4">
                                         <label className="fw-bold font-13 text-dark mb-2">کد پستی (۱۰ رقمی) <span className="text-danger">*</span></label>
-                                        <input type="text" name="postal_code" value={formData.postal_code} onChange={handleChange} className="form-control border-ui py-3 font-14 rounded-3 text-start shadow-sm bg-light focus-white" placeholder="1234567890" required />
+                                        <input type="text" name="postal_code" value={formData.postal_code} onChange={handleChange} className="form-control border-ui py-3 font-14 rounded-3 text-start shadow-sm bg-light focus-white" placeholder="1234567890" dir="ltr" required />
                                     </div>
                                     <div className="col-md-4">
                                         <label className="fw-bold font-13 text-dark mb-2">پلاک <span className="text-danger">*</span></label>
-                                        <input type="text" name="plaque" value={formData.plaque} onChange={handleChange} className="form-control border-ui py-3 font-14 rounded-3 shadow-sm bg-light focus-white text-start" placeholder="12" required />
+                                        <input type="text" name="plaque" value={formData.plaque} onChange={handleChange} className="form-control border-ui py-3 font-14 rounded-3 shadow-sm bg-light focus-white text-start" placeholder="مثال: ۴" required />
                                     </div>
                                     <div className="col-md-4">
                                         <label className="fw-bold font-13 text-dark mb-2">واحد</label>
@@ -278,24 +330,30 @@ const CheckoutPage = () => {
 
                                     <div className="col-12 mt-5">
                                         <h5 className="fw-900 text-dark mb-3"><i className="bi bi-truck text-primary fs-4 me-2"></i> روش ارسال را انتخاب کنید</h5>
-                                        <div className="row gy-3">
-                                            {shippingMethods.map(method => (
-                                                <div className="col-md-6" key={method.id}>
-                                                    <label className={`w-100 border rounded-4 p-3 cursor-pointer transition d-flex align-items-center justify-content-between ${formData.shipping_method_id === method.id ? 'border-danger bg-danger bg-opacity-10 shadow-sm' : 'border-ui bg-white hover-shadow'}`}>
-                                                        <div className="d-flex align-items-center gap-3">
-                                                            <input type="radio" name="shipping_method_id" value={method.id} checked={formData.shipping_method_id === method.id} onChange={handleChange} className="form-check-input mt-0 shadow-none cursor-pointer" style={{width:'22px', height:'22px'}} />
-                                                            <div>
-                                                                <span className="d-block fw-bold font-14 text-dark mb-1">{method.name}</span>
-                                                                {method.description && <span className="font-12 text-muted">{method.description}</span>}
+                                        {shippingMethods.length === 0 ? (
+                                            <div className="alert alert-warning font-13 fw-bold rounded-4 py-3">
+                                                <i className="bi bi-exclamation-triangle-fill me-2"></i> هیچ روش ارسالی فعال نیست.
+                                            </div>
+                                        ) : (
+                                            <div className="row gy-3">
+                                                {shippingMethods.map(method => (
+                                                    <div className="col-md-6" key={method.id}>
+                                                        <label className={`w-100 border rounded-4 p-3 cursor-pointer transition d-flex align-items-center justify-content-between ${formData.shipping_method_id === method.id ? 'border-danger bg-danger bg-opacity-10 shadow-sm' : 'border-ui bg-white hover-shadow'}`}>
+                                                            <div className="d-flex align-items-center gap-3">
+                                                                <input type="radio" name="shipping_method_id" value={method.id} checked={formData.shipping_method_id === method.id} onChange={handleChange} className="form-check-input mt-0 shadow-none cursor-pointer" style={{width:'22px', height:'22px'}} />
+                                                                <div>
+                                                                    <span className="d-block fw-bold font-14 text-dark mb-1">{method.name}</span>
+                                                                    {method.description && <span className="font-12 text-muted">{method.description}</span>}
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                        <span className={`badge ${method.is_pay_on_delivery ? 'bg-warning text-dark' : 'bg-primary'} font-12 py-2 px-3 rounded-pill`}>
-                                                            {method.is_pay_on_delivery ? 'پس کرایه' : `پرداخت آنلاین`}
-                                                        </span>
-                                                    </label>
-                                                </div>
-                                            ))}
-                                        </div>
+                                                            <span className={`badge ${method.is_pay_on_delivery ? 'bg-warning text-dark' : 'bg-primary'} font-12 py-2 px-3 rounded-pill`}>
+                                                                {method.is_pay_on_delivery ? 'پس کرایه' : `پرداخت آنلاین`}
+                                                            </span>
+                                                        </label>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </form>
@@ -311,19 +369,21 @@ const CheckoutPage = () => {
                                     <input 
                                         type="text" 
                                         className="form-control font-13 py-3 border-ui shadow-none rounded-start-3 bg-light focus-white text-center" 
-                                        placeholder="مثال: SPRING1403" 
+                                        placeholder="مثال: DISCOUNT2026" 
                                         value={couponInput}
                                         onChange={(e) => setCouponInput(e.target.value)}
                                         disabled={couponData !== null}
-                                        autoComplete="off"
+                                        dir="ltr"
                                     />
-                                    {couponData ? (
-                                        <button type="button" className="btn btn-danger text-white fw-bold px-4 rounded-end-3" onClick={() => {setCouponData(null); setFormData(p=>({...p, coupon_code:''})); setCouponInput('');}}>حذف</button>
-                                    ) : (
-                                        <button type="button" className="btn btn-dark text-white fw-bold px-4 rounded-end-3" onClick={handleApplyCoupon} disabled={isApplyingCoupon}>
-                                            {isApplyingCoupon ? <div className="spinner-border spinner-border-sm"></div> : 'اعمال'}
-                                        </button>
-                                    )}
+                                    <div className="input-group-append">
+                                        {couponData ? (
+                                            <button type="button" className="btn btn-danger text-white fw-bold px-4 rounded-end-3 h-100" onClick={() => {setCouponData(null); setFormData(p=>({...p, coupon_code:''})); setCouponInput('');}}>حذف</button>
+                                        ) : (
+                                            <button type="button" className="btn btn-dark text-white fw-bold px-4 rounded-end-3 h-100" onClick={handleApplyCoupon} disabled={isApplyingCoupon}>
+                                                {isApplyingCoupon ? <div className="spinner-border spinner-border-sm"></div> : 'اعمال'}
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                                 {couponData && (
                                     <div className="mt-3 p-2 bg-success bg-opacity-10 border border-success border-opacity-25 rounded-3 text-center">
@@ -338,15 +398,12 @@ const CheckoutPage = () => {
                                 <div className="d-flex flex-column gap-3 mb-4 overflow-auto custom-scrollbar pe-2" style={{maxHeight: '220px'}}>
                                     {cartItems.map(item => {
                                         const product = item.product_details || {};
-                                        
                                         const mainImageObj = product?.gallery?.find(img => img.is_main) || product?.gallery?.[0];
                                         const rawUrl = mainImageObj?.url || product?.image_url || product?.image;
-                                        const imageUrl = resolveImageUrl(rawUrl);
-                                        
                                         return (
                                             <div key={item.id} className="d-flex align-items-center gap-3 border-bottom border-light pb-3">
                                                 <div className="bg-light rounded-3 p-1 border border-ui">
-                                                    <img src={imageUrl} alt={product.title || 'محصول'} style={{width:'45px', height:'45px', objectFit:'contain'}} onError={(e) => { e.target.src = '/assets/image/product/product-no-bg.png'; }} />
+                                                    <img src={resolveImageUrl(rawUrl)} alt={product.title} style={{width:'45px', height:'45px', objectFit:'contain'}} onError={(e) => { e.target.src = '/assets/image/product/product-no-bg.png'; }} />
                                                 </div>
                                                 <div className="flex-grow-1">
                                                     <h6 className="font-13 fw-bold text-dark text-overflow-1 m-0 mb-1">{product.title}</h6>
@@ -367,18 +424,18 @@ const CheckoutPage = () => {
                                     </li>
                                     
                                     {discountAmount > 0 && (
-                                        <li className="d-flex justify-content-between align-items-center mb-3 animate-fade-in">
-                                            <span className="font-13 text-danger fw-bold d-flex align-items-center gap-1"><i className="bi bi-tag-fill"></i> تخفیف اعمال شده</span>
-                                            <span className="font-15 text-danger fw-bold">- {discountAmount.toLocaleString()} <span className="font-11 fw-normal">تومان</span></span>
+                                        <li className="d-flex justify-content-between align-items-center mb-3">
+                                            <span className="font-13 text-muted">سود شما از این خرید</span>
+                                            <span className="font-15 text-danger fw-bold">{(discountAmount).toLocaleString()} تومان</span>
                                         </li>
                                     )}
 
-                                    <li className="d-flex justify-content-between align-items-center mb-3">
-                                        <span className="font-13 text-muted">هزینه ارسال <span className="font-11">({(totalWeight / 1000).toFixed(1)} کیلوگرم)</span></span>
-                                        {shippingCost > 0 ? (
-                                            <span className="font-14 text-dark fw-bold">{shippingCost.toLocaleString()} <span className="font-11 text-muted fw-normal">تومان</span></span>
+                                    <li className="d-flex mb-4 pb-4 border-bottom border-dashed align-items-center justify-content-between">
+                                        <span className="text-muted font-14">هزینه ارسال</span>
+                                        {shippingCost === 0 ? (
+                                            <span className="font-13 text-success fw-bold">رایگان (یا پس‌کرایه)</span>
                                         ) : (
-                                            <span className="font-13 text-primary fw-bold px-2 py-1 bg-primary bg-opacity-10 rounded-pill">{selectedMethod?.is_pay_on_delivery ? 'پس‌کرایه (هنگام تحویل)' : 'رایگان'}</span>
+                                            <span className="font-15 text-dark fw-bold">{shippingCost.toLocaleString()} <span className="font-11 text-muted fw-normal">تومان</span></span>
                                         )}
                                     </li>
 
@@ -400,7 +457,6 @@ const CheckoutPage = () => {
                             </div>
                         </div>
                     </div>
-
                 </div>
             </div>
 
@@ -412,42 +468,15 @@ const CheckoutPage = () => {
                 .transition { transition: all 0.3s ease; }
                 .text-overflow-1 { overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; }
                 .border-dashed { border-style: dashed !important; border-color: #dee2e6 !important;}
-                
                 .focus-white:focus { background-color: #ffffff !important; box-shadow: 0 0 0 4px rgba(239, 64, 86, 0.1) !important; border-color: #ef4056 !important;}
-                
-                .animate-fade-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
-                @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-
-                .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+                .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
                 .custom-scrollbar::-webkit-scrollbar-track { background: #f8f9fa; border-radius: 10px; }
                 .custom-scrollbar::-webkit-scrollbar-thumb { background: #dee2e6; border-radius: 10px; }
-                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #ced4da; }
-                
-                .custom-toast {
-                    position: fixed;
-                    bottom: 30px;
-                    left: -400px;
-                    min-width: 300px;
-                    padding: 16px 24px;
-                    border-radius: 16px;
-                    z-index: 999999;
-                    transition: left 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-                }
+                .custom-toast { position: fixed; bottom: 30px; left: -400px; min-width: 300px; padding: 16px 24px; border-radius: 16px; z-index: 999999; transition: left 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
                 .custom-toast.show { left: 30px; }
-                
                 @media (max-width: 768px) {
-                    .custom-toast {
-                        left: 50% !important;
-                        transform: translateX(-50%);
-                        bottom: -100px;
-                        width: 90%;
-                        min-width: unset;
-                        transition: bottom 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-                    }
-                    .custom-toast.show { 
-                        bottom: 20px !important; 
-                        left: 50% !important;
-                    }
+                    .custom-toast { left: 50% !important; transform: translateX(-50%); bottom: -100px; width: 90%; min-width: unset; transition: bottom 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
+                    .custom-toast.show { bottom: 20px !important; left: 50% !important; }
                 }
             `}</style>
         </section>

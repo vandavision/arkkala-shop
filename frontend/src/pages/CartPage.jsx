@@ -151,7 +151,7 @@ const CartPage = () => {
                                                                             <i className="bi bi-shield-check text-success me-2 fs-5"></i> گارانتی اصالت و سلامت فیزیکی
                                                                         </div>
                                                                         <div className="d-flex align-items-center text-muted font-13">
-                                                                            <i className="bi bi-shop-window text-primary me-2 fs-5"></i> فروشنده: <strong className="text-dark ms-1">آبتین</strong>
+                                                                            <i className="bi bi-shop-window text-primary me-2 fs-5"></i> فروشنده: <strong className="text-dark ms-1">آرک کالا</strong>
                                                                         </div>
                                                                     </div>
                                                                     

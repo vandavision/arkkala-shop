@@ -33,14 +33,16 @@ class PaymentService:
         )
 
         callback_path = reverse('payment-callback')
-        callback_url = request.build_absolute_uri(callback_path) + f"?gateway={gateway_name}&transaction_id={transaction.id}"
-
+        
+        callback_url = request.build_absolute_uri(callback_path) + f"?gateway={gateway_name}&transaction_id={transaction.uuid}"
+        
         buyer_name = order.user.get_full_name() if order.user else 'کاربر مهمان'
+        short_order_id = str(order.uuid).split('-')[0].upper()
 
         payment_url, authority = gateway.request_payment(
             amount=int(order.payable_amount),
             callback_url=callback_url,
-            description=f"پرداخت سفارش {order.id} توسط {buyer_name}"
+            description=f"پرداخت سفارش {short_order_id} توسط {buyer_name}"
         )
 
         transaction.authority = authority
@@ -53,7 +55,7 @@ class PaymentService:
         """
         Verifies the payment and updates both Transaction and Order status.
         """
-        transaction = Transaction.objects.get(id=transaction_id)
+        transaction = Transaction.objects.get(uuid=transaction_id)
         
         if transaction.status != 'pending':
             return transaction 
