@@ -80,6 +80,12 @@ class SiteSetting(models.Model):
     phone_number = models.CharField(max_length=50, default="12345678 - 021", verbose_name="شماره پشتیبانی")
     working_hours = models.CharField(max_length=255, default="۲۴ ساعته شبانه روز", verbose_name="ساعات پاسخگویی")
     
+    seller_legal_name = models.CharField(max_length=255, null=True, blank=True, verbose_name=_('نام شخص حقیقی / حقوقی'))
+    seller_address = models.TextField(null=True, blank=True, verbose_name=_('آدرس کامل فروشگاه'))
+    seller_economic_code = models.CharField(max_length=50, null=True, blank=True, verbose_name=_('شماره اقتصادی'))
+    seller_postal_code = models.CharField(max_length=20, null=True, blank=True, verbose_name=_('کد پستی'))
+    seller_registration_number = models.CharField(max_length=50, null=True, blank=True, verbose_name=_('شماره ثبت / شناسه ملی'))
+    
     telegram = models.URLField(blank=True, null=True, verbose_name="لینک تلگرام")
     instagram = models.URLField(blank=True, null=True, verbose_name="لینک اینستاگرام")
     whatsapp = models.URLField(blank=True, null=True, verbose_name="لینک واتساپ")
@@ -110,20 +116,27 @@ class SiteSetting(models.Model):
     copyright_text = models.CharField(max_length=255, default="کلیه حقوق این سایت محفوظ است.", verbose_name="متن کپی‌رایت")
 
     class Meta:
-        verbose_name = "تنظیمات پایه سایت"
-        verbose_name_plural = "تنظیمات پایه سایت"
+        verbose_name = _('تنظیمات سایت')
+        verbose_name_plural = _('تنظیمات سایت')
 
-    def save(self, *args, **kwargs):
-        self.pk = 1  
+    def save(self, *args, **kwargs) -> None:
+        """Ensure only one instance exists (Singleton pattern)."""
+        if self.__class__.objects.exists() and not self.pk:
+            raise ValidationError(_("تنها یک رکورد برای تنظیمات سایت مجاز است."))
+        self.pk = 1
         super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs) -> None:
+        """Prevent deletion of the singleton instance."""
+        pass
 
     @classmethod
     def load(cls):
-        obj, _ = cls.objects.get_or_create(pk=1)
+        obj, created = cls.objects.get_or_create(pk=1)
         return obj
-        
-    def __str__(self):
-        return "تنظیمات عمومی سایت"
+
+    def __str__(self) -> str:
+        return self.site_name or _("تنظیمات کلی فروشگاه")
 
 
 class FAQ(UUIDBaseModel, TimeStampMixin):

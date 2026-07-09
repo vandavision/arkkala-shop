@@ -1,3 +1,4 @@
+// arkkala/frontend/src/components/SeoMeta.jsx
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
 
@@ -32,7 +33,7 @@ const SeoMeta = ({ seoData, fallbackTitle, price, inventory, isArticle = false }
     const twitterCreator = seoData.twitter_creator || '';
 
     return (
-        <Helmet htmlAttributes={{ lang: 'fa', dir: 'rtl' }}>
+        <Helmet>
             <title>{metaTitle} | {siteName}</title>
             {metaDesc && <meta name="description" content={metaDesc} />}
             {keywords && <meta name="keywords" content={keywords} />}

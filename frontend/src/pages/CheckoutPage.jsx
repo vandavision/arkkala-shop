@@ -60,6 +60,9 @@ const CheckoutPage = () => {
     const [couponInput, setCouponInput] = useState(formData.coupon_code || '');
     const [couponData, setCouponData] = useState(null);
     const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+
+    // State for showing the guest password
+    const [showPassword, setShowPassword] = useState(false);
     
     const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
     const showToast = (message, type = 'success') => {
@@ -272,7 +275,12 @@ const CheckoutPage = () => {
                                                     </div>
                                                     <div className="col-md-6">
                                                         <label className="fw-bold font-13 text-dark mb-2">تعیین رمز عبور برای حساب جدید <span className="text-danger">*</span></label>
-                                                        <input type="password" name="guest_password" value={formData.guest_password} onChange={handleChange} className="form-control border-ui py-3 font-14 rounded-3 text-start shadow-sm bg-light focus-white" placeholder="حداقل ۸ کاراکتر" dir="ltr" required />
+                                                        <div className="position-relative">
+                                                            <input type={showPassword ? "text" : "password"} name="guest_password" value={formData.guest_password} onChange={handleChange} className="form-control border-ui py-3 font-14 rounded-3 text-start shadow-sm bg-light focus-white pe-5" placeholder="حداقل ۸ کاراکتر" dir="ltr" required />
+                                                            <button type="button" className="btn border-0 position-absolute top-50 end-0 translate-middle-y text-muted px-3" onClick={() => setShowPassword(!showPassword)} style={{ zIndex: 10 }}>
+                                                                <i className={`bi bi-eye${showPassword ? '-slash' : ''}`}></i>
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 </>
                                             ) : (

@@ -119,6 +119,8 @@ class OrderViewSet(viewsets.ReadOnlyModelViewSet):
                 guest_first_name=serializer.validated_data.get('guest_first_name'),
                 guest_last_name=serializer.validated_data.get('guest_last_name'),
                 guest_phone=serializer.validated_data.get('guest_phone'),
+                guest_email=serializer.validated_data.get('guest_email'),
+                guest_password=serializer.validated_data.get('guest_password'),
                 address_data=address_data,
                 shipping_method_id=serializer.validated_data['shipping_method_id'],
                 coupon_code=serializer.validated_data.get('coupon_code')

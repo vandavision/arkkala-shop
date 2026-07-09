@@ -1,15 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { getOrderDetail } from '../api/cartApi';
 import { SiteContext } from '../context/SiteContext';
-
-const resolveImageUrl = (url) => {
-    if (!url) return '/assets/image/product/product-no-bg.png';
-    if (url.startsWith('http') || url.startsWith('data:')) return url;
-    let baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-    baseUrl = baseUrl.replace(/\/api\/?$/, '');
-    return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
-};
 
 const OrderInvoicePage = () => {
     const { id } = useParams();
@@ -38,32 +30,21 @@ const OrderInvoicePage = () => {
         window.print();
     };
 
-    const getStatusBadge = (status) => {
-        switch(status) {
-            case 'pending': return <span className="badge bg-warning bg-opacity-10 text-warning border border-warning border-opacity-50 px-3 py-2 rounded-pill font-13 fw-bold">در انتظار پرداخت</span>;
-            case 'processing': return <span className="badge bg-info bg-opacity-10 text-info border border-info border-opacity-50 px-3 py-2 rounded-pill font-13 fw-bold">در حال پردازش</span>;
-            case 'shipped': return <span className="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-50 px-3 py-2 rounded-pill font-13 fw-bold">ارسال شده</span>;
-            case 'delivered': return <span className="badge bg-success bg-opacity-10 text-success border border-success border-opacity-50 px-3 py-2 rounded-pill font-13 fw-bold">تحویل شده</span>;
-            case 'cancelled': return <span className="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-50 px-3 py-2 rounded-pill font-13 fw-bold">لغو شده</span>;
-            default: return <span className="badge bg-secondary text-white px-3 py-2 rounded-pill font-13 fw-bold">{status}</span>;
-        }
-    };
-
     if (loading) {
         return (
-            <div className="text-center py-5 d-flex flex-column align-items-center justify-content-center bg-white rounded-4 shadow-sm border border-ui min-vh-50">
+            <div className="text-center py-5 d-flex flex-column align-items-center justify-content-center bg-white min-vh-100 rounded-4 shadow-sm border border-ui">
                 <div className="spinner-border text-danger mb-3" style={{width: '3rem', height:'3rem', borderWidth: '0.25rem'}}></div>
-                <h6 className="font-14 fw-bold text-muted">در حال بارگذاری فاکتور سفارش...</h6>
+                <h6 className="font-14 fw-bold text-muted">در حال بارگذاری صورتحساب...</h6>
             </div>
         );
     }
 
     if (!order) {
         return (
-            <div className="text-center py-5 d-flex flex-column align-items-center justify-content-center bg-white rounded-4 shadow-sm border border-ui min-vh-50">
+            <div className="text-center py-5 d-flex flex-column align-items-center justify-content-center bg-white min-vh-100 rounded-4 shadow-sm border border-ui">
                 <i className="bi bi-receipt text-muted opacity-25 d-block mb-3" style={{ fontSize: '5rem' }}></i>
                 <h5 className="fw-bold text-dark mb-3">سفارش مورد نظر یافت نشد!</h5>
-                <button onClick={() => navigate('/dashboard/orders')} className="btn btn-danger rounded-pill px-4 py-2 font-13 fw-bold shadow-sm hover-lift">
+                <button onClick={() => navigate('/dashboard/orders')} className="btn btn-danger rounded-pill px-4 py-2 font-13 fw-bold shadow-sm">
                     بازگشت به لیست سفارشات
                 </button>
             </div>
@@ -72,200 +53,275 @@ const OrderInvoicePage = () => {
 
     const shortOrderId = order.id.slice(0, 8).toUpperCase();
     const orderDate = new Date(order.created_at).toLocaleDateString('fa-IR');
-    const orderTime = new Date(order.created_at).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
+    
+    const totalItemsAmount = Number(order.total_items_amount) || 0;
+    const discountAmount = Number(order.discount_amount) || 0;
+    const subtotalAfterDiscount = totalItemsAmount - discountAmount;
+    
+    const taxAmount = subtotalAfterDiscount * 0.10; 
+    const finalAmountWithoutShipping = subtotalAfterDiscount + taxAmount;
+    const shippingCost = Number(order.shipping_cost) || 0;
 
     return (
-        <div className="order-invoice-page position-relative">
-            <div className="d-flex align-items-center justify-content-between mb-4 no-print">
-                <div className="d-flex align-items-center gap-3">
-                    <button onClick={() => navigate(-1)} className="btn btn-light rounded-circle shadow-sm border border-ui d-flex align-items-center justify-content-center hover-lift" style={{width: '45px', height: '45px'}}>
-                        <i className="bi bi-arrow-right fs-5 text-dark"></i>
-                    </button>
-                    <h2 className="fw-900 h5 m-0 text-dark">جزئیات <span className="text-danger">سفارش</span></h2>
-                </div>
-                <button onClick={handlePrint} className="btn btn-primary rounded-pill px-4 py-2 font-13 fw-bold shadow-sm hover-lift d-flex align-items-center gap-2">
-                    <i className="bi bi-printer-fill fs-5"></i> چاپ فاکتور
+        <div className="invoice-page-wrapper">
+            
+            <div className="d-flex align-items-center justify-content-between mb-4 d-print-none">
+                <button onClick={() => navigate(-1)} className="btn btn-light rounded-circle shadow-sm border border-ui d-flex align-items-center justify-content-center hover-lift" style={{width: '45px', height: '45px'}} title="بازگشت">
+                    <i className="bi bi-arrow-right fs-5 text-dark"></i>
+                </button>
+                <button onClick={handlePrint} className="btn btn-dark rounded-pill px-4 py-2 font-14 fw-bold shadow-sm d-flex align-items-center gap-2 hover-lift">
+                    <i className="bi bi-printer-fill fs-5"></i> پرینت صورتحساب
                 </button>
             </div>
 
-            <div className="invoice-print-area bg-white rounded-4 border border-ui shadow-sm p-4 p-md-5 mb-4">
+            <div className="invoice-a4-container bg-white p-4 p-md-5 rounded-4 shadow-sm border border-ui mx-auto">
                 
-                {/* Invoice Header */}
-                <div className="d-flex flex-column flex-md-row align-items-center justify-content-between border-bottom border-dark border-opacity-25 pb-4 mb-4 gap-4">
-                    <div className="d-flex align-items-center gap-3">
-                        <img src={settings?.logo_url || "/assets/image/logo.png"} alt={settings?.site_name} style={{ maxHeight: '60px', objectFit: 'contain' }} />
-                        <div className="vr bg-secondary opacity-25 d-none d-md-block" style={{width:'2px', height:'40px'}}></div>
-                        <div className="d-none d-md-block">
-                            <h4 className="fw-900 text-dark m-0 font-18 mb-1">فروشگاه {settings?.site_name || 'ارک کالا'}</h4>
-                            <span className="font-12 text-muted">فاکتور فروش کالا و خدمات</span>
-                        </div>
+                <div className="row align-items-center mb-4">
+                    <div className="col-3 text-start">
+                        {settings?.logo_url ? (
+                            <img src={settings.logo_url} alt="لوگو" style={{ maxHeight: '60px', objectFit: 'contain' }} />
+                        ) : (
+                            <div style={{width:'60px', height:'60px'}}></div>
+                        )}
                     </div>
-                    
-                    <div className="text-center text-md-end">
-                        <h5 className="fw-bold text-dark font-15 mb-2">شماره سفارش: <span className="font-monospace" dir="ltr">{shortOrderId}</span></h5>
-                        <div className="d-flex align-items-center justify-content-center justify-content-md-end gap-3 text-muted font-13">
-                            <span><i className="bi bi-calendar2-week me-1"></i> {orderDate}</span>
-                            <span><i className="bi bi-clock me-1"></i> {orderTime}</span>
+                    <div className="col-6 text-center">
+                        <h3 className="fw-900 fs-4 m-0 text-dark">صورتحساب فروش کالا و خدمات</h3>
+                    </div>
+                    <div className="col-3 text-end text-dark font-13 fw-bold lh-lg">
+                        <div className="d-flex justify-content-end gap-2">
+                            <span className="text-muted">شماره سفارش:</span>
+                            <span dir="ltr">{shortOrderId}</span>
+                        </div>
+                        <div className="d-flex justify-content-end gap-2">
+                            <span className="text-muted">تاریخ سفارش:</span>
+                            <span>{orderDate}</span>
                         </div>
                     </div>
                 </div>
 
-                {/* Customer & Order Info */}
-                <div className="row mb-5 border border-ui rounded-4 mx-0 overflow-hidden">
-                    <div className="col-md-6 p-4 bg-light border-end-md border-ui">
-                        <h6 className="fw-900 text-dark mb-3 font-14"><i className="bi bi-person-vcard text-danger me-2"></i> اطلاعات خریدار</h6>
-                        <ul className="list-unstyled m-0 d-flex flex-column gap-3 font-13">
-                            <li className="d-flex align-items-start gap-2">
-                                <span className="text-muted min-w-80">تحویل گیرنده:</span>
-                                <strong className="text-dark">{order.guest_first_name} {order.guest_last_name}</strong>
-                            </li>
-                            <li className="d-flex align-items-start gap-2">
-                                <span className="text-muted min-w-80">شماره تماس:</span>
-                                <strong className="text-dark font-monospace" dir="ltr">{order.guest_phone || '---'}</strong>
-                            </li>
-                            <li className="d-flex align-items-start gap-2">
-                                <span className="text-muted min-w-80">کد پستی:</span>
-                                <strong className="text-dark font-monospace" dir="ltr">{order.postal_code || '---'}</strong>
-                            </li>
-                            <li className="d-flex align-items-start gap-2">
-                                <span className="text-muted min-w-80 flex-shrink-0">آدرس:</span>
-                                <strong className="text-dark lh-lg text-justify">{order.province}، {order.city}، {order.postal_address} {order.plaque ? `پلاک ${order.plaque}` : ''} {order.building_unit ? `واحد ${order.building_unit}` : ''}</strong>
-                            </li>
-                        </ul>
-                    </div>
-                    <div className="col-md-6 p-4">
-                        <h6 className="fw-900 text-dark mb-3 font-14"><i className="bi bi-info-circle text-primary me-2"></i> اطلاعات سفارش</h6>
-                        <ul className="list-unstyled m-0 d-flex flex-column gap-3 font-13">
-                            <li className="d-flex align-items-center gap-2">
-                                <span className="text-muted min-w-80">وضعیت سفارش:</span>
-                                {getStatusBadge(order.status)}
-                            </li>
-                            <li className="d-flex align-items-center gap-2">
-                                <span className="text-muted min-w-80">روش ارسال:</span>
-                                <strong className="text-dark">{order.shipping_method_name || 'پست پیشتاز'}</strong>
-                            </li>
-                            <li className="d-flex align-items-center gap-2">
-                                <span className="text-muted min-w-80">کد پیگیری پرداخت:</span>
-                                <strong className="text-dark font-monospace" dir="ltr">{order.tracking_code || '---'}</strong>
-                            </li>
-                            <li className="d-flex align-items-center gap-2">
-                                <span className="text-muted min-w-80">وضعیت پرداخت:</span>
-                                {order.is_paid ? (
-                                    <span className="badge bg-success bg-opacity-10 text-success rounded-pill px-3 py-1"><i className="bi bi-check2-all me-1"></i> پرداخت شده</span>
-                                ) : (
-                                    <span className="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3 py-1"><i className="bi bi-x-lg me-1"></i> پرداخت نشده</span>
-                                )}
-                            </li>
-                        </ul>
-                    </div>
-                </div>
+                <table className="table table-bordered border-dark m-0 font-12 text-dark align-middle mb-3 invoice-table">
+                    <tbody>
+                        <tr>
+                            <th className="text-center bg-light fw-bold fs-6 py-2" colSpan="3">مشخصات فروشنده</th>
+                        </tr>
+                        <tr>
+                            <td className="w-50 py-3 px-3 align-top">
+                                <div className="d-flex mb-2"><strong className="min-w-140">نام شخص حقوقی/حقیقی:</strong> {settings?.seller_legal_name || settings?.site_name || 'ثبت نشده'}</div>
+                                <div className="d-flex mb-0"><strong className="min-w-140">آدرس کامل:</strong> {settings?.seller_address || 'ثبت نشده'}</div>
+                            </td>
+                            <td className="w-25 py-3 px-3 align-top">
+                                <div className="d-flex mb-2"><strong className="min-w-100">شماره اقتصادی:</strong> {settings?.seller_economic_code || '---'}</div>
+                                <div className="d-flex mb-0"><strong className="min-w-100">کد پستی:</strong> <span dir="ltr">{settings?.seller_postal_code || '---'}</span></div>
+                            </td>
+                            <td className="w-25 py-3 px-3 align-top">
+                                <div className="d-flex mb-2"><strong className="min-w-140">شماره ثبت/شناسه ملی:</strong> {settings?.seller_registration_number || '---'}</div>
+                                <div className="d-flex mb-0"><strong className="min-w-140">تلفن/نمابر:</strong> <span dir="ltr">{settings?.phone_number || '---'}</span></div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <table className="table table-bordered border-dark m-0 font-12 text-dark align-middle mb-4 invoice-table">
+                    <tbody>
+                        <tr>
+                            <th className="text-center bg-light fw-bold fs-6 py-2" colSpan="3">مشخصات خریدار</th>
+                        </tr>
+                        <tr>
+                            <td className="w-50 py-3 px-3 align-top">
+                                <div className="d-flex mb-2"><strong className="min-w-140">نام شخص حقوقی/حقیقی:</strong> {order.customer_first_name} {order.customer_last_name}</div>
+                                <div className="d-flex mb-0"><strong className="min-w-140">آدرس کامل:</strong> {order.province}، {order.city}، {order.postal_address} {order.plaque ? `پلاک ${order.plaque}` : ''} {order.building_unit ? `واحد ${order.building_unit}` : ''}</div>
+                            </td>
+                            <td className="w-25 py-3 px-3 align-top">
+                                <div className="d-flex mb-2"><strong className="min-w-100">شماره اقتصادی:</strong> ---</div>
+                                <div className="d-flex mb-0"><strong className="min-w-100">کد پستی:</strong> <span dir="ltr">{order.postal_code || '---'}</span></div>
+                            </td>
+                            <td className="w-25 py-3 px-3 align-top">
+                                <div className="d-flex mb-2"><strong className="min-w-140">شماره ثبت/شناسه ملی:</strong> ---</div>
+                                <div className="d-flex mb-0"><strong className="min-w-140">شماره تماس:</strong> <span dir="ltr">{order.customer_phone || '---'}</span></div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
 
-                {/* Order Items Table */}
-                <h6 className="fw-900 text-dark mb-3 font-15"><i className="bi bi-cart-check text-success me-2"></i> لیست کالاهای سفارش</h6>
-                <div className="table-responsive border border-ui rounded-4 mb-4">
-                    <table className="table table-hover align-middle mb-0 text-center font-13">
-                        <thead className="table-light text-muted">
-                            <tr>
-                                <th className="py-3 fw-bold border-0">ردیف</th>
-                                <th className="py-3 fw-bold border-0 text-start">شرح کالا</th>
-                                <th className="py-3 fw-bold border-0">تعداد</th>
-                                <th className="py-3 fw-bold border-0">مبلغ واحد (تومان)</th>
-                                <th className="py-3 fw-bold border-0">مبلغ کل (تومان)</th>
-                            </tr>
-                        </thead>
-                        <tbody className="border-top-0">
-                            {order.items && order.items.map((item, index) => (
-                                <tr key={item.id} className="border-bottom border-light">
-                                    <td className="py-3 text-muted fw-bold">{index + 1}</td>
-                                    <td className="py-3 text-start">
-                                        <div className="d-flex align-items-center gap-3">
-                                            <div className="bg-white border border-light shadow-sm rounded-3 p-1 flex-shrink-0" style={{width: '50px', height: '50px'}}>
-                                                <img src={resolveImageUrl(item.product_image)} alt={item.product_title} className="img-fluid w-100 h-100 object-fit-contain" onError={(e) => { e.target.src = '/assets/image/product/product-no-bg.png'; }} />
-                                            </div>
-                                            <div className="d-flex flex-column justify-content-center">
-                                                <span className="fw-bold text-dark d-block mb-1 text-overflow-1">{item.product_title}</span>
-                                                {item.variant_details && item.variant_details.attributes && (
-                                                    <div className="d-flex gap-2 font-11 text-muted">
-                                                        {item.variant_details.attributes.map((attr, idx) => (
-                                                            <span key={idx} className="bg-light px-2 py-1 rounded-pill">{attr.attribute_name}: {attr.value}</span>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
+                <table className="table table-bordered border-dark m-0 font-12 text-dark align-middle text-center invoice-table">
+                    <thead className="bg-light">
+                        <tr>
+                            <th className="fw-bold fs-6 py-2" colSpan="11">مشخصات کالا یا خدمات مورد معامله</th>
+                        </tr>
+                        <tr className="font-11 fw-bold align-middle">
+                            <th style={{width: '3%'}}>ردیف</th>
+                            <th style={{width: '7%'}}>کد کالا</th>
+                            <th style={{width: '30%'}} className="text-start pe-2">شرح کالا یا خدمات</th>
+                            <th style={{width: '6%'}}>تعداد</th>
+                            <th style={{width: '6%'}}>واحد</th>
+                            <th style={{width: '10%'}}>مبلغ واحد <br/>(تومان)</th>
+                            <th style={{width: '10%'}}>مبلغ کل <br/>(تومان)</th>
+                            <th style={{width: '7%'}}>تخفیف <br/>(تومان)</th>
+                            <th style={{width: '11%'}}>مبلغ پس از تخفیف <br/>(تومان)</th>
+                            <th style={{width: '10%'}}>مالیات و عوارض <br/>(تومان)</th>
+                            <th style={{width: '12%'}}>جمع کل به علاوه مالیات <br/>(تومان)</th>
+                        </tr>
+                    </thead>
+                    <tbody className="fw-semibold">
+                        {order.items?.map((item, index) => {
+                            const itemTotal = Number(item.total_price);
+                            return (
+                                <tr key={item.id}>
+                                    <td>{index + 1}</td>
+                                    <td dir="ltr" className="font-11 text-muted">{item.id.slice(0, 5).toUpperCase()}</td>
+                                    <td className="text-start pe-2">
+                                        {item.product_title} 
+                                        {item.variant_details?.attributes && item.variant_details.attributes.length > 0 && (
+                                            <span className="text-muted font-10 ms-1">
+                                                ({item.variant_details.attributes.map(a => `${a.attribute_name}: ${a.value}`).join(' - ')})
+                                            </span>
+                                        )}
                                     </td>
-                                    <td className="py-3 fw-bold text-dark">{item.quantity}</td>
-                                    <td className="py-3 text-muted">{Number(item.unit_price).toLocaleString()}</td>
-                                    <td className="py-3 fw-bold text-dark">{Number(item.total_price).toLocaleString()}</td>
+                                    <td>{item.quantity}</td>
+                                    <td>عدد</td>
+                                    <td>{Number(item.unit_price).toLocaleString()}</td>
+                                    <td>{itemTotal.toLocaleString()}</td>
+                                    <td className="text-muted">-</td>
+                                    <td>{itemTotal.toLocaleString()}</td>
+                                    <td className="text-muted">-</td>
+                                    <td>{itemTotal.toLocaleString()}</td>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                            );
+                        })}
 
-                {/* Order Financial Summary */}
-                <div className="row justify-content-end mx-0">
-                    <div className="col-12 col-md-6 col-lg-5 p-0">
-                        <div className="bg-light border border-ui rounded-4 p-4 d-flex flex-column gap-3 font-14">
-                            <div className="d-flex justify-content-between align-items-center">
-                                <span className="text-muted">مجموع مبلغ کالاها:</span>
-                                <strong className="text-dark">{Number(order.total_items_amount).toLocaleString()} تومان</strong>
-                            </div>
-                            
-                            {Number(order.discount_amount) > 0 && (
-                                <div className="d-flex justify-content-between align-items-center">
-                                    <span className="text-danger fw-bold"><i className="bi bi-tag-fill me-1"></i> سود شما از خرید:</span>
-                                    <strong className="text-danger fw-bold">{Number(order.discount_amount).toLocaleString()} تومان</strong>
-                                </div>
-                            )}
+                        <tr className="bg-light fw-bold font-12">
+                            <td colSpan="6" className="text-end pe-3">جمع کل</td>
+                            <td>{totalItemsAmount.toLocaleString()}</td>
+                            <td className="text-danger">{discountAmount.toLocaleString()}</td>
+                            <td>{subtotalAfterDiscount.toLocaleString()}</td>
+                            <td>{taxAmount.toLocaleString()}</td>
+                            <td className="text-success">{finalAmountWithoutShipping.toLocaleString()}</td>
+                        </tr>
+                        
+                        {shippingCost > 0 && (
+                            <tr className="bg-light fw-bold font-12">
+                                <td colSpan="10" className="text-end pe-3">هزینه ارسال ({order.shipping_method_name || 'سرویس پستی'})</td>
+                                <td>{shippingCost.toLocaleString()}</td>
+                            </tr>
+                        )}
+                        {shippingCost === 0 && (
+                            <tr className="bg-light fw-bold font-12">
+                                <td colSpan="10" className="text-end pe-3">هزینه ارسال ({order.shipping_method_name || 'سرویس پستی'})</td>
+                                <td className="text-danger">پس کرایه / رایگان</td>
+                            </tr>
+                        )}
 
-                            <div className="d-flex justify-content-between align-items-center">
-                                <span className="text-muted">هزینه ارسال:</span>
-                                <strong className="text-dark">{Number(order.shipping_cost) === 0 ? 'پس‌کرایه / رایگان' : `${Number(order.shipping_cost).toLocaleString()} تومان`}</strong>
-                            </div>
+                        <tr className="bg-dark text-white fw-bold font-14 print-bg-dark">
+                            <td colSpan="10" className="text-end pe-3 py-3 print-text-white">مبلغ نهایی قابل پرداخت (تومان)</td>
+                            <td className="py-3 print-text-white fs-6">{Number(order.payable_amount).toLocaleString()}</td>
+                        </tr>
 
-                            <div className="d-flex justify-content-between align-items-center border-bottom border-dark border-opacity-10 pb-3 mb-1">
-                                <span className="text-muted">مالیات (۱۰٪):</span>
-                                <strong className="text-dark">
-                                    {Number((order.total_items_amount - order.discount_amount) * 0.10).toLocaleString()} تومان
-                                </strong>
-                            </div>
-
-                            <div className="d-flex justify-content-between align-items-center pt-2">
-                                <span className="fw-900 text-dark font-15">مبلغ نهایی قابل پرداخت:</span>
-                                <strong className="fw-900 text-success font-20">{Number(order.payable_amount).toLocaleString()} <span className="font-12 text-muted fw-normal">تومان</span></strong>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Print Footer Notice */}
-                <div className="mt-5 pt-4 border-top border-light text-center no-screen d-none print-only">
-                    <p className="font-12 text-muted mb-0">این فاکتور به صورت سیستمی تولید شده و بدون مهر و امضا فاقد اعتبار قانونی جهت ارائه به مراجع ذی‌صلاح می‌باشد.</p>
-                </div>
+                        <tr>
+                            <td colSpan="5" className="text-start py-3 pe-3 fw-bold align-middle">
+                                شرایط و نحوه فروش: &nbsp;&nbsp;&nbsp;
+                                {order.is_paid ? <i className="bi bi-check-square-fill text-success fs-5 align-middle"></i> : <i className="bi bi-square fs-5 align-middle"></i>} نقدی &nbsp;&nbsp;&nbsp;
+                                {!order.is_paid ? <i className="bi bi-check-square-fill text-success fs-5 align-middle"></i> : <i className="bi bi-square fs-5 align-middle"></i>} غیرنقدی
+                            </td>
+                            <td colSpan="6" className="text-start py-3 pe-3 fw-bold align-middle">
+                                توضیحات: {order.tracking_code ? `کد پیگیری تراکنش بانکی: ${order.tracking_code}` : '---'}
+                            </td>
+                        </tr>
+                        <tr style={{ height: '140px' }} className="align-top">
+                            <td colSpan="5" className="text-start pt-4 pe-4 fw-bold font-13 position-relative">
+                                مهر و امضاء فروشنده
+                                {order.is_paid && <div className="position-absolute text-success" style={{top: '60px', right: '40px', border: '3px solid #198754', padding: '5px 15px', transform: 'rotate(-10deg)', borderRadius: '10px', fontSize: '18px'}}>پرداخت شده</div>}
+                            </td>
+                            <td colSpan="6" className="text-start pt-4 pe-4 fw-bold font-13">
+                                مهر و امضاء خریدار
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
 
             <style jsx="true">{`
                 .hover-lift { transition: transform 0.2s ease, box-shadow 0.2s; }
-                .hover-lift:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.08) !important; }
-                .min-w-80 { min-width: 90px; display: inline-block; }
-                .text-overflow-1 { overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; }
+                .hover-lift:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important; }
                 
-                @media (min-width: 768px) {
-                    .border-end-md { border-left: 1px solid #dee2e6; border-right: none; }
+                .min-w-100 { min-width: 100px; display: inline-block; }
+                .min-w-120 { min-width: 120px; display: inline-block; }
+                .min-w-140 { min-width: 140px; display: inline-block; }
+                
+                .invoice-table th, .invoice-table td {
+                    border-color: #000 !important;
+                }
+
+                .invoice-a4-container {
+                    max-width: 210mm;
+                    margin: 0 auto;
                 }
 
                 @media print {
-                    body { background-color: #fff !important; margin: 0; padding: 0; }
-                    body * { visibility: hidden; }
-                    .invoice-print-area, .invoice-print-area * { visibility: visible; }
-                    .invoice-print-area { position: absolute; left: 0; top: 0; width: 100%; border: none !important; box-shadow: none !important; padding: 0 !important; }
-                    .no-print { display: none !important; }
-                    .print-only { display: block !important; }
+                    @page { 
+                        size: A4 portrait; 
+                        margin: 10mm; 
+                    }
                     
-                    .bg-light { background-color: #f8f9fa !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                    .table-light { background-color: #f8f9fa !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-                    .badge { border: 1px solid #dee2e6 !important; color: #000 !important; background: transparent !important; }
+                    * {
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                    }
+
+                    html, body, #root, .app-wrapper, .dashboard-layout, .main-content {
+                        background-color: #fff !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        width: 100% !important;
+                    }
+
+                    body * {
+                        visibility: hidden;
+                    }
+                    
+                    .invoice-page-wrapper, .invoice-page-wrapper * {
+                        visibility: visible;
+                    }
+                    
+                    .invoice-page-wrapper {
+                        position: absolute;
+                        left: 0;
+                        top: 0;
+                        width: 100%;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                    }
+
+                    .invoice-a4-container {
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        border: none !important;
+                        box-shadow: none !important;
+                        padding: 0 !important;
+                        margin: 0 !important;
+                    }
+
+                    .d-print-none, .d-print-none * {
+                        display: none !important;
+                        height: 0 !important;
+                    }
+
+                    .table {
+                        page-break-inside: auto;
+                        width: 100% !important;
+                    }
+                    tr {
+                        page-break-inside: avoid;
+                        page-break-after: auto;
+                    }
+                    th, td {
+                        border: 1px solid #000 !important;
+                        color: #000 !important;
+                        padding: 6px 4px !important;
+                    }
+                    
+                    .bg-light { background-color: #f1f3f5 !important; }
+                    .print-bg-dark { background-color: #212529 !important; }
+                    .print-text-white { color: #fff !important; }
                 }
             `}</style>
         </div>

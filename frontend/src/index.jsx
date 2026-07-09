@@ -1,3 +1,4 @@
+// arkkala/frontend/src/index.jsx
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
@@ -9,6 +10,9 @@ import { CartProvider } from './context/CartContext';
 import { CompareProvider } from './context/CompareContext';
 import { SiteProvider } from './context/SiteContext'; 
 import './styles/main.css';
+
+document.documentElement.dir = 'rtl';
+document.documentElement.lang = 'fa';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(

@@ -1,3 +1,4 @@
+// arkkala/frontend/src/context/SiteContext.jsx
 import React, { createContext, useState, useEffect } from 'react';
 import { getSiteSettings } from '../api/homeApi';
 
@@ -16,6 +17,11 @@ export const SiteProvider = ({ children }) => {
         twitter: '',
         copyright_text: '',
         logo_url: null,
+        seller_legal_name: '',
+        seller_address: '',
+        seller_economic_code: '',
+        seller_postal_code: '',
+        seller_registration_number: '',
         namad_1_img_url: null, namad_1_link: null,
         namad_2_img_url: null, namad_2_link: null,
         namad_3_img_url: null, namad_3_link: null,
@@ -27,7 +33,7 @@ export const SiteProvider = ({ children }) => {
 
     useEffect(() => {
         getSiteSettings().then(data => {
-            if (data) setSettings(data);
+            if (data) setSettings(prev => ({ ...prev, ...data }));
         });
     }, []);
 

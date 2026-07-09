@@ -1,3 +1,4 @@
+// arkkala/frontend/src/api/authApi.js
 import axiosInstance from './axios';
 
 export const getAuthConfig = async () => {

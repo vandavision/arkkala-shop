@@ -16,6 +16,8 @@ axiosInstance.interceptors.request.use(
         const token = localStorage.getItem('access_token');
         if (token) {
             config.headers['Authorization'] = 'Bearer ' + token;
+        } else {
+            delete config.headers['Authorization'];
         }
         return config;
     },
@@ -56,10 +58,13 @@ axiosInstance.interceptors.response.use(
                 } catch (err) {
                     localStorage.removeItem('access_token');
                     localStorage.removeItem('refresh_token');
-                    window.location.href = '/login/';
+                    delete axiosInstance.defaults.headers['Authorization'];
+                    window.location.href = '/login';
                 }
             } else {
-                window.location.href = '/login/';
+                localStorage.removeItem('access_token');
+                delete axiosInstance.defaults.headers['Authorization'];
+                window.location.href = '/login';
             }
         }
         return Promise.reject(error);

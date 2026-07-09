@@ -21,6 +21,10 @@ const LoginPage = () => {
     const [passwordConfirm, setPasswordConfirm] = useState('');
     const [otpCode, setOtpCode] = useState('');
     const [loading, setLoading] = useState(false);
+    
+    // Show Password Toggles
+    const [showPassword, setShowPassword] = useState(false);
+    const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
 
     // Toast
     const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
@@ -234,16 +238,23 @@ const LoginPage = () => {
                                             <span className="font-13 fw-bold text-dark">رمز عبور حساب کاربری</span>
                                             <button type="button" onClick={() => setStep('identifier')} className="btn btn-link p-0 font-12 text-danger text-decoration-none"><i className="bi bi-pencil-square"></i> تغییر ایمیل</button>
                                         </div>
-                                        <input 
-                                            type="password" 
-                                            className="form-control py-3 px-4 bg-light border-0 shadow-sm rounded-4 font-14 focus-danger text-start mb-3" 
-                                            placeholder="رمز عبور"
-                                            value={password}
-                                            onChange={(e) => setPassword(e.target.value)}
-                                            dir="ltr"
-                                            autoFocus
-                                            required
-                                        />
+                                        
+                                        <div className="position-relative mb-3">
+                                            <input 
+                                                type={showPassword ? "text" : "password"} 
+                                                className="form-control py-3 px-4 bg-light border-0 shadow-sm rounded-4 font-14 focus-danger text-start pe-5" 
+                                                placeholder="رمز عبور"
+                                                value={password}
+                                                onChange={(e) => setPassword(e.target.value)}
+                                                dir="ltr"
+                                                autoFocus
+                                                required
+                                            />
+                                            <button type="button" className="btn border-0 position-absolute top-50 end-0 translate-middle-y text-muted px-3" onClick={() => setShowPassword(!showPassword)} style={{ zIndex: 10 }}>
+                                                <i className={`bi bi-eye${showPassword ? '-slash' : ''}`}></i>
+                                            </button>
+                                        </div>
+
                                         <div className="text-end">
                                             <button type="button" onClick={() => setStep('forgot_request')} className="btn btn-link p-0 font-12 text-muted text-decoration-none hover-text-danger">
                                                 رمز عبور را فراموش کرده‌اید؟
@@ -273,24 +284,36 @@ const LoginPage = () => {
                                             autoFocus
                                             required
                                         />
-                                        <input 
-                                            type="password" 
-                                            className="form-control py-3 px-4 bg-light border-0 shadow-sm rounded-4 font-14 focus-danger text-start mb-3" 
-                                            placeholder="رمز عبور قوی"
-                                            value={password}
-                                            onChange={(e) => setPassword(e.target.value)}
-                                            dir="ltr"
-                                            required
-                                        />
-                                        <input 
-                                            type="password" 
-                                            className="form-control py-3 px-4 bg-light border-0 shadow-sm rounded-4 font-14 focus-danger text-start" 
-                                            placeholder="تکرار رمز عبور"
-                                            value={passwordConfirm}
-                                            onChange={(e) => setPasswordConfirm(e.target.value)}
-                                            dir="ltr"
-                                            required
-                                        />
+                                        
+                                        <div className="position-relative mb-3">
+                                            <input 
+                                                type={showPassword ? "text" : "password"} 
+                                                className="form-control py-3 px-4 bg-light border-0 shadow-sm rounded-4 font-14 focus-danger text-start pe-5" 
+                                                placeholder="رمز عبور قوی"
+                                                value={password}
+                                                onChange={(e) => setPassword(e.target.value)}
+                                                dir="ltr"
+                                                required
+                                            />
+                                            <button type="button" className="btn border-0 position-absolute top-50 end-0 translate-middle-y text-muted px-3" onClick={() => setShowPassword(!showPassword)} style={{ zIndex: 10 }}>
+                                                <i className={`bi bi-eye${showPassword ? '-slash' : ''}`}></i>
+                                            </button>
+                                        </div>
+
+                                        <div className="position-relative mb-3">
+                                            <input 
+                                                type={showPasswordConfirm ? "text" : "password"} 
+                                                className="form-control py-3 px-4 bg-light border-0 shadow-sm rounded-4 font-14 focus-danger text-start pe-5" 
+                                                placeholder="تکرار رمز عبور"
+                                                value={passwordConfirm}
+                                                onChange={(e) => setPasswordConfirm(e.target.value)}
+                                                dir="ltr"
+                                                required
+                                            />
+                                            <button type="button" className="btn border-0 position-absolute top-50 end-0 translate-middle-y text-muted px-3" onClick={() => setShowPasswordConfirm(!showPasswordConfirm)} style={{ zIndex: 10 }}>
+                                                <i className={`bi bi-eye${showPasswordConfirm ? '-slash' : ''}`}></i>
+                                            </button>
+                                        </div>
                                     </div>
                                     <button type="submit" disabled={loading} className="btn btn-danger w-100 py-3 rounded-pill fw-bold shadow-sm hover-lift">
                                         {loading ? <div className="spinner-border spinner-border-sm text-white"></div> : 'ثبت نام'}
@@ -343,24 +366,36 @@ const LoginPage = () => {
                                             autoFocus
                                             required
                                         />
-                                        <input 
-                                            type="password" 
-                                            className="form-control py-3 px-4 bg-light border-0 shadow-sm rounded-4 font-14 focus-danger text-start mb-3" 
-                                            placeholder="رمز عبور جدید"
-                                            value={password}
-                                            onChange={(e) => setPassword(e.target.value)}
-                                            dir="ltr"
-                                            required
-                                        />
-                                        <input 
-                                            type="password" 
-                                            className="form-control py-3 px-4 bg-light border-0 shadow-sm rounded-4 font-14 focus-danger text-start" 
-                                            placeholder="تکرار رمز عبور جدید"
-                                            value={passwordConfirm}
-                                            onChange={(e) => setPasswordConfirm(e.target.value)}
-                                            dir="ltr"
-                                            required
-                                        />
+
+                                        <div className="position-relative mb-3">
+                                            <input 
+                                                type={showPassword ? "text" : "password"} 
+                                                className="form-control py-3 px-4 bg-light border-0 shadow-sm rounded-4 font-14 focus-danger text-start pe-5" 
+                                                placeholder="رمز عبور جدید"
+                                                value={password}
+                                                onChange={(e) => setPassword(e.target.value)}
+                                                dir="ltr"
+                                                required
+                                            />
+                                            <button type="button" className="btn border-0 position-absolute top-50 end-0 translate-middle-y text-muted px-3" onClick={() => setShowPassword(!showPassword)} style={{ zIndex: 10 }}>
+                                                <i className={`bi bi-eye${showPassword ? '-slash' : ''}`}></i>
+                                            </button>
+                                        </div>
+
+                                        <div className="position-relative mb-3">
+                                            <input 
+                                                type={showPasswordConfirm ? "text" : "password"} 
+                                                className="form-control py-3 px-4 bg-light border-0 shadow-sm rounded-4 font-14 focus-danger text-start pe-5" 
+                                                placeholder="تکرار رمز عبور جدید"
+                                                value={passwordConfirm}
+                                                onChange={(e) => setPasswordConfirm(e.target.value)}
+                                                dir="ltr"
+                                                required
+                                            />
+                                            <button type="button" className="btn border-0 position-absolute top-50 end-0 translate-middle-y text-muted px-3" onClick={() => setShowPasswordConfirm(!showPasswordConfirm)} style={{ zIndex: 10 }}>
+                                                <i className={`bi bi-eye${showPasswordConfirm ? '-slash' : ''}`}></i>
+                                            </button>
+                                        </div>
                                     </div>
                                     <button type="submit" disabled={loading} className="btn btn-danger w-100 py-3 rounded-pill fw-bold shadow-sm hover-lift">
                                         {loading ? <div className="spinner-border spinner-border-sm text-white"></div> : 'ذخیره و ورود'}
