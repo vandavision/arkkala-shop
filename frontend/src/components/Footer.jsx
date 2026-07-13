@@ -101,7 +101,7 @@ const Footer = () => {
                                     {activeNamads.map(namad => (
                                         <li className="nav-item" key={`namad-${namad.id}`}>
                                             <a href={namad.link} target="_blank" rel="noreferrer" className="nav-link bg-light border border-ui rounded-4 shadow-sm hover-lift d-flex align-items-center justify-content-center p-2 bg-white" style={{width: '90px', height: '90px'}}>
-                                                <img src={namad.img} alt={`نماد اعتبار ${namad.id}`} className="img-fluid object-fit-contain w-100 h-100" />
+                                                <img src={namad.img} alt={`نماد اعتبار ${namad.id}`} className="img-fluid object-fit-contain w-100 h-100" loading="lazy" decoding="async" />
                                             </a>
                                         </li>
                                     ))}
@@ -116,7 +116,7 @@ const Footer = () => {
                         </div>
                         
                         <div className="col-md-2 text-center d-none d-md-block">
-                            <button onClick={scrollToTop} className="btn bg-danger text-white rounded-circle shadow-sm hover-lift d-flex align-items-center justify-content-center mx-auto p-0" style={{width:'40px', height:'40px'}}>
+                            <button onClick={scrollToTop} aria-label="Scroll to top" className="btn bg-danger text-white rounded-circle shadow-sm hover-lift d-flex align-items-center justify-content-center mx-auto p-0" style={{width:'40px', height:'40px'}}>
                                 <i className="bi bi-chevron-up fs-5"></i>
                             </button>
                         </div>
@@ -124,11 +124,11 @@ const Footer = () => {
                         <div className="col-md-5 text-center text-md-end">
                             <nav className="navbar navbar-expand p-0 justify-content-center justify-content-md-end">
                                 <ul className="navbar-nav flex-row gap-3">
-                                    {settings?.instagram && <li className="nav-item"><a href={settings.instagram} target="_blank" rel="noreferrer" className="nav-link text-muted hover-text-danger fs-5 transition p-0"><i className="bi bi-instagram"></i></a></li>}
-                                    {settings?.twitter && <li className="nav-item"><a href={settings.twitter} target="_blank" rel="noreferrer" className="nav-link text-muted hover-text-info fs-5 transition p-0"><i className="bi bi-twitter-x"></i></a></li>}
-                                    {settings?.linkedin && <li className="nav-item"><a href={settings.linkedin} target="_blank" rel="noreferrer" className="nav-link text-muted hover-text-primary fs-5 transition p-0"><i className="bi bi-linkedin"></i></a></li>}
-                                    {settings?.telegram && <li className="nav-item"><a href={settings.telegram} target="_blank" rel="noreferrer" className="nav-link text-muted hover-text-primary fs-5 transition p-0"><i className="bi bi-telegram"></i></a></li>}
-                                    {settings?.whatsapp && <li className="nav-item"><a href={settings.whatsapp} target="_blank" rel="noreferrer" className="nav-link text-muted hover-text-success fs-5 transition p-0"><i className="bi bi-whatsapp"></i></a></li>}
+                                    {settings?.instagram && <li className="nav-item"><a href={settings.instagram} target="_blank" rel="noreferrer" className="nav-link text-muted hover-text-danger fs-5 transition p-0" aria-label="اینستاگرام"><i className="bi bi-instagram"></i></a></li>}
+                                    {settings?.twitter && <li className="nav-item"><a href={settings.twitter} target="_blank" rel="noreferrer" className="nav-link text-muted hover-text-info fs-5 transition p-0" aria-label="توییتر"><i className="bi bi-twitter-x"></i></a></li>}
+                                    {settings?.linkedin && <li className="nav-item"><a href={settings.linkedin} target="_blank" rel="noreferrer" className="nav-link text-muted hover-text-primary fs-5 transition p-0" aria-label="لینکدین"><i className="bi bi-linkedin"></i></a></li>}
+                                    {settings?.telegram && <li className="nav-item"><a href={settings.telegram} target="_blank" rel="noreferrer" className="nav-link text-muted hover-text-primary fs-5 transition p-0" aria-label="تلگرام"><i className="bi bi-telegram"></i></a></li>}
+                                    {settings?.whatsapp && <li className="nav-item"><a href={settings.whatsapp} target="_blank" rel="noreferrer" className="nav-link text-muted hover-text-success fs-5 transition p-0" aria-label="واتساپ"><i className="bi bi-whatsapp"></i></a></li>}
                                 </ul>
                             </nav>
                         </div>

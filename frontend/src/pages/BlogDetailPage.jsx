@@ -1,3 +1,4 @@
+// arkkala/frontend/src/pages/BlogDetailPage.jsx
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getPostDetail, getPostsList, submitPostComment } from '../api/blogApi';
@@ -30,6 +31,7 @@ const BlogDetailPage = () => {
     const [latestPosts, setLatestPosts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [activeFaqIndex, setActiveFaqIndex] = useState(null);
 
     const [commentBody, setCommentBody] = useState('');
     const [submittingComment, setSubmittingComment] = useState(false);
@@ -90,6 +92,10 @@ const BlogDetailPage = () => {
         window.open(shareUrl, '_blank');
     };
 
+    const toggleFaqAccordion = (index) => {
+        setActiveFaqIndex(activeFaqIndex === index ? null : index);
+    };
+
     if (loading) {
         return (
             <div className="d-flex flex-column justify-content-center align-items-center min-vh-100 bg-light">
@@ -140,6 +146,17 @@ const BlogDetailPage = () => {
                         <div className="bg-white rounded-4 shadow-sm border border-ui p-4 p-md-5 mb-4 animate-fade-in">
                             <h1 className="fw-900 h3 text-dark mb-4 lh-base title-line-bottom pb-3">{post.title}</h1>
                             
+                            {/* GEO: E-E-A-T Badge */}
+                            {post.expert_reviewer && (
+                                <div className="alert bg-success bg-opacity-10 border border-success border-opacity-25 rounded-3 d-flex align-items-center gap-3 mb-4 shadow-sm">
+                                    <i className="bi bi-patch-check-fill text-success fs-2"></i>
+                                    <div>
+                                        <span className="d-block font-12 text-success fw-bold mb-1">تایید شده توسط متخصص (E-E-A-T)</span>
+                                        <span className="font-14 text-dark fw-bold">{post.expert_reviewer}</span>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="row gy-3 justify-content-start align-items-center mb-4">
                                 {post.category && (
                                     <div className="col-auto">
@@ -174,16 +191,90 @@ const BlogDetailPage = () => {
                             </div>
 
                             <div className="text-center mb-5">
-                                <img 
-                                    src={resolveImageUrl(post.image)} 
-                                    className="img-fluid rounded-4 shadow-sm w-100 object-fit-cover" 
-                                    style={{maxHeight: '450px'}} 
-                                    alt={post.title} 
-                                    onError={(e) => { e.target.onerror = null; e.target.src = '/assets/image/blog/blog-1.jpg'; }}
-                                />
+                                <picture>
+                                    <source srcSet={resolveImageUrl(post.image).replace(/\.(jpg|jpeg|png)$/i, '.webp')} type="image/webp" />
+                                    <img 
+                                        src={resolveImageUrl(post.image)} 
+                                        className="img-fluid rounded-4 shadow-sm w-100 object-fit-cover" 
+                                        style={{maxHeight: '450px'}} 
+                                        alt={post.image_alt || post.title} 
+                                        title={post.image_alt || post.title}
+                                        fetchpriority="high"
+                                        loading="eager"
+                                        decoding="async"
+                                        onError={(e) => { e.target.onerror = null; e.target.src = '/assets/image/blog/blog-1.jpg'; }}
+                                    />
+                                </picture>
                             </div>
 
+                            {/* GEO: Key Takeaways */}
+                            {post.key_takeaways && Array.isArray(post.key_takeaways) && post.key_takeaways.length > 0 && (
+                                <div className="bg-light rounded-4 p-4 p-md-5 border border-ui mb-5 shadow-sm">
+                                    <h4 className="fw-900 text-dark mb-4 d-flex align-items-center gap-2 fs-5">
+                                        <i className="bi bi-lightning-charge-fill text-warning fs-3"></i> خلاصه مطلب (نکات کلیدی)
+                                    </h4>
+                                    <ul className="mb-0 lh-lg font-14 text-dark d-flex flex-column gap-3 ps-0 list-unstyled">
+                                        {post.key_takeaways.map((point, idx) => (
+                                            <li key={idx} className="d-flex align-items-start gap-2">
+                                                <i className="bi bi-check-circle-fill text-success mt-1"></i> {point}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+
                             <div className="blog-content-body font-15 text-dark lh-lg text-justify" dangerouslySetInnerHTML={{ __html: post.body || post.content || post.description || '<p>محتوایی برای این مقاله ثبت نشده است.</p>' }}></div>
+                            
+                            {/* AEO: Dynamic FAQ Accordion */}
+                            {post.faq_data && Array.isArray(post.faq_data) && post.faq_data.length > 0 && (
+                                <div className="mt-5 pt-4 border-top border-light">
+                                    <h4 className="fw-900 text-dark mb-4 d-flex align-items-center gap-2 fs-5">
+                                        <i className="bi bi-patch-question text-danger fs-3"></i> سوالات متداول (FAQ)
+                                    </h4>
+                                    <div className="accordion d-flex flex-column gap-3">
+                                        {post.faq_data.map((faq, index) => {
+                                            const isOpen = activeFaqIndex === index;
+                                            return (
+                                                <div className="accordion-item border border-ui rounded-4 overflow-hidden shadow-sm bg-light transition" key={index}>
+                                                    <h2 className="accordion-header m-0">
+                                                        <button 
+                                                            type="button" 
+                                                            className={`accordion-button shadow-none bg-light font-14 fw-bold py-4 px-4 text-start d-flex justify-content-between align-items-center w-100 border-0 ${isOpen ? 'text-danger' : 'text-dark'}`}
+                                                            onClick={() => toggleFaqAccordion(index)}
+                                                        >
+                                                            <span className="pe-3">{faq.question}</span>
+                                                            <i className={`bi bi-chevron-down transition fs-5 flex-shrink-0 ${isOpen ? 'rotate-180 text-danger' : 'text-muted'}`}></i>
+                                                        </button>
+                                                    </h2>
+                                                    <div className={`accordion-collapse overflow-hidden transition-all ${isOpen ? 'show-panel' : 'hide-panel'}`}>
+                                                        <div className="accordion-body px-4 pb-4 pt-2 text-muted font-14 lh-lg border-top border-light text-justify bg-white">
+                                                            {faq.answer}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* GEO: Citations */}
+                            {post.citations && Array.isArray(post.citations) && post.citations.length > 0 && (
+                                <div className="mt-5 pt-4 border-top border-light">
+                                    <h5 className="fw-bold text-dark mb-3 font-15 d-flex align-items-center gap-2">
+                                        <i className="bi bi-link-45deg text-secondary fs-4"></i> منابع و ارجاعات
+                                    </h5>
+                                    <ul className="lh-lg font-13 text-muted ps-0 list-unstyled d-flex flex-column gap-2" dir="ltr">
+                                        {post.citations.map((cite, idx) => (
+                                            <li key={idx} className="text-start">
+                                                <a href={cite} target="_blank" rel="nofollow noreferrer" className="text-primary text-decoration-none hover-text-danger transition text-break">
+                                                    [{idx + 1}] {cite}
+                                                </a>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
                         </div>
 
                         <div className="bg-white rounded-4 shadow-sm border border-ui p-4 p-md-5 mt-4" id="comments">
@@ -259,7 +350,18 @@ const BlogDetailPage = () => {
                             
                             <div className="bg-white rounded-4 shadow-sm border border-ui p-4 text-center mb-4 hover-shadow transition">
                                 <div className="position-relative d-inline-block mb-3">
-                                    <img src="/assets/image/user/user.jpg" className="rounded-circle border border-3 border-danger p-1 object-fit-cover" style={{width: '90px', height: '90px'}} alt="نویسنده" onError={(e)=>{e.target.src='/assets/image/user/user.png'}} />
+                                    <picture>
+                                        <source srcSet="/assets/image/user/user.webp" type="image/webp" />
+                                        <img 
+                                            src="/assets/image/user/user.jpg" 
+                                            className="rounded-circle border border-3 border-danger p-1 object-fit-cover" 
+                                            style={{width: '90px', height: '90px'}} 
+                                            alt="نویسنده" 
+                                            loading="lazy"
+                                            decoding="async"
+                                            onError={(e)=>{e.target.src='/assets/image/user/user.png'}} 
+                                        />
+                                    </picture>
                                     <span className="position-absolute bottom-0 end-0 bg-success border border-white border-2 rounded-circle" style={{width: '20px', height: '20px'}}></span>
                                 </div>
                                 <h5 className="fw-bold text-dark mb-1 font-16">{post.author?.first_name ? `${post.author.first_name} ${post.author.last_name}` : `تیم تحریریه ${siteName}`}</h5>
@@ -279,7 +381,18 @@ const BlogDetailPage = () => {
                                     <div className="d-flex flex-column gap-3">
                                         {latestPosts.map(p => (
                                             <Link to={`/blog/${p.slug}`} key={p.uuid} className="d-flex align-items-center gap-3 text-decoration-none hover-bg-light p-2 rounded-3 transition">
-                                                <img src={resolveImageUrl(p.image)} className="rounded-3 object-fit-cover shadow-sm" style={{width: '70px', height: '70px'}} alt={p.title} onError={(e)=>{e.target.src='/assets/image/blog/blog-1.jpg'}} />
+                                                <picture>
+                                                    <source srcSet={resolveImageUrl(p.image).replace(/\.(jpg|jpeg|png)$/i, '.webp')} type="image/webp" />
+                                                    <img 
+                                                        src={resolveImageUrl(p.image)} 
+                                                        className="rounded-3 object-fit-cover shadow-sm" 
+                                                        style={{width: '70px', height: '70px'}} 
+                                                        alt={p.image_alt || p.title} 
+                                                        loading="lazy"
+                                                        decoding="async"
+                                                        onError={(e)=>{e.target.src='/assets/image/blog/blog-1.jpg'}} 
+                                                    />
+                                                </picture>
                                                 <div>
                                                     <h6 className="font-13 fw-bold text-dark text-overflow-2 m-0 lh-base hover-text-danger transition">{p.title}</h6>
                                                     <span className="font-11 text-muted d-block mt-2"><i className="bi bi-clock me-1"></i>{new Date(p.created_at).toLocaleDateString('fa-IR')}</span>
@@ -328,6 +441,11 @@ const BlogDetailPage = () => {
 
                 .custom-toast { position: fixed; bottom: 30px; left: -400px; min-width: 300px; padding: 16px 24px; border-radius: 16px; z-index: 999999; transition: left 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
                 .custom-toast.show { left: 30px; }
+                
+                .hide-panel { max-height: 0; opacity: 0; transition: all 0.3s ease; }
+                .show-panel { max-height: 1000px; opacity: 1; transition: all 0.4s ease; }
+                .rotate-180 { transform: rotate(180deg); }
+
                 @media (max-width: 768px) {
                     .custom-toast { left: 50% !important; transform: translateX(-50%); bottom: -100px; width: 90%; min-width: unset; transition: bottom 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
                     .custom-toast.show { bottom: 20px !important; left: 50% !important; }

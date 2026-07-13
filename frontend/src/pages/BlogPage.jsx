@@ -1,3 +1,4 @@
+// arkkala/frontend/src/pages/BlogPage.jsx
 import React, { useState, useEffect, useRef, useContext } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { getPostsList, getBlogCategories } from '../api/blogApi';
@@ -197,13 +198,19 @@ const BlogPage = () => {
                                     <div className="card blog-card border-0 bg-transparent h-100 hover-lift group-blog-card">
                                         <div className="card-img position-relative z-0 overflow-hidden rounded-4 shadow-sm">
                                             <Link to={`/blog/${post.slug}`}>
-                                                <img 
-                                                    src={resolveImageUrl(post.image)} 
-                                                    className="img-fluid w-100 object-fit-cover transition blog-image" 
-                                                    style={{height: '240px'}}
-                                                    alt={post.title}
-                                                    onError={(e) => { e.target.onerror = null; e.target.src = '/assets/image/blog/blog-1.jpg'; }}
-                                                />
+                                                <picture>
+                                                    <source srcSet={resolveImageUrl(post.image).replace(/\.(jpg|jpeg|png)$/i, '.webp')} type="image/webp" />
+                                                    <img 
+                                                        src={resolveImageUrl(post.image)} 
+                                                        className="img-fluid w-100 object-fit-cover transition blog-image" 
+                                                        style={{height: '240px'}}
+                                                        alt={post.image_alt || post.title}
+                                                        title={post.image_alt || post.title}
+                                                        loading="lazy"
+                                                        decoding="async"
+                                                        onError={(e) => { e.target.onerror = null; e.target.src = '/assets/image/blog/blog-1.jpg'; }}
+                                                    />
+                                                </picture>
                                             </Link>
                                             {post.category && (
                                                 <span className="position-absolute top-0 end-0 bg-white text-danger fw-bold font-11 px-3 py-1 m-3 rounded-pill shadow-sm">

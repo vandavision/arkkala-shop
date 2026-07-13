@@ -1,17 +1,17 @@
 """
 Serializers for the Blog App.
-Handles data transformation and validation for blog models.
+Handles data transformation and validation for blog models including SEO, AEO, and GEO.
 Optimized memory caching logic.
 """
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 from rest_framework import serializers
-from rest_framework.request import Request
+
 from .models import Category, Tag, Post, Comment
 from platform_seo.serializers import BaseSeoSerializer
 
+
 class BlogCategorySerializer(serializers.ModelSerializer):
     """Serializer for the Blog Category model."""
-    
     class Meta:
         model = Category
         fields = ['uuid', 'title', 'slug']
@@ -19,7 +19,6 @@ class BlogCategorySerializer(serializers.ModelSerializer):
 
 class TagSerializer(serializers.ModelSerializer):
     """Serializer for the Blog Tag model."""
-    
     class Meta:
         model = Tag
         fields = ['uuid', 'title', 'slug']
@@ -27,12 +26,12 @@ class TagSerializer(serializers.ModelSerializer):
 
 class PostSeoSerializer(BaseSeoSerializer):
     """SEO fields Serializer for Blog Post."""
-    
     class Meta:
         model = Post
         fields = [
             'seo_keywords', 'meta_description', 'canonical_url', 'og_image_url', 'schema_markup',
-            'og_title', 'og_type', 'og_description', 'og_url', 'og_site_name', 'og_locale', 'article_author'
+            'og_title', 'og_type', 'og_description', 'og_url', 'og_site_name', 'og_locale', 'article_author',
+            'twitter_card', 'twitter_creator', 'twitter_site'
         ]
 
     def get_canonical_url(self, obj: Post) -> str:
@@ -63,25 +62,25 @@ class PostListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Post
         fields = [
-            'uuid', 'title', 'slug', 'category', 'author_name', 'image', 
+            'uuid', 'title', 'slug', 'category', 'author_name', 'image', 'image_alt', 
             'short_description', 'view_count', 'read_time', 'created_at'
         ]
 
 
 class PostDetailSerializer(serializers.ModelSerializer):
-    """Serializer for detailed Blog Post view."""
+    """Serializer for detailed Blog Post view with GEO and AEO injections."""
     category = BlogCategorySerializer(read_only=True)
     tags = TagSerializer(many=True, read_only=True)
     author_name = serializers.CharField(source='author.get_full_name', read_only=True)
     comments = serializers.SerializerMethodField()
     seo = PostSeoSerializer(source='*', read_only=True)
-
+    
     class Meta:
         model = Post
         fields = [
-            'uuid', 'title', 'slug', 'category', 'tags', 'author_name', 'image', 
-            'short_description', 'body', 'view_count', 'read_time', 
-            'comments', 'seo', 'created_at'
+            'uuid', 'title', 'slug', 'category', 'tags', 'author_name', 'image', 'image_alt',
+            'short_description', 'body', 'key_takeaways', 'expert_reviewer', 'faq_data', 'citations',
+            'view_count', 'read_time', 'comments', 'seo', 'created_at'
         ]
 
     def get_comments(self, obj: Post) -> List[Dict[str, Any]]:

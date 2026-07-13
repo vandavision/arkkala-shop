@@ -28,6 +28,7 @@ import ProfileInfo from './pages/ProfileInfo';
 import UserOrders from './pages/UserOrders';
 import UserFavorites from './pages/UserFavorites';
 import UserComments from './pages/UserComments';
+import { Helmet } from 'react-helmet-async';
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
@@ -50,7 +51,9 @@ function App() {
   return (
     <div className="app-wrapper bg-light">
       <ScrollToTop />
-      
+      <Helmet>
+        <html lang="fa" dir="rtl" />
+      </Helmet>
       {!isIsolatedPage && <Header />}
       
       <div className="main-content">

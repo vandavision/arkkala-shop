@@ -102,6 +102,9 @@ const AboutUsPage = () => {
                                     alt={title} 
                                     className="img-fluid rounded-5 shadow-md w-100 object-fit-cover position-relative z-1 border border-ui transition" 
                                     style={{maxHeight: '400px'}}
+                                    fetchpriority="high"
+                                    loading="eager"
+                                    decoding="async"
                                     onError={(e) => { e.target.onerror = null; e.target.src = '/assets/image/about/rtl-theme.jpg'; }}
                                 />
                             </div>

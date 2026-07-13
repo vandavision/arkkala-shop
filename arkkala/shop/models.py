@@ -1,17 +1,29 @@
 """
 Shop Models including Category, Brand, Product, Variants, Images, Videos, and Comments.
+Strictly optimized for SEO, AEO (Answer Engine Optimization), and GEO.
 """
+from typing import Dict, Any, List
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import FileExtensionValidator
 from django.utils import timezone
-from typing import Dict, Any, List
 from django.conf import settings
+
 from platform_tools.mixins.models.base import UUIDBaseModel, TimeStampMixin, TitleSlugMixin
 from platform_seo.models.mixins.seo import SEOMixin, ProductDetailJsonLdMixin
 
+try:
+    from django_jsonform.models.fields import JSONField
+except ImportError:
+    JSONField = models.JSONField
+
 User = get_user_model()
+
+STRING_LIST_SCHEMA: Dict[str, Any] = {
+    'type': 'array',
+    'items': {'type': 'string'}
+}
 
 
 class Category(UUIDBaseModel, TimeStampMixin, TitleSlugMixin, SEOMixin):
@@ -25,21 +37,29 @@ class Category(UUIDBaseModel, TimeStampMixin, TitleSlugMixin, SEOMixin):
         verbose_name=_('دسته بندی پدر')
     )
     image = models.ImageField(upload_to='categories/images/', null=True, blank=True, verbose_name=_('تصویر'))
+    image_alt = models.CharField(max_length=255, null=True, blank=True, verbose_name=_('متن جایگزین تصویر (Alt)'))
     is_active = models.BooleanField(default=True, verbose_name=_('فعال'))
 
     class Meta:
         verbose_name = _('دسته بندی')
         verbose_name_plural = _('دسته بندی ها')
 
+    def __str__(self) -> str:
+        return self.title
+
 
 class Brand(UUIDBaseModel, TimeStampMixin, TitleSlugMixin, SEOMixin):
     """Product Brand Model."""
     logo = models.ImageField(upload_to='brands/logos/', null=True, blank=True, verbose_name=_('لوگو'))
+    logo_alt = models.CharField(max_length=255, null=True, blank=True, verbose_name=_('متن جایگزین لوگو (Alt)'))
     is_active = models.BooleanField(default=True, verbose_name=_('فعال'))
 
     class Meta:
         verbose_name = _('برند')
         verbose_name_plural = _('برند ها')
+
+    def __str__(self) -> str:
+        return self.title
 
 
 class Attribute(UUIDBaseModel, TimeStampMixin, TitleSlugMixin):
@@ -47,6 +67,9 @@ class Attribute(UUIDBaseModel, TimeStampMixin, TitleSlugMixin):
     class Meta:
         verbose_name = _('ویژگی')
         verbose_name_plural = _('ویژگی ها')
+
+    def __str__(self) -> str:
+        return self.title
 
 
 class AttributeValue(UUIDBaseModel):
@@ -63,7 +86,7 @@ class AttributeValue(UUIDBaseModel):
 
 
 class Product(UUIDBaseModel, TimeStampMixin, TitleSlugMixin, SEOMixin, ProductDetailJsonLdMixin):
-    """Main Product Model."""
+    """Main Product Model with SEO, AEO, and GEO validations."""
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, related_name='products', verbose_name=_('دسته بندی'))
     brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, blank=True, related_name='products', verbose_name=_('برند'))
 
@@ -71,6 +94,12 @@ class Product(UUIDBaseModel, TimeStampMixin, TitleSlugMixin, SEOMixin, ProductDe
     short_description = models.TextField(null=True, blank=True, verbose_name=_('توضیح کوتاه'))
     description = models.TextField(verbose_name=_('توضیحات کامل'))
 
+    # --- GEO (Generative Engine Optimization) Fields ---
+    expert_reviewer = models.CharField(max_length=255, null=True, blank=True, verbose_name=_('بررسی‌کننده محصول (E-E-A-T)'), help_text=_('مفید برای محصولات تخصصی، پزشکی یا دیجیتال'))
+    key_takeaways = JSONField(schema=STRING_LIST_SCHEMA, null=True, blank=True, verbose_name=_('ویژگی‌های کلیدی (GEO)'), help_text=_('بهترین ویژگی‌ها به صورت بولت‌وار برای هوش مصنوعی.'))
+    citations = JSONField(schema=STRING_LIST_SCHEMA, null=True, blank=True, verbose_name=_('منابع کاتالوگ (Citations)'), help_text=_('ارجاعات به وب‌سایت سازنده اصلی.'))
+
+    # --- Pricing & Inventory ---
     base_price = models.DecimalField(max_digits=12, decimal_places=0, verbose_name=_('قیمت پایه (تکی)'))
     base_inventory = models.PositiveIntegerField(default=0, verbose_name=_('موجودی پایه'))
 
@@ -96,36 +125,41 @@ class Product(UUIDBaseModel, TimeStampMixin, TitleSlugMixin, SEOMixin, ProductDe
         verbose_name = _('محصول')
         verbose_name_plural = _('محصولات')
 
+    def __str__(self) -> str:
+        return self.title
+
     @property
     def is_special_offer_active(self) -> bool:
-        """
-        Check if the special offer is currently active.
-        
-        Returns:
-            bool: True if active, False otherwise.
-        """
+        """Check if the special offer is currently active."""
         if self.special_discount_percent > 0 and self.special_offer_end:
             return self.special_offer_end > timezone.now()
         return False
     
     def generate_json_ld(self) -> Dict[str, Any]:
         """
-        Generates comprehensive JSON-LD including Product Schema and BreadcrumbList.
-        Designed specifically for Headless SEO.
-        
-        Returns:
-            Dict[str, Any]: A dictionary containing the structured JSON-LD data.
+        Generates comprehensive JSON-LD including Product Schema, BreadcrumbList,
+        FAQPage (dynamically generated from approved questions for AEO), and E-E-A-T (GEO).
         """
         frontend_domain: str = getattr(settings, 'FRONTEND_URL', 'https://arkkala.com').rstrip('/')
         product_url: str = f"{frontend_domain}/product/{self.slug}/"
         
+        main_img = self.gallery.filter(is_main=True).first() or self.gallery.first()
+        
+        image_object = ""
+        if main_img:
+            image_object = {
+                "@type": "ImageObject",
+                "url": f"{frontend_domain}{main_img.image.url}",
+                "description": main_img.image_alt or self.title
+            }
+
         json_ld: Dict[str, Any] = {
             "@context": "https://schema.org",
             "@graph": [
                 {
                     "@type": "Product",
                     "name": self.title,
-                    "image": [self.gallery.first().image.url if self.gallery.exists() else ""],
+                    "image": image_object if image_object else "",
                     "description": self.meta_description or self.short_description or self.title,
                     "sku": str(self.sku) if hasattr(self, 'sku') else str(self.uuid),
                     "brand": {
@@ -137,12 +171,22 @@ class Product(UUIDBaseModel, TimeStampMixin, TitleSlugMixin, SEOMixin, ProductDe
                         "url": product_url,
                         "priceCurrency": "IRT",
                         "price": str(self.base_price),
-                        "availability": "https://schema.org/InStock" if self.base_inventory > 0 else "https://schema.org/OutOfStock",
+                        "availability": "https://schema.org/InStock" if (self.base_inventory > 0 or self.variants.filter(inventory__gt=0).exists()) else "https://schema.org/OutOfStock",
                         "itemCondition": "https://schema.org/NewCondition"
                     }
                 }
             ]
         }
+
+        # GEO: Reviews & E-E-A-T
+        if self.expert_reviewer:
+            json_ld["@graph"][0]["reviewedBy"] = {
+                "@type": "Person",
+                "name": self.expert_reviewer
+            }
+        
+        if self.citations:
+            json_ld["@graph"][0]["citation"] = self.citations
 
         if getattr(self, 'average_rating', 0) > 0 and self.comments.filter(is_approved=True).exists():
             json_ld["@graph"][0]["aggregateRating"] = {
@@ -151,6 +195,25 @@ class Product(UUIDBaseModel, TimeStampMixin, TitleSlugMixin, SEOMixin, ProductDe
                 "reviewCount": str(self.comments.filter(is_approved=True).count())
             }
 
+        # AEO: Dynamic FAQ generation from Questions
+        answered_questions = self.questions.filter(is_approved=True).exclude(answer_text__isnull=True).exclude(answer_text__exact='')
+        if answered_questions.exists():
+            faq_items = []
+            for q in answered_questions:
+                faq_items.append({
+                    "@type": "Question",
+                    "name": q.text,
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": q.answer_text
+                    }
+                })
+            json_ld["@graph"].append({
+                "@type": "FAQPage",
+                "mainEntity": faq_items
+            })
+
+        # SEO: Breadcrumbs
         if getattr(self, 'category', None):
             breadcrumbs: List[Dict[str, Any]] = [
                 {"@type": "ListItem", "position": 1, "name": "خانه", "item": f"{frontend_domain}/"},
@@ -170,6 +233,7 @@ class ProductGallery(UUIDBaseModel):
     """Product Images."""
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='gallery', verbose_name=_('محصول'))
     image = models.ImageField(upload_to='products/gallery/', verbose_name=_('تصویر'))
+    image_alt = models.CharField(max_length=255, null=True, blank=True, verbose_name=_('متن جایگزین تصویر (Alt)'), help_text=_('حیاتی برای سئوی تصاویر کالا'))
     is_main = models.BooleanField(default=False, verbose_name=_('تصویر اصلی'))
 
     class Meta:
@@ -190,7 +254,6 @@ class ProductVideo(UUIDBaseModel):
     class Meta:
         verbose_name = _('ویدیو محصول')
         verbose_name_plural = _('ویدیوهای محصول')
-        ordering = ['created_at'] if hasattr(UUIDBaseModel, 'created_at') else []
 
 
 class ProductVariant(UUIDBaseModel, TimeStampMixin):
@@ -221,7 +284,7 @@ class Comment(UUIDBaseModel, TimeStampMixin):
 
 
 class Question(UUIDBaseModel, TimeStampMixin):
-    """Represents a user or guest question about a specific product, along with its answer."""
+    """Represents a user or guest question. Serves as dynamic AEO base."""
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='questions', verbose_name=_('محصول'))
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name=_('کاربر ثبت‌نام شده'))
     name = models.CharField(max_length=255, null=True, blank=True, verbose_name=_('نام نویسنده مهمان'))

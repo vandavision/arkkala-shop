@@ -168,6 +168,8 @@ const Header = () => {
                                                         alt={product.title} 
                                                         className="rounded-3 shadow-sm object-fit-cover bg-white" 
                                                         style={{ width: '60px', height: '60px', border: '1px solid #eee' }} 
+                                                        loading="lazy"
+                                                        decoding="async"
                                                         onError={(e) => { e.target.onerror = null; e.target.src = '/assets/image/product/logo.png'; }} 
                                                     />
                                                     <div className="ms-3 flex-grow-1 text-end">
@@ -203,7 +205,7 @@ const Header = () => {
                                         <div className="d-flex flex-wrap gap-2">
                                             {searchResults.brands.map(brand => (
                                                 <Link to={`/shop?brands=${brand.slug}`} key={`search-brand-${brand.uuid}`} className="d-flex align-items-center badge bg-white text-dark border border-ui px-2 py-1 fw-normal hover-bg-danger text-decoration-none shadow-sm transition" onClick={() => setShowSearchDropdown(false)}>
-                                                    {brand.logo && <img src={resolveImageUrl(brand.logo)} alt={brand.title} width="16" height="16" className="me-2 object-fit-contain" onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }} />}
+                                                    {brand.logo && <img src={resolveImageUrl(brand.logo)} alt={brand.title} width="16" height="16" className="me-2 object-fit-contain" loading="lazy" decoding="async" onError={(e) => { e.target.onerror = null; e.target.style.display = 'none'; }} />}
                                                     <span className="font-12">{brand.title}</span>
                                                 </Link>
                                             ))}
@@ -232,13 +234,13 @@ const Header = () => {
                     <div className="container-fluid px-3 pt-3 pb-3">
                         <div className="row align-items-center pb-3 m-0 w-100">
                             <div className="col-auto p-0">
-                                <button className="btn border-0 p-0 text-dark hover-lift shadow-none" onClick={() => setIsMobileMenuOpen(true)}>
+                                <button aria-label="Menu" className="btn border-0 p-0 text-dark hover-lift shadow-none" onClick={() => setIsMobileMenuOpen(true)}>
                                     <i className="bi bi-list" style={{ fontSize: '32px' }}></i>
                                 </button>
                             </div>
                             <div className="col text-center p-0">
                                 <Link to="/" className="d-inline-block text-center w-100">
-                                    <img src={settings?.logo_url || "/assets/image/logo.png"} alt={settings?.site_name} className="img-fluid" style={{ maxHeight: '38px', objectFit: 'contain' }} />
+                                    <img src={settings?.logo_url || "/assets/image/logo.png"} alt={settings?.site_name} className="img-fluid" style={{ maxHeight: '38px', objectFit: 'contain' }} fetchpriority="high" loading="eager" decoding="async" />
                                 </Link>
                             </div>
                             <div className="col-auto text-end p-0">
@@ -254,7 +256,7 @@ const Header = () => {
                 <div className={`mobile-overlay ${isMobileMenuOpen ? 'show' : ''}`} onClick={() => setIsMobileMenuOpen(false)}></div>
                 <div className={`mobile-sidebar bg-white ${isMobileMenuOpen ? 'open' : ''}`}>
                     <div className="d-flex justify-content-between align-items-center p-3 border-bottom border-light">
-                        <img src={settings?.logo_url || "/assets/image/logo.png"} alt={settings?.site_name} style={{ maxHeight: '35px' }} />
+                        <img src={settings?.logo_url || "/assets/image/logo.png"} alt={settings?.site_name} style={{ maxHeight: '35px' }} loading="lazy" decoding="async" />
                         <button className="btn border-0 text-muted p-1 hover-lift" onClick={() => setIsMobileMenuOpen(false)}>
                             <i className="bi bi-x-lg fs-4"></i>
                         </button>
@@ -270,7 +272,7 @@ const Header = () => {
                                     <h6 className="mb-1 font-14 fw-bold">{user.first_name || 'کاربر سایت'}</h6>
                                     <Link to="/dashboard/profile" onClick={() => setIsMobileMenuOpen(false)} className="font-12 text-muted text-decoration-none">مشاهده حساب کاربری</Link>
                                 </div>
-                                <button className="btn p-0 text-danger hover-lift" onClick={() => { logout(); setIsMobileMenuOpen(false); }}><i className="bi bi-box-arrow-right fs-5"></i></button>
+                                <button aria-label="Logout" className="btn p-0 text-danger hover-lift" onClick={() => { logout(); setIsMobileMenuOpen(false); }}><i className="bi bi-box-arrow-right fs-5"></i></button>
                             </div>
                         ) : (
                             <Link to="/login" onClick={() => setIsMobileMenuOpen(false)} className="d-flex align-items-center bg-light p-3 rounded-4 mb-4 border border-ui text-decoration-none text-dark hover-lift transition">
@@ -294,7 +296,7 @@ const Header = () => {
                                                 style={{ cursor: 'pointer' }}
                                             >
                                                 <div className="d-flex align-items-center gap-2 flex-grow-1">
-                                                    {cat.image && <img src={resolveImageUrl(cat.image)} alt={cat.title} width="24" height="24" className="object-fit-contain rounded-circle" onError={(e)=>{e.target.onerror = null; e.target.style.display='none'}} />}
+                                                    {cat.image && <img src={resolveImageUrl(cat.image)} alt={cat.title} width="24" height="24" className="object-fit-contain rounded-circle" loading="lazy" decoding="async" onError={(e)=>{e.target.onerror = null; e.target.style.display='none'}} />}
                                                     <span className="text-dark">{cat.title}</span>
                                                 </div>
                                                 <i className={`bi bi-chevron-down transition ${expandedCategory === cat.uuid ? 'rotate-180 text-danger' : 'text-muted'}`}></i>
@@ -306,7 +308,7 @@ const Header = () => {
                                                 className="d-flex justify-content-between align-items-center w-100 text-dark text-decoration-none"
                                             >
                                                 <div className="d-flex align-items-center gap-2 flex-grow-1">
-                                                    {cat.image && <img src={resolveImageUrl(cat.image)} alt={cat.title} width="24" height="24" className="object-fit-contain rounded-circle" onError={(e)=>{e.target.onerror = null; e.target.style.display='none'}} />}
+                                                    {cat.image && <img src={resolveImageUrl(cat.image)} alt={cat.title} width="24" height="24" className="object-fit-contain rounded-circle" loading="lazy" decoding="async" onError={(e)=>{e.target.onerror = null; e.target.style.display='none'}} />}
                                                     <span>{cat.title}</span>
                                                 </div>
                                             </Link>
@@ -355,7 +357,8 @@ const Header = () => {
                         <div className="row align-items-center m-0 w-100">
                             <div className="col-lg-2 p-0">
                                 <Link to="/" className="d-inline-block hover-lift transition">
-                                    <img src={settings?.logo_url || "/assets/image/logo.png"} alt={settings?.site_name} className="img-fluid" style={{ maxHeight: '55px', objectFit: 'contain' }} />
+                                    {/* SEO Optimization: LCP Image loaded eager with fetchpriority high */}
+                                    <img src={settings?.logo_url || "/assets/image/logo.png"} alt={settings?.site_name} className="img-fluid" style={{ maxHeight: '55px', objectFit: 'contain' }} fetchpriority="high" loading="eager" decoding="async" />
                                 </Link>
                             </div>
 
@@ -447,7 +450,7 @@ const Header = () => {
                                                     >
                                                         <span className="d-flex align-items-center gap-2">
                                                             {cat.image ? (
-                                                                <img src={resolveImageUrl(cat.image)} alt={cat.title} width="20" height="20" className="object-fit-contain rounded-circle" />
+                                                                <img src={resolveImageUrl(cat.image)} alt={cat.title} width="20" height="20" className="object-fit-contain rounded-circle" loading="lazy" decoding="async" />
                                                             ) : (
                                                                 <span className="cat-bullet"></span>
                                                             )}

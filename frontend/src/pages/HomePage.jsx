@@ -66,6 +66,7 @@ const StoryModal = ({ videoSrc, onClose }) => {
                 style={{ width: '40px', height: '40px', zIndex: 9999999 }}
                 onClick={onClose}
                 title="بستن"
+                aria-label="بستن ویدیو"
             >
                 <i className="bi bi-x fs-4 text-dark"></i>
             </button>
@@ -85,7 +86,7 @@ const StorySection = ({ stories }) => {
             <section className="story-section">
                 <div className="container-fluid pt-4">
                     <h2 className="section-title visually-hidden">استوری‌ها</h2>
-                    <Swiper modules={[FreeMode]} freeMode={true} slidesPerView="auto" className="my-unique-free-mode px-2">
+                    <Swiper dir="rtl" modules={[FreeMode]} freeMode={true} slidesPerView="auto" className="my-unique-free-mode px-2">
                         {stories.map((story) => (
                             <SwiperSlide key={story.uuid || story.id} className="mx-3 pointer storiesList-slide hover-lift transition-all" style={{ width: 'auto' }}>
                                 <div className="stories-Swiper-item d-flex flex-column align-items-center" onClick={() => story.video ? setActiveVideo(story.video) : null}>
@@ -97,6 +98,7 @@ const StorySection = ({ stories }) => {
                                                     src={story.image ? resolveImageUrl(story.image) : '/assets/image/product/product-no-bg.png'} 
                                                     alt={story.title} 
                                                     loading="lazy"
+                                                    decoding="async"
                                                     onError={(e) => { e.target.onerror = null; e.target.src = '/assets/image/product/product-no-bg.png'; }}
                                                 />
                                             </div>
@@ -122,6 +124,7 @@ const MainSlider = ({ sliders }) => {
                 <h2 className="section-title visually-hidden">اسلایدر</h2>
                 <div className="slider">
                     <Swiper
+                        dir="rtl"
                         modules={[Autoplay, Pagination, Navigation]}
                         spaceBetween={0} slidesPerView={1}
                         autoplay={{ delay: 5000, disableOnInteraction: false }} 
@@ -129,14 +132,18 @@ const MainSlider = ({ sliders }) => {
                         navigation
                         className="rounded-4 overflow-hidden shadow-sm"
                     >
-                        {sliders.map((slider) => (
+                        {sliders.map((slider, index) => (
                             <SwiperSlide key={slider.uuid || slider.id}>
                                 <a href={slider.link || '#'}>
+                                    {/* SEO Optimization: First slide loads Eager (for LCP), the rest Lazy */}
                                     <img 
                                         src={slider.image ? resolveImageUrl(slider.image) : '/assets/image/product/product-no-bg.png'} 
                                         className="img-fluid w-100" 
                                         style={{ maxHeight: '450px', objectFit: 'cover' }} 
                                         alt={slider.title} 
+                                        fetchpriority={index === 0 ? "high" : "auto"}
+                                        loading={index === 0 ? "eager" : "lazy"}
+                                        decoding="async"
                                         onError={(e) => { e.target.onerror = null; e.target.src = '/assets/image/product/product-no-bg.png'; }}
                                     />
                                 </a>
@@ -159,8 +166,8 @@ const CategoriesSection = ({ categories }) => {
                         <div className="d-lg-flex justify-content-lg-start">
                             <div className="d-flex align-items-center justify-content-lg-center justify-content-between flex-lg-column w-100">
                                 <div className="d-flex flex-row flex-lg-column align-items-center align-items-lg-start gap-2 gap-lg-1">
-                                    <h5 className="h3 fw-900 mb-0 text-dark">دسته بندی</h5>
-                                    <h5 className="h3 fw-900 mb-0 text-danger">محصولات</h5>
+                                    <h2 className="h3 fw-900 mb-0 text-dark">دسته بندی</h2>
+                                    <h3 className="h3 fw-900 mb-0 text-danger">محصولات</h3>
                                 </div>
                                 <Link to="/categories" className="btn btn-sm mt-lg-4 px-4 btn-outline-danger rounded-pill fw-bold shadow-sm hover-lift transition-all d-flex align-items-center gap-1">
                                     مشاهده <i className="bi bi-chevron-left font-12"></i>
@@ -169,7 +176,7 @@ const CategoriesSection = ({ categories }) => {
                         </div>
                     </div>
                     <div className="col-lg-10">
-                        <Swiper modules={[FreeMode, Navigation]} freeMode={true} slidesPerView="auto" navigation className="pro-slider py-4 px-2">
+                        <Swiper dir="rtl" modules={[FreeMode, Navigation]} freeMode={true} slidesPerView="auto" navigation className="pro-slider py-4 px-2">
                             {categories.map(cat => {
                                 const imgUrl = cat.image || cat.image_url || cat.icon || cat.logo;
                                 return (
@@ -183,6 +190,8 @@ const CategoriesSection = ({ categories }) => {
                                                         style={{ width: '65%', height: '65%', objectFit: 'contain', transition: 'transform 0.4s ease' }} 
                                                         alt={cat.title} 
                                                         className="cat-img"
+                                                        loading="lazy"
+                                                        decoding="async"
                                                         onError={(e) => { e.target.onerror = null; e.target.src = '/assets/image/category/kalaye-degital.png'; }} 
                                                     />
                                                 </div>
@@ -236,8 +245,8 @@ const SpecialOffers = ({ products }) => {
                         <div className="mb-3 d-none d-xl-block">
                             <i className="bi bi-percent rounded-circle bg-white text-danger d-flex align-items-center justify-content-center shadow" style={{width: '60px', height: '60px', fontSize: '30px'}}></i>
                         </div>
-                        <h3 className="fw-900 fs-3 mb-1">پیشنهادات</h3>
-                        <h3 className="fw-900 fs-3 mb-3">شگفت‌انگیز</h3>
+                        <h2 className="fw-900 fs-3 mb-1">پیشنهادات</h2>
+                        <h2 className="fw-900 fs-3 mb-3">شگفت‌انگیز</h2>
                         
                         {sectionEndTime && (
                             <div className="mb-4 d-flex justify-content-center w-100" style={{ minHeight: '35px' }}>
@@ -252,6 +261,7 @@ const SpecialOffers = ({ products }) => {
                     
                     <div className="position-relative flex-grow-1 w-100" style={{ zIndex: 10, minWidth: 0 }}>
                         <Swiper 
+                            dir="rtl"
                             modules={[Navigation]} 
                             slidesPerView={1.2} 
                             spaceBetween={15} 
@@ -290,6 +300,7 @@ const BannersSection = ({ banners }) => {
                                         src={banner.image ? resolveImageUrl(banner.image) : '/assets/image/product/product-no-bg.png'} 
                                         alt={banner.title} 
                                         loading="lazy" 
+                                        decoding="async"
                                         onError={(e) => { e.target.onerror = null; e.target.src = '/assets/image/product/product-no-bg.png'; }}
                                     />
                                 </div>
@@ -317,6 +328,8 @@ const BestSellers = ({ products, sideBanner }) => {
                                     style={{transition: 'transform 0.4s ease'}} 
                                     src={sideBanner?.image ? resolveImageUrl(sideBanner.image) : "/assets/image/product/product_cover_1.png"} 
                                     alt={sideBanner?.title || "بنر محصولات پرفروش"} 
+                                    loading="lazy"
+                                    decoding="async"
                                     onError={(e) => { e.target.onerror = null; e.target.src = '/assets/image/product/product_cover_1.png'; }}
                                 />
                             </div>
@@ -324,6 +337,7 @@ const BestSellers = ({ products, sideBanner }) => {
                     </div>
                     <div className="col-md-12 col-lg-9">
                         <Swiper 
+                            dir="rtl"
                             modules={[Navigation]} 
                             slidesPerView={1.5} 
                             spaceBetween={15} 
@@ -354,7 +368,7 @@ const ProductGroupGrid = ({ groups }) => {
                         {groups.map((group, groupIndex) => (
                             <div className="col-lg-3 col-sm-6 border-end-lg" key={groupIndex}>
                                 <div className="product-group-item px-2">
-                                    <h5 className="fw-bold text-dark ms-1 mb-2">دسته‌بندی {groupIndex + 1}</h5>
+                                    <h3 className="h5 fw-bold text-dark ms-1 mb-2">دسته‌بندی {groupIndex + 1}</h3>
                                     <p className="text-muted font-12 mb-3">بر اساس سلیقه شما</p>
                                     <div className="row gy-3">
                                         {group.map((product) => (
@@ -364,6 +378,8 @@ const ProductGroupGrid = ({ groups }) => {
                                                         src={product.gallery?.[0]?.url ? resolveImageUrl(product.gallery[0].url) : '/assets/image/product/product-no-bg.png'} 
                                                         className="img-fluid rounded border border-ui p-1 transition" 
                                                         alt={product.title} 
+                                                        loading="lazy"
+                                                        decoding="async"
                                                         style={{height: '100px', objectFit:'contain', width:'100%'}} 
                                                         onError={(e) => { e.target.onerror = null; e.target.src = '/assets/image/product/product-no-bg.png'; }} 
                                                     />
@@ -390,7 +406,7 @@ const BrandsSection = ({ brands }) => {
         <section className="product-slider brand-box mt-5">
             <div className="container-fluid">
                 <SectionTitle title="محبوب ترین" highlight="برندها" linkPath="/brands" />
-                <Swiper modules={[Autoplay, Navigation]} slidesPerView={2.5} spaceBetween={15} breakpoints={{ 576: { slidesPerView: 4 }, 768: { slidesPerView: 6 }, 1024: { slidesPerView: 8 } }} autoplay={{ delay: 3000 }} navigation className="pro-slider py-3 px-1">
+                <Swiper dir="rtl" modules={[Autoplay, Navigation]} slidesPerView={2.5} spaceBetween={15} breakpoints={{ 576: { slidesPerView: 4 }, 768: { slidesPerView: 6 }, 1024: { slidesPerView: 8 } }} autoplay={{ delay: 3000 }} navigation className="pro-slider py-3 px-1">
                     {brands.map(brand => (
                         <SwiperSlide key={brand.uuid || brand.id}>
                             <Link to={`/shop?brands=${brand.slug}`} className="d-block text-center border-ui bg-white rounded-3 p-3 shadow-sm hover-lift">
@@ -401,6 +417,8 @@ const BrandsSection = ({ brands }) => {
                                     onMouseOver={e => {e.currentTarget.style.filter='none'; e.currentTarget.style.opacity='1'}} 
                                     onMouseOut={e => {e.currentTarget.style.filter='grayscale(100%)'; e.currentTarget.style.opacity='0.7'}} 
                                     alt={brand.title} 
+                                    loading="lazy"
+                                    decoding="async"
                                     onError={(e) => { e.target.onerror = null; e.target.src = '/assets/image/brand/brand1-1.png'; }}
                                 />
                             </Link>
@@ -420,6 +438,7 @@ const BlogSection = ({ posts }) => {
                 <SectionTitle title="آخرین مطالب" highlight="وبلاگ" linkPath="/blog" />
                 
                 <Swiper 
+                    dir="rtl"
                     modules={[Navigation]} 
                     slidesPerView={1.2} 
                     spaceBetween={20} 
@@ -437,6 +456,7 @@ const BlogSection = ({ posts }) => {
                                         style={{height: '240px'}}
                                         alt={post.title} 
                                         loading="lazy" 
+                                        decoding="async"
                                         onError={(e) => { e.target.onerror = null; e.target.src = '/assets/image/blog/blog-1.jpg'; }}
                                     />
                                 </div>
@@ -444,14 +464,14 @@ const BlogSection = ({ posts }) => {
                                     className="card-body bg-white rounded-4 shadow-sm border-ui position-relative mx-3" 
                                     style={{ marginTop: '-40px', zIndex: 2 }}
                                 >
-                                    <h6 className="text-overflow-2 h6 fw-bold mb-3 text-dark lh-lg">{post.title}</h6>
+                                    <h3 className="text-overflow-2 h6 fw-bold mb-3 text-dark lh-lg">{post.title}</h3>
                                     <div className="d-flex mt-4 align-items-center justify-content-between border-top pt-3">
                                         <div className="text-muted font-12 d-flex align-items-center">
                                             <i className="bi bi-calendar2-week fs-5 ms-2"></i>
                                             <span className="pt-1">{post.read_time || '۱۲'} دقیقه مطالعه</span>
                                         </div>
                                         <Link to={`/blog/${post.slug}`} className="btn btn-sm btn-danger text-white rounded-pill px-3 py-1 d-flex align-items-center gap-1 shadow-sm transition">
-                                            مشاهده <i className="bi bi-arrow-left-short fs-5"></i>
+                                            مطالعه <i className="bi bi-arrow-left-short fs-5"></i>
                                         </Link>
                                     </div>
                                 </div>

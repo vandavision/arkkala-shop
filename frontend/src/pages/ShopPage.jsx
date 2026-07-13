@@ -368,7 +368,7 @@ const ShopPage = () => {
                     </div>
 
                     {!categorySlug && !isSpecialOffers && !isBestSellers && categories.length > 0 && (
-                        <Swiper modules={[FreeMode]} freeMode={true} slidesPerView="auto" className="pro-slider py-3 px-2">
+                        <Swiper dir="rtl" modules={[FreeMode]} freeMode={true} slidesPerView="auto" className="pro-slider py-3 px-2">
                             {categories.map(cat => {
                                 const imgUrl = cat.image || cat.image_url || cat.icon || cat.logo;
                                 return (

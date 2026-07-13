@@ -1,13 +1,16 @@
+"""
+Serializers for the Shop App.
+Passes detailed SEO, AEO, and GEO metadata structures to Next.js completely.
+"""
 from typing import Any, Dict, List, Optional
 from rest_framework import serializers
 from rest_framework.request import Request
 from .models import Brand, Product, ProductVariant, AttributeValue, Comment, ProductGallery, ProductVideo, Question, PriceHistory
 from platform_seo.serializers import BaseSeoSerializer
 
+
 class QuestionSerializer(serializers.ModelSerializer):
-    """
-    Serializer for the Question model to display approved Q&As.
-    """
+    """Serializer for the Question model to display approved Q&As (AEO source)."""
     user_name = serializers.SerializerMethodField()
 
     class Meta:
@@ -27,7 +30,7 @@ class BrandSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Brand
-        fields = ['uuid', 'title', 'slug', 'logo', 'product_count']
+        fields = ['uuid', 'title', 'slug', 'logo', 'logo_alt', 'product_count']
 
     def get_product_count(self, obj: Brand) -> int:
         """Return the number of active products for this brand."""
@@ -83,12 +86,12 @@ class CommentSerializer(serializers.ModelSerializer):
 
 
 class ProductGallerySerializer(serializers.ModelSerializer):
-    """Serializer for Product Images Gallery."""
+    """Serializer for Product Images Gallery with Alt Tags (SEO)."""
     url = serializers.FileField(source='image')
     
     class Meta:
         model = ProductGallery
-        fields = ['url', 'is_main']
+        fields = ['url', 'image_alt', 'is_main']
 
 
 class ProductVideoSerializer(serializers.ModelSerializer):
@@ -110,6 +113,7 @@ class PriceHistorySerializer(serializers.ModelSerializer):
 class ProductDetailSerializer(serializers.ModelSerializer):
     """
     Main Product Serializer for detailed view optimized for Prefetched data.
+    Sends GEO and AEO explicit data arrays directly to frontend.
     """
     brand = BrandSerializer(read_only=True)
     variants = ProductVariantSerializer(many=True, read_only=True)
@@ -126,6 +130,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
         model = Product
         fields = [
             'uuid', 'title', 'english_title', 'slug', 'brand', 'short_description', 'description', 
+            'key_takeaways', 'expert_reviewer', 'citations', 
             'base_price', 'base_inventory', 'weight', 'volume',
             'is_wholesale', 'wholesale_min_quantity', 'wholesale_base_price',
             'special_discount_percent', 'special_offer_end', 'is_special_offer',

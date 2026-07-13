@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { FreeMode, Navigation, Thumbs, Zoom, EffectFade } from 'swiper/modules';
+import { FreeMode, Navigation, Thumbs, Zoom, EffectFade, Autoplay } from 'swiper/modules';
 import Chart from 'chart.js/auto';
 import { getProductDetail, submitComment, submitQuestion, getProductsList, toggleFavorite } from '../api/shopApi';
 import { CartContext } from '../context/CartContext';
@@ -315,12 +315,12 @@ const ProductDetailPage = () => {
             .catch(() => showToast("خطا در کپی کردن لینک.", "danger"));
     };
 
-    if (loading) return <div className="text-center py-5 my-5 min-vh-100 d-flex align-items-center justify-content-center"><div className="spinner-border text-danger" style={{width: '4rem', height:'4rem', borderWidth:'0.3rem'}}></div></div>;
+    if (loading) return <div className="text-center py-5 my-5 min-vh-100 d-flex align-items-center justify-content-center"><div className="spinner-border text-danger" style={{width: '4rem', height:'4rem', borderWidth:'0.3rem'}} aria-label="در حال بارگذاری"></div></div>;
     if (error || !product) return <div className="text-center py-5 my-5 text-danger min-vh-100 d-flex flex-column align-items-center justify-content-center"><i className="bi bi-exclamation-triangle fs-1 mb-3"></i><h2 className="fw-bold mb-4">{error}</h2><Link to="/shop" className="btn btn-danger rounded-pill px-5 py-3 shadow-sm hover-lift fw-bold">بازگشت به فروشگاه</Link></div>;
 
     const allImages = product.gallery && product.gallery.length > 0 
         ? product.gallery.map(img => ({ ...img, url: resolveImageUrl(img.url) }))
-        : [{ url: resolveImageUrl(product.image_url || product.image), is_main: true }];
+        : [{ url: resolveImageUrl(product.image_url || product.image), is_main: true, image_alt: product.title }];
         
     const mainVideo = product.videos?.length 
         ? { ...product.videos[0], url: resolveImageUrl(product.videos[0].url) } 
@@ -366,9 +366,17 @@ const ProductDetailPage = () => {
 
     return (
         <React.Fragment>
-            {product && <SeoMeta seoData={product} fallbackTitle={product.title} price={currentPrice} inventory={currentInventory} />}
+            {product && <SeoMeta 
+                seoData={product.seo || product} 
+                fallbackTitle={product.title} 
+                price={currentPrice} 
+                inventory={currentInventory} 
+                customImage={allImages[0]?.url} 
+                customSchema={product.seo?.schema_markup || product.json_ld || product.seo?.json_ld}
+                slug={product.slug}
+            />}
 
-            <div className={`custom-toast ${toast.show ? 'show' : ''} bg-${toast.type} shadow-lg d-flex align-items-center gap-3`}>
+            <div className={`custom-toast ${toast.show ? 'show' : ''} bg-${toast.type} shadow-lg d-flex align-items-center gap-3`} role="alert" aria-live="assertive" aria-atomic="true">
                 <i className={`bi ${toast.type === 'success' ? 'bi-check-circle-fill' : toast.type === 'warning' ? 'bi-exclamation-triangle-fill' : 'bi-x-circle-fill'} fs-3 text-white`}></i>
                 <span className="font-14 fw-bold text-white lh-base">{toast.message}</span>
             </div>
@@ -399,22 +407,22 @@ const ProductDetailPage = () => {
                                 <div className="pro_gallery position-relative bg-white p-3 p-md-4 rounded-4 shadow-sm border border-ui h-lg-100">
                                     <div className="icon-product-box mt-3 me-3 z-3">
                                         {mainVideo && (
-                                            <div className="icon-product-box-item hint--left cursor-pointer bg-light border border-ui shadow-sm hover-lift text-danger" data-bs-toggle="modal" data-bs-target="#videoModal" aria-label="ویدیو معرفی">
+                                            <button className="btn p-0 icon-product-box-item hint--left cursor-pointer bg-light border border-ui shadow-sm hover-lift text-danger" data-bs-toggle="modal" data-bs-target="#videoModal" aria-label="ویدیو معرفی">
                                                 <i className="bi bi-play-fill fs-5"></i>
-                                            </div>
+                                            </button>
                                         )}
-                                        <div className="icon-product-box-item hint--left cursor-pointer bg-light border border-ui shadow-sm hover-lift" data-bs-toggle="modal" data-bs-target="#shareModal" aria-label="اشتراک گذاری">
+                                        <button className="btn p-0 icon-product-box-item hint--left cursor-pointer bg-light border border-ui shadow-sm hover-lift" data-bs-toggle="modal" data-bs-target="#shareModal" aria-label="اشتراک گذاری">
                                             <i className="bi bi-share-fill"></i>
-                                        </div>
-                                        <div onClick={handleToggleFavorite} className={`icon-product-box-item hint--left cursor-pointer bg-light border border-ui shadow-sm hover-lift ${isFavorite ? 'active-favorite' : ''}`} aria-label={isFavorite ? "حذف از علاقه‌مندی‌ها" : "افزودن به علاقه‌مندی‌ها"}>
+                                        </button>
+                                        <button onClick={handleToggleFavorite} className={`btn p-0 icon-product-box-item hint--left cursor-pointer bg-light border border-ui shadow-sm hover-lift ${isFavorite ? 'active-favorite' : ''}`} aria-label={isFavorite ? "حذف از علاقه‌مندی‌ها" : "افزودن به علاقه‌مندی‌ها"}>
                                             <i className={isFavorite ? "bi bi-heart-fill text-danger pulse-animation" : "bi bi-heart text-dark"}></i>
-                                        </div>
-                                        <div className="icon-product-box-item hint--left cursor-pointer bg-light border border-ui shadow-sm hover-lift" data-bs-toggle="modal" data-bs-target="#chartModal" aria-label="نمودار قیمت">
+                                        </button>
+                                        <button className="btn p-0 icon-product-box-item hint--left cursor-pointer bg-light border border-ui shadow-sm hover-lift" data-bs-toggle="modal" data-bs-target="#chartModal" aria-label="نمودار قیمت">
                                             <i className="bi bi-bar-chart-line-fill text-primary"></i>
-                                        </div>
-                                        <div onClick={handleCompareClick} className="icon-product-box-item hint--left cursor-pointer bg-light border border-ui shadow-sm hover-lift" aria-label="افزودن به مقایسه">
+                                        </button>
+                                        <button onClick={handleCompareClick} className="btn p-0 icon-product-box-item hint--left cursor-pointer bg-light border border-ui shadow-sm hover-lift" aria-label="افزودن به مقایسه">
                                             <i className="bi bi-shuffle text-success"></i>
-                                        </div>
+                                        </button>
                                     </div>
 
                                     <div className="position-absolute z-3 top-0 start-0 mt-4 ms-4 d-flex flex-column gap-2">
@@ -424,6 +432,7 @@ const ProductDetailPage = () => {
                                     </div>
 
                                     <Swiper
+                                        dir="rtl"
                                         style={{ '--swiper-navigation-color': '#ef4056', '--swiper-pagination-color': '#ef4056' }}
                                         spaceBetween={10}
                                         navigation={true}
@@ -436,13 +445,23 @@ const ProductDetailPage = () => {
                                         {allImages.map((img, idx) => (
                                             <SwiperSlide key={idx} title="برای بزرگنمایی دابل کلیک کنید">
                                                 <div className="swiper-zoom-container bg-white">
-                                                    <img src={img.url} alt={product.title} className="img-fluid object-fit-contain main-gallery-img" onError={(e) => { e.target.src = '/assets/image/product/product-no-bg.png'; }} />
+                                                    <img 
+                                                        src={img.url} 
+                                                        alt={img.image_alt || product.title} 
+                                                        title={img.image_alt || product.title} 
+                                                        className="img-fluid object-fit-contain main-gallery-img" 
+                                                        fetchpriority={idx === 0 ? "high" : "auto"} 
+                                                        loading={idx === 0 ? "eager" : "lazy"}
+                                                        decoding="async"
+                                                        onError={(e) => { e.target.src = '/assets/image/product/product-no-bg.png'; }} 
+                                                    />
                                                 </div>
                                             </SwiperSlide>
                                         ))}
                                     </Swiper>
 
                                     <Swiper
+                                        dir="rtl"
                                         onSwiper={setThumbsSwiper}
                                         spaceBetween={12}
                                         slidesPerView={4}
@@ -453,7 +472,15 @@ const ProductDetailPage = () => {
                                     >
                                         {allImages.map((img, idx) => (
                                             <SwiperSlide key={idx} className="cursor-pointer bg-white rounded-3 border border-ui p-1 hover-shadow transition">
-                                                <img src={img.url} alt={`thumb-${idx}`} className="img-fluid object-fit-contain rounded-2" style={{height:'75px', width:'100%'}} onError={(e) => { e.target.src = '/assets/image/product/product-no-bg.png'; }} />
+                                                <img 
+                                                    src={img.url} 
+                                                    alt={img.image_alt || `گالری تصویر ${idx + 1} از ${product.title}`} 
+                                                    className="img-fluid object-fit-contain rounded-2" 
+                                                    style={{height:'75px', width:'100%'}} 
+                                                    loading="lazy" 
+                                                    decoding="async"
+                                                    onError={(e) => { e.target.src = '/assets/image/product/product-no-bg.png'; }} 
+                                                />
                                             </SwiperSlide>
                                         ))}
                                     </Swiper>
@@ -472,8 +499,23 @@ const ProductDetailPage = () => {
                                     <h1 className="fs-5 mb-3 lh-base fw-900 text-dark">{product.title}</h1>
                                     {product.english_title && <p className="font-13 text-muted font-en mb-4">{product.english_title}</p>}
                                     
+                                    {/* Content Freshness Indicator */}
+                                    {product.modified_at && (
+                                        <div className="mb-3">
+                                            <span className="font-11 text-muted">آخرین بروزرسانی: <time dateTime={product.modified_at}>{new Date(product.modified_at).toLocaleDateString('fa-IR')}</time></span>
+                                        </div>
+                                    )}
+
+                                    {/* GEO: Expert Reviewer Badge */}
+                                    {product.expert_reviewer && (
+                                        <div className="alert bg-success bg-opacity-10 border border-success border-opacity-25 rounded-pill py-2 px-3 d-inline-flex align-items-center gap-2 mb-3 shadow-sm w-fit-content">
+                                            <i className="bi bi-patch-check-fill text-success fs-5"></i>
+                                            <span className="font-12 text-dark fw-bold">بررسی و تایید شده توسط: {product.expert_reviewer}</span>
+                                        </div>
+                                    )}
+
                                     <div className="d-flex align-items-center pb-4 border-bottom border-light flex-wrap gap-3 gap-md-4">
-                                        <div className="d-flex align-items-center bg-warning bg-opacity-10 px-3 py-1 rounded-pill border border-warning border-opacity-25">
+                                        <div className="d-flex align-items-center bg-warning bg-opacity-10 px-3 py-1 rounded-pill border border-warning border-opacity-25" aria-label={`امتیاز ${product.average_rating.toFixed(1)} از 5`}>
                                             <i className="bi bi-star-fill text-warning me-2"></i>
                                             <span className="text-dark fw-bold font-14 pt-1">{product.average_rating.toFixed(1)}</span>
                                         </div>
@@ -486,8 +528,16 @@ const ProductDetailPage = () => {
                                     </div>
 
                                     <div className="product-feature py-4">
-                                        <h5 className="font-16 mb-3 fw-bold text-dark d-flex align-items-center gap-2"><i className="bi bi-card-checklist text-primary"></i> ویژگی‌های برتر</h5>
-                                        {product.short_description ? (
+                                        <h2 className="font-16 mb-3 fw-bold text-dark d-flex align-items-center gap-2"><i className="bi bi-card-checklist text-primary"></i> ویژگی‌های برتر</h2>
+                                        
+                                        {/* GEO: Explicit Key Takeaways Rendering if available */}
+                                        {product.key_takeaways && Array.isArray(product.key_takeaways) && product.key_takeaways.length > 0 ? (
+                                            <ul className="list-unstyled m-0 p-0 d-flex flex-column gap-3 mb-4">
+                                                {product.key_takeaways.map((kt, idx) => (
+                                                    <li key={idx} className="font-13 text-dark d-flex align-items-start fw-semibold"><i className="bi bi-check-circle-fill text-success me-2 fs-5"></i>{kt}</li>
+                                                ))}
+                                            </ul>
+                                        ) : product.short_description ? (
                                             <p className="font-14 text-muted text-justify lh-lg m-0">{product.short_description}</p>
                                         ) : (
                                             <ul className="list-unstyled m-0 p-0 d-flex flex-column gap-3">
@@ -529,13 +579,13 @@ const ProductDetailPage = () => {
                                         const isColor = attrName.includes('رنگ') || attrName.includes('Color');
                                         return (
                                             <div key={index} className="mb-4">
-                                                <label className="font-14 fw-bold mb-3 d-block text-dark d-flex align-items-center gap-2"><i className="bi bi-sliders text-secondary"></i> انتخاب {attrName}</label>
-                                                <div className="d-flex flex-wrap gap-2">
+                                                <div className="font-14 fw-bold mb-3 d-block text-dark d-flex align-items-center gap-2"><i className="bi bi-sliders text-secondary"></i> انتخاب {attrName}</div>
+                                                <div className="d-flex flex-wrap gap-2" role="radiogroup" aria-label={`انتخاب ${attrName}`}>
                                                     {Array.from(availableAttributes[attrName]).map(val => {
                                                         const isSelected = selectedOptions[attrName] === val;
                                                         return (
                                                             <React.Fragment key={val}>
-                                                                <input type="radio" className="btn-check" id={`attr-${attrName}-${val}`} checked={isSelected} onChange={() => handleOptionChange(attrName, val)} />
+                                                                <input type="radio" className="btn-check" id={`attr-${attrName}-${val}`} checked={isSelected} onChange={() => handleOptionChange(attrName, val)} aria-checked={isSelected} />
                                                                 <label className={`btn font-12 px-3 py-2 border rounded-pill transition hover-lift ${isSelected ? 'border-danger text-danger bg-danger bg-opacity-10 fw-bold shadow-sm' : 'border-ui text-muted bg-white'}`} htmlFor={`attr-${attrName}-${val}`}>
                                                                     {isColor && <span className="d-inline-block rounded-circle me-2 border border-ui shadow-sm" style={{width:'12px', height:'12px', verticalAlign:'middle', backgroundColor: val === 'مشکی' ? '#212529' : val === 'سفید' ? '#f8f9fa' : val === 'قرمز' ? '#dc3545' : val === 'سبز' ? '#198754' : val === 'آبی' ? '#0d6efd' : '#ccc'}}></span>}
                                                                     {val}
@@ -559,13 +609,13 @@ const ProductDetailPage = () => {
                                             <span>قیمت کالا:</span>
                                             {hasDiscount && <del className="text-danger">{Number(originalPrice).toLocaleString()}</del>}
                                         </div>
-                                        <strong className="fs-3 fw-900 text-dark d-flex align-items-center justify-content-between m-0">
-                                            <span>مبلغ نهایی</span>
+                                        <div className="fs-3 fw-900 text-dark d-flex align-items-center justify-content-between m-0">
+                                            <span className="font-16">مبلغ نهایی</span>
                                             <span className="text-success d-flex align-items-center gap-2">
-                                                {hasDiscount && <span className="badge bg-danger rounded-pill font-13 px-2 py-1 align-middle">{discountPercent}%</span>}
+                                                {hasDiscount && <span className="badge bg-danger rounded-pill font-13 px-2 py-1 align-middle" aria-label={`تخفیف ${discountPercent} درصدی`}>{discountPercent}%</span>}
                                                 {Number(currentPrice).toLocaleString()} <span className="text-muted font-13 fw-normal ms-1">تومان</span>
                                             </span>
-                                        </strong>
+                                        </div>
                                     </div>
                                     
                                     <form onSubmit={handleAddToCart} className="w-100 d-flex flex-column align-items-center gap-3">
@@ -578,19 +628,20 @@ const ProductDetailPage = () => {
                                         <div className="counter bg-white border border-ui rounded-pill p-2 d-flex align-items-center justify-content-between w-100 shadow-sm">
                                             <span className="font-13 fw-bold text-muted ms-3">تعداد کالا:</span>
                                             <div className="d-flex align-items-center bg-light rounded-pill border border-light p-1">
-                                                <button type="button" className="btn btn-sm btn-white rounded-circle shadow-sm border-0 d-flex align-items-center justify-content-center" style={{width:'32px', height:'32px'}} onClick={() => setQuantity(prev => Math.max(1, prev - 1))} disabled={quantity <= 1 || currentInventory === 0}><i className="bi bi-dash text-danger fw-bold"></i></button>
-                                                <input type="text" className="form-control border-0 text-center bg-transparent fw-900 font-16 p-0" value={quantity} readOnly style={{width:'35px'}}/>
-                                                <button type="button" className="btn btn-sm btn-white rounded-circle shadow-sm border-0 d-flex align-items-center justify-content-center" style={{width:'32px', height:'32px'}} onClick={() => setQuantity(prev => Math.min(currentInventory, prev + 1))} disabled={quantity >= currentInventory || currentInventory === 0}><i className="bi bi-plus text-success fw-bold"></i></button>
+                                                <button type="button" className="btn btn-sm btn-white rounded-circle shadow-sm border-0 d-flex align-items-center justify-content-center" style={{width:'32px', height:'32px'}} onClick={() => setQuantity(prev => Math.max(1, prev - 1))} disabled={quantity <= 1 || currentInventory === 0} aria-label="کاهش تعداد"><i className="bi bi-dash text-danger fw-bold"></i></button>
+                                                <label htmlFor="product-qty" className="visually-hidden">تعداد</label>
+                                                <input id="product-qty" type="text" className="form-control border-0 text-center bg-transparent fw-900 font-16 p-0" value={quantity} readOnly style={{width:'35px'}} aria-live="polite"/>
+                                                <button type="button" className="btn btn-sm btn-white rounded-circle shadow-sm border-0 d-flex align-items-center justify-content-center" style={{width:'32px', height:'32px'}} onClick={() => setQuantity(prev => Math.min(currentInventory, prev + 1))} disabled={quantity >= currentInventory || currentInventory === 0} aria-label="افزایش تعداد"><i className="bi bi-plus text-success fw-bold"></i></button>
                                             </div>
                                         </div>
 
                                         {currentInventory > 0 ? (
-                                            <button type="submit" disabled={isAddingToCart} className="btn main-color-two-bg w-100 text-center text-white rounded-pill shadow hover-lift py-3 font-16 fw-bold d-flex align-items-center justify-content-center gap-2">
-                                                {isAddingToCart ? <div className="spinner-border spinner-border-sm text-white"></div> : <i className="bi bi-bag-check-fill fs-4"></i>}
+                                            <button type="submit" disabled={isAddingToCart} className="btn main-color-two-bg w-100 text-center text-white rounded-pill shadow hover-lift py-3 font-16 fw-bold d-flex align-items-center justify-content-center gap-2" aria-label="افزودن به سبد خرید">
+                                                {isAddingToCart ? <div className="spinner-border spinner-border-sm text-white" role="status" aria-hidden="true"></div> : <i className="bi bi-bag-check-fill fs-4" aria-hidden="true"></i>}
                                                 افزودن به سبد خرید
                                             </button>
                                         ) : (
-                                            <button type="button" className="btn btn-secondary w-100 text-center text-white rounded-pill disabled py-3 fw-bold font-16" disabled>
+                                            <button type="button" className="btn btn-secondary w-100 text-center text-white rounded-pill disabled py-3 fw-bold font-16" disabled aria-label="محصول ناموجود است">
                                                 ناموجود
                                             </button>
                                         )}
@@ -602,77 +653,118 @@ const ProductDetailPage = () => {
                 </div>
             </section>
 
-            <section className="product-desc mt-5 mb-5">
+<section className="product-desc mt-5 mb-5">
                 <div className="container-fluid">
-                    <div className="product-desc-tab mb-4 bg-white p-2 rounded-pill shadow-sm border border-ui d-flex justify-content-md-center overflow-auto custom-scrollbar">
-                        <ul className="nav flex-nowrap m-0 p-0 gap-1" role="tablist">
-                            <li className="nav-item flex-shrink-0">
-                                <button className={`btn rounded-pill px-3 px-md-4 py-2 font-13 font-md-15 transition fw-bold ${activeTab === 'desc' ? 'btn-danger shadow-sm text-white' : 'btn-white text-muted hover-bg-light'}`} onClick={() => setActiveTab('desc')}>معرفی محصول</button>
-                            </li>
-                            <li className="nav-item flex-shrink-0">
-                                <button className={`btn rounded-pill px-3 px-md-4 py-2 font-13 font-md-15 transition fw-bold ${activeTab === 'specs' ? 'btn-danger shadow-sm text-white' : 'btn-white text-muted hover-bg-light'}`} onClick={() => setActiveTab('specs')}>مشخصات فنی</button>
-                            </li>
-                            <li className="nav-item flex-shrink-0">
-                                <button className={`btn rounded-pill px-3 px-md-4 py-2 font-13 font-md-15 transition fw-bold d-flex align-items-center gap-2 ${activeTab === 'comments' ? 'btn-danger shadow-sm text-white' : 'btn-white text-muted hover-bg-light'}`} onClick={() => setActiveTab('comments')}>
-                                    نظرات <span className={`badge rounded-pill ${activeTab === 'comments' ? 'bg-white text-danger' : 'bg-secondary'}`}>{product.comments?.length || 0}</span>
+                    <div className="bg-white rounded-4 shadow-sm border border-ui p-2 mb-4 d-flex justify-content-center overflow-auto custom-scrollbar">
+                        <ul className="nav nav-pills flex-nowrap m-0 p-0 gap-2" role="tablist">
+                            <li className="nav-item flex-shrink-0" role="presentation">
+                                <button className={`nav-link rounded-pill px-4 py-2 font-14 transition fw-bold d-flex align-items-center gap-2 ${activeTab === 'desc' ? 'active bg-danger text-white shadow-sm' : 'text-muted hover-bg-light border border-transparent'}`} onClick={() => setActiveTab('desc')} role="tab" aria-selected={activeTab === 'desc'}>
+                                    <i className="bi bi-file-text"></i> معرفی محصول
                                 </button>
                             </li>
-                            <li className="nav-item flex-shrink-0">
-                                <button className={`btn rounded-pill px-3 px-md-4 py-2 font-13 font-md-15 transition fw-bold d-flex align-items-center gap-2 ${activeTab === 'qa' ? 'btn-danger shadow-sm text-white' : 'btn-white text-muted hover-bg-light'}`} onClick={() => setActiveTab('qa')}>
-                                    پرسش و پاسخ <span className={`badge rounded-pill ${activeTab === 'qa' ? 'bg-white text-danger' : 'bg-secondary'}`}>{product.questions?.length || 0}</span>
+                            <li className="nav-item flex-shrink-0" role="presentation">
+                                <button className={`nav-link rounded-pill px-4 py-2 font-14 transition fw-bold d-flex align-items-center gap-2 ${activeTab === 'specs' ? 'active bg-danger text-white shadow-sm' : 'text-muted hover-bg-light border border-transparent'}`} onClick={() => setActiveTab('specs')} role="tab" aria-selected={activeTab === 'specs'}>
+                                    <i className="bi bi-sliders2"></i> مشخصات فنی
+                                </button>
+                            </li>
+                            <li className="nav-item flex-shrink-0" role="presentation">
+                                <button className={`nav-link rounded-pill px-4 py-2 font-14 transition fw-bold d-flex align-items-center gap-2 ${activeTab === 'comments' ? 'active bg-danger text-white shadow-sm' : 'text-muted hover-bg-light border border-transparent'}`} onClick={() => setActiveTab('comments')} role="tab" aria-selected={activeTab === 'comments'}>
+                                    <i className="bi bi-chat-dots"></i> نظرات
+                                    <span className={`badge rounded-pill ms-1 ${activeTab === 'comments' ? 'bg-white text-danger' : 'bg-secondary bg-opacity-25 text-dark'}`}>{product.comments?.length || 0}</span>
+                                </button>
+                            </li>
+                            <li className="nav-item flex-shrink-0" role="presentation">
+                                <button className={`nav-link rounded-pill px-4 py-2 font-14 transition fw-bold d-flex align-items-center gap-2 ${activeTab === 'qa' ? 'active bg-danger text-white shadow-sm' : 'text-muted hover-bg-light border border-transparent'}`} onClick={() => setActiveTab('qa')} role="tab" aria-selected={activeTab === 'qa'}>
+                                    <i className="bi bi-question-circle"></i> پرسش و پاسخ
+                                    <span className={`badge rounded-pill ms-1 ${activeTab === 'qa' ? 'bg-white text-danger' : 'bg-secondary bg-opacity-25 text-dark'}`}>{product.questions?.length || 0}</span>
                                 </button>
                             </li>
                         </ul>
                     </div>
                     
-                    <div className="row mt-4 pt-2 justify-content-center">
+                    <div className="row mt-4 justify-content-center">
                         <div className="col-xl-10">
-                            <div className="content-box rounded-4 p-3 p-md-5 border-ui shadow-sm bg-white min-vh-50 position-relative overflow-hidden">
-                                <div className="position-absolute top-0 end-0 opacity-10 p-5 z-0 pointer-events-none d-none d-md-block">
-                                    <i className="bi bi-box-seam" style={{fontSize:'20rem'}}></i>
-                                </div>
-
-                                <div className="product-descs position-relative z-1">
+                            <div className="content-box rounded-4 p-4 p-md-5 border-ui shadow-sm bg-white min-vh-50">
+                                
+                                <div className="product-descs">
                                     {activeTab === 'desc' && (
-                                        <div className="product-desc-content animate-fade-in">
-                                            <h4 className="fw-900 text-dark border-bottom border-light pb-3 mb-4 d-flex align-items-center gap-3 fs-5"><span className="bg-danger text-white rounded-3 p-2 d-flex"><i className="bi bi-file-earmark-text"></i></span> بررسی تخصصی و معرفی</h4>
-                                            <div className="font-14 font-md-15 text-muted lh-lg text-justify" dangerouslySetInnerHTML={{ __html: product.description.replace(/\n/g, '<br/>') }}></div>
+                                        <div className="product-desc-content animate-fade-in" role="tabpanel">
+                                            <div className="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom border-light">
+                                                <div className="bg-danger bg-opacity-10 text-danger rounded-4 d-flex align-items-center justify-content-center" style={{ width: '50px', height: '50px' }}>
+                                                    <i className="bi bi-file-earmark-text fs-4"></i>
+                                                </div>
+                                                <h3 className="fw-900 text-dark m-0 fs-5">بررسی تخصصی و معرفی</h3>
+                                            </div>
+                                            
+                                            <div className="font-14 font-md-15 text-dark lh-lg text-justify custom-html-content" dangerouslySetInnerHTML={{ __html: product.description.replace(/\n/g, '<br/>') }}></div>
+                                            
+                                            {product.citations && Array.isArray(product.citations) && product.citations.length > 0 && (
+                                                <div className="mt-5 pt-4 bg-light rounded-4 p-4 border border-light">
+                                                    <h4 className="fw-bold text-dark mb-4 font-15 d-flex align-items-center gap-2 border-end border-danger border-4 pe-2">
+                                                        <i className="bi bi-link-45deg text-muted fs-4" aria-hidden="true"></i> منابع و کاتالوگ محصول
+                                                    </h4>
+                                                    <div className="d-flex flex-wrap gap-2" dir="ltr">
+                                                        {product.citations.map((cite, idx) => (
+                                                            <a key={idx} href={cite} target="_blank" rel="nofollow noreferrer" className="btn bg-white border border-ui rounded-pill font-12 text-muted hover-text-danger hover-border-danger transition shadow-sm d-inline-flex align-items-center gap-2">
+                                                                <i className="bi bi-box-arrow-up-right"></i> منبع [{idx + 1}]
+                                                            </a>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
 
                                     {activeTab === 'specs' && (
-                                        <div className="animate-fade-in">
-                                            <h4 className="fw-900 text-dark border-bottom border-light pb-3 mb-4 d-flex align-items-center gap-3 fs-5"><span className="bg-danger text-white rounded-3 p-2 d-flex"><i className="bi bi-sliders2-vertical"></i></span> مشخصات فنی کالا</h4>
-                                            <div className="box_list mt-4">
-                                                <ul className="param_list list-unstyled p-0 m-0 border border-ui rounded-4 overflow-hidden shadow-sm">
-                                                    <li className="d-flex flex-column flex-md-row border-bottom border-ui align-items-stretch transition hover-bg-light">
-                                                        <div className="bg-light p-3 text-muted fw-bold font-13 font-md-14 d-flex align-items-center" style={{width: '100%', maxWidth: '35%'}}>برند سازنده</div>
-                                                        <div className="p-3 text-dark flex-grow-1 border-start-md border-ui font-14 font-md-15 fw-bold d-flex align-items-center">{product.brand ? product.brand.title : 'متفرقه'}</div>
-                                                    </li>
-                                                    <li className="d-flex flex-column flex-md-row border-bottom border-ui align-items-stretch transition hover-bg-light">
-                                                        <div className="bg-light p-3 text-muted fw-bold font-13 font-md-14 d-flex align-items-center" style={{width: '100%', maxWidth: '35%'}}>گروه کالایی</div>
-                                                        <div className="p-3 text-dark flex-grow-1 border-start-md border-ui font-14 font-md-15 fw-bold d-flex align-items-center">{product.category ? product.category.title : '-'}</div>
-                                                    </li>
-                                                    <li className="d-flex flex-column flex-md-row border-bottom border-ui align-items-stretch transition hover-bg-light">
-                                                        <div className="bg-light p-3 text-muted fw-bold font-13 font-md-14 d-flex align-items-center" style={{width: '100%', maxWidth: '35%'}}>وزن و ابعاد پایه</div>
-                                                        <div className="p-3 text-dark flex-grow-1 border-start-md border-ui font-14 font-md-15 fw-bold d-flex align-items-center">{product.weight} گرم</div>
-                                                    </li>
-                                                    {product.is_variable && product.variants?.[0]?.attributes.map((attr, idx) => (
-                                                        <li key={idx} className="d-flex flex-column flex-md-row border-bottom border-ui align-items-stretch transition hover-bg-light">
-                                                            <div className="bg-light p-3 text-muted fw-bold font-13 font-md-14 d-flex align-items-center" style={{width: '100%', maxWidth: '35%'}}>{attr.attribute_name}</div>
-                                                            <div className="p-3 text-dark flex-grow-1 border-start-md border-ui font-14 font-md-15 fw-bold d-flex align-items-center text-primary">بستگی به مدل انتخابی دارد</div>
-                                                        </li>
-                                                    ))}
-                                                </ul>
+                                        <div className="animate-fade-in" role="tabpanel">
+                                            <div className="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom border-light">
+                                                <div className="bg-danger bg-opacity-10 text-danger rounded-4 d-flex align-items-center justify-content-center" style={{ width: '50px', height: '50px' }}>
+                                                    <i className="bi bi-sliders2-vertical fs-4"></i>
+                                                </div>
+                                                <h3 className="fw-900 text-dark m-0 fs-5">مشخصات فنی کالا</h3>
+                                            </div>
+                                            
+                                            <div className="table-responsive mt-4">
+                                                <table className="table table-striped table-hover border-ui rounded-4 overflow-hidden shadow-sm m-0">
+                                                    <tbody>
+                                                        <tr>
+                                                            <td className="bg-light text-muted fw-bold font-13 align-middle py-3 px-4" style={{width: '30%'}}>برند سازنده</td>
+                                                            <td className="text-dark font-14 fw-bold align-middle py-3 px-4">{product.brand ? product.brand.title : 'متفرقه'}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td className="bg-light text-muted fw-bold font-13 align-middle py-3 px-4">گروه کالایی</td>
+                                                            <td className="text-dark font-14 fw-bold align-middle py-3 px-4">{product.category ? product.category.title : '-'}</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td className="bg-light text-muted fw-bold font-13 align-middle py-3 px-4">وزن و ابعاد پایه</td>
+                                                            <td className="text-dark font-14 fw-bold align-middle py-3 px-4">{product.weight} گرم</td>
+                                                        </tr>
+                                                        {product.is_variable && Object.keys(availableAttributes).map((attrName, idx) => (
+                                                            <tr key={idx} className="transition">
+                                                                <td className="bg-light text-muted fw-bold font-13 align-middle py-3 px-4">{attrName}</td>
+                                                                <td className="text-dark font-14 fw-bold align-middle py-3 px-4">
+                                                                    {selectedOptions[attrName] || 'لطفاً انتخاب کنید'}
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
                                             </div>
                                         </div>
                                     )}
 
                                     {activeTab === 'comments' && (
-                                        <div className="product-comment-content animate-fade-in">
-                                            <div className="comment-form mb-5 bg-light border border-ui rounded-4 p-3 p-md-5 shadow-sm">
-                                                <h4 className="fw-900 text-dark mb-3 d-flex align-items-center gap-3 fs-5"><span className="bg-danger text-white rounded-3 p-2 d-flex"><i className="bi bi-chat-quote-fill"></i></span> دیدگاه خود را بنویسید</h4>
-                                                <p className="font-14 text-muted mb-4">تجربیات شما به سایر کاربران در انتخاب بهتر کمک می‌کند.</p>
+                                        <div className="product-comment-content animate-fade-in" role="tabpanel">
+                                            <div className="comment-form mb-5 bg-light border border-ui rounded-4 p-4 p-md-5 shadow-sm">
+                                                <div className="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom border-light">
+                                                    <div className="bg-danger bg-opacity-10 text-danger rounded-4 d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: '50px', height: '50px' }}>
+                                                        <i className="bi bi-chat-quote-fill fs-4"></i>
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="fw-900 text-dark m-0 fs-5 mb-1">دیدگاه خود را بنویسید</h3>
+                                                        <p className="font-12 text-muted m-0">تجربیات شما به سایر کاربران در انتخاب بهتر کمک می‌کند.</p>
+                                                    </div>
+                                                </div>
                                                 
                                                 {user ? (
                                                     <form onSubmit={handleCommentSubmit}>
@@ -680,31 +772,31 @@ const ProductDetailPage = () => {
                                                             <div className="col-12">
                                                                 <div className="form-group d-flex align-items-center gap-3 bg-white p-3 rounded-pill border border-ui w-fit-content shadow-sm">
                                                                     <label className="fw-bold font-14 m-0 text-dark">امتیاز شما:</label>
-                                                                    <div className="d-flex flex-row-reverse rating-stars fs-4">
+                                                                    <div className="d-flex flex-row-reverse rating-stars fs-4" role="radiogroup" aria-label="امتیاز کالا از 1 تا 5">
                                                                         {[5, 4, 3, 2, 1].map(star => (
                                                                             <React.Fragment key={star}>
-                                                                                <input type="radio" name="rating" id={`star${star}`} value={star} checked={rating === star} onChange={() => setRating(star)} />
-                                                                                <label htmlFor={`star${star}`} className={rating >= star ? 'text-warning drop-shadow' : 'text-muted opacity-25'}><i className="bi bi-star-fill"></i></label>
+                                                                                <input type="radio" name="rating" id={`star${star}`} value={star} checked={rating === star} onChange={() => setRating(star)} aria-label={`${star} ستاره`} />
+                                                                                <label htmlFor={`star${star}`} className={rating >= star ? 'text-warning drop-shadow' : 'text-muted opacity-25'}><i className="bi bi-star-fill" aria-hidden="true"></i></label>
                                                                             </React.Fragment>
                                                                         ))}
                                                                     </div>
                                                                 </div>
                                                             </div>
                                                             <div className="col-md-6">
-                                                                <label className="text-success mb-2 fw-bold font-13"><i className="bi bi-plus-circle-fill me-1"></i> نقاط قوت</label>
-                                                                <input type="text" className="form-control border-0 shadow-sm py-3 px-4 rounded-pill font-13" placeholder="مثال: کیفیت ساخت بالا" value={pros} onChange={(e) => setPros(e.target.value)} />
+                                                                <label htmlFor="prosInput" className="text-success mb-2 fw-bold font-13"><i className="bi bi-plus-circle-fill me-1" aria-hidden="true"></i> نقاط قوت</label>
+                                                                <input id="prosInput" type="text" className="form-control border-0 shadow-sm py-3 px-4 rounded-pill font-13" placeholder="مثال: کیفیت ساخت بالا" value={pros} onChange={(e) => setPros(e.target.value)} />
                                                             </div>
                                                             <div className="col-md-6">
-                                                                <label className="text-danger mb-2 fw-bold font-13"><i className="bi bi-dash-circle-fill me-1"></i> نقاط ضعف</label>
-                                                                <input type="text" className="form-control border-0 shadow-sm py-3 px-4 rounded-pill font-13" placeholder="مثال: قیمت بالا" value={cons} onChange={(e) => setCons(e.target.value)} />
+                                                                <label htmlFor="consInput" className="text-danger mb-2 fw-bold font-13"><i className="bi bi-dash-circle-fill me-1" aria-hidden="true"></i> نقاط ضعف</label>
+                                                                <input id="consInput" type="text" className="form-control border-0 shadow-sm py-3 px-4 rounded-pill font-13" placeholder="مثال: قیمت بالا" value={cons} onChange={(e) => setCons(e.target.value)} />
                                                             </div>
                                                             <div className="col-12">
-                                                                <label className="fw-bold font-13 mb-2 text-dark">متن نقد و بررسی <span className="text-danger">*</span></label>
-                                                                <textarea className="form-control border-0 shadow-sm py-3 px-4 rounded-4 font-13" rows="4" placeholder="کامل‌ترین تجربه خود را بنویسید..." value={commentBody} onChange={(e) => setCommentBody(e.target.value)} required></textarea>
+                                                                <label htmlFor="commentBody" className="fw-bold font-13 mb-2 text-dark">متن نقد و بررسی <span className="text-danger">*</span></label>
+                                                                <textarea id="commentBody" className="form-control border-0 shadow-sm py-3 px-4 rounded-4 font-13" rows="4" placeholder="کامل‌ترین تجربه خود را بنویسید..." value={commentBody} onChange={(e) => setCommentBody(e.target.value)} required></textarea>
                                                             </div>
                                                             <div className="col-12 text-end mt-4">
                                                                 <button type="submit" className="btn btn-danger px-4 px-md-5 py-2 py-md-3 rounded-pill fw-bold font-14 shadow hover-lift w-100 w-md-auto" disabled={submittingComment}>
-                                                                    {submittingComment ? <div className="spinner-border spinner-border-sm text-white"></div> : <i className="bi bi-send-check-fill me-2"></i>}
+                                                                    {submittingComment ? <div className="spinner-border spinner-border-sm text-white" role="status" aria-hidden="true"></div> : <i className="bi bi-send-check-fill me-2" aria-hidden="true"></i>}
                                                                     ارسال دیدگاه
                                                                 </button>
                                                             </div>
@@ -712,14 +804,17 @@ const ProductDetailPage = () => {
                                                     </form>
                                                 ) : (
                                                     <div className="alert bg-white text-center rounded-4 p-4 p-md-5 shadow-sm border-0">
-                                                        <i className="bi bi-lock-fill fs-1 text-danger d-block mb-3"></i>
+                                                        <i className="bi bi-lock-fill fs-1 text-danger d-block mb-3" aria-hidden="true"></i>
                                                         <p className="font-14 font-md-16 text-dark fw-bold mb-4">برای ثبت نظر نیازمند ورود به حساب کاربری هستید.</p>
                                                         <Link to="/login" className="btn btn-outline-danger rounded-pill px-4 px-md-5 py-2 fw-bold shadow-sm hover-lift">ورود / ثبت‌نام</Link>
                                                     </div>
                                                 )}
                                             </div>
 
-                                            <div className="box_filter mt-5 pb-3 border-bottom border-2 border-light mb-4">
+                                            <div className="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom border-light mt-5">
+                                                <div className="bg-light text-muted rounded-4 d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: '40px', height: '40px' }}>
+                                                    <i className="bi bi-people-fill fs-5"></i>
+                                                </div>
                                                 <h4 className="fw-900 text-dark m-0 fs-5">نظرات سایر خریداران</h4>
                                             </div>
 
@@ -743,31 +838,31 @@ const ProductDetailPage = () => {
                                                                 <div className="row">
                                                                     <div className="col-12 col-lg-3 border-end-lg border-light mb-3 mb-lg-0 d-flex flex-row flex-lg-column align-items-center align-items-lg-start justify-content-between">
                                                                         <div className="d-flex align-items-center gap-3 mb-0 mb-lg-3">
-                                                                            <div className="bg-light rounded-circle border border-ui d-flex align-items-center justify-content-center d-none d-md-flex" style={{width:'50px', height:'50px'}}><i className="bi bi-person text-secondary fs-3"></i></div>
+                                                                            <div className="bg-light rounded-circle border border-ui d-flex align-items-center justify-content-center d-none d-md-flex" style={{width:'50px', height:'50px'}}><i className="bi bi-person text-secondary fs-3" aria-hidden="true"></i></div>
                                                                             <div>
                                                                                 <span className="fw-bold font-14 text-dark d-block mb-1">{comment.user_name}</span>
-                                                                                <span className="font-11 text-muted px-2 py-1 bg-light rounded-pill border">{new Date(comment.created_at).toLocaleDateString('fa-IR')}</span>
+                                                                                <span className="font-11 text-muted px-2 py-1 bg-light rounded-pill border"><time dateTime={comment.created_at}>{new Date(comment.created_at).toLocaleDateString('fa-IR')}</time></span>
                                                                             </div>
                                                                         </div>
-                                                                        <div className="d-flex text-warning font-13 bg-warning bg-opacity-10 px-3 py-1 rounded-pill border border-warning border-opacity-25 mt-0 mt-lg-auto">
+                                                                        <div className="d-flex text-warning font-13 bg-warning bg-opacity-10 px-3 py-1 rounded-pill border border-warning border-opacity-25 mt-0 mt-lg-auto" aria-label={`امتیاز ${comment.rating} از 5`}>
                                                                             {Array.from({ length: 5 }).map((_, i) => (
-                                                                                <i key={i} className={i < comment.rating ? "bi bi-star-fill" : "bi bi-star text-muted opacity-25"}></i>
+                                                                                <i key={i} className={i < comment.rating ? "bi bi-star-fill" : "bi bi-star text-muted opacity-25"} aria-hidden="true"></i>
                                                                             ))}
                                                                         </div>
                                                                     </div>
                                                                     <div className="col-12 col-lg-9 ps-lg-4 mt-3 mt-lg-0 border-top border-light border-top-lg-0 pt-3 pt-lg-0">
-                                                                        {(prosText && prosText !== 'ندارد' || consText && consText !== 'ندارد') && (
+                                                                        {((prosText && prosText !== 'ندارد') || (consText && consText !== 'ندارد')) && (
                                                                             <div className="row mb-3 bg-light p-2 p-md-3 rounded-4 border border-ui mx-0">
                                                                                 {prosText && prosText !== 'ندارد' && (
                                                                                     <div className="col-md-6 mb-2 mb-md-0">
                                                                                         <span className="text-success font-12 fw-bold d-block mb-1">نقاط قوت</span>
-                                                                                        <div className="font-13 text-dark"><i className="bi bi-plus-circle-fill text-success me-1 fs-6 align-middle"></i>{prosText}</div>
+                                                                                        <div className="font-13 text-dark"><i className="bi bi-plus-circle-fill text-success me-1 fs-6 align-middle" aria-hidden="true"></i>{prosText}</div>
                                                                                     </div>
                                                                                 )}
                                                                                 {consText && consText !== 'ندارد' && (
                                                                                     <div className="col-md-6">
                                                                                         <span className="text-danger font-12 fw-bold d-block mb-1">نقاط ضعف</span>
-                                                                                        <div className="font-13 text-dark"><i className="bi bi-dash-circle-fill text-danger me-1 fs-6 align-middle"></i>{consText}</div>
+                                                                                        <div className="font-13 text-dark"><i className="bi bi-dash-circle-fill text-danger me-1 fs-6 align-middle" aria-hidden="true"></i>{consText}</div>
                                                                                     </div>
                                                                                 )}
                                                                             </div>
@@ -781,7 +876,7 @@ const ProductDetailPage = () => {
                                                 </div>
                                             ) : (
                                                 <div className="text-center py-5 bg-light border border-light rounded-4">
-                                                    <img src="/assets/image/cart/empty-cart.svg" alt="empty" style={{width:'80px', opacity:'0.5'}} className="mb-3"/>
+                                                    <img src="/assets/image/cart/empty-cart.svg" alt="هیچ نظری ثبت نشده" style={{width:'80px', opacity:'0.5'}} className="mb-3"/>
                                                     <h6 className="font-15 fw-bold text-dark mb-2">نظری برای نمایش وجود ندارد</h6>
                                                 </div>
                                             )}
@@ -789,30 +884,38 @@ const ProductDetailPage = () => {
                                     )}
 
                                     {activeTab === 'qa' && (
-                                        <div className="animate-fade-in">
-                                            <h4 className="fw-900 text-dark border-bottom border-light pb-3 mb-4 d-flex align-items-center gap-3 fs-5"><span className="bg-danger text-white rounded-3 p-2 d-flex"><i className="bi bi-question-diamond"></i></span> پرسش و پاسخ کاربران</h4>
+                                        <div className="animate-fade-in" role="tabpanel">
+                                            <div className="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom border-light">
+                                                <div className="bg-danger bg-opacity-10 text-danger rounded-4 d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: '50px', height: '50px' }}>
+                                                    <i className="bi bi-question-diamond-fill fs-4"></i>
+                                                </div>
+                                                <div>
+                                                    <h3 className="fw-900 text-dark m-0 fs-5 mb-1">پرسش و پاسخ کاربران</h3>
+                                                    <p className="font-12 text-muted m-0">سوالات خود را درباره این محصول بپرسید</p>
+                                                </div>
+                                            </div>
                                             
-                                            <div className="box_questions bg-light border border-light rounded-4 p-3 p-md-4 mb-4 shadow-sm">
+                                            <div className="box_questions bg-light border border-light rounded-4 p-4 p-md-5 mb-5 shadow-sm">
                                                 <form onSubmit={handleQuestionSubmit}>
                                                     <div className="row gy-3">
                                                         <div className="col-12">
                                                             <div className="alert bg-info bg-opacity-10 border border-info border-opacity-25 rounded-3 d-flex align-items-start gap-2 m-0 font-13 text-dark">
-                                                                <i className="bi bi-info-circle-fill text-info fs-5"></i> <span className="pt-1">ثبت پرسش برای تمامی افراد آزاد است.</span>
+                                                                <i className="bi bi-info-circle-fill text-info fs-5" aria-hidden="true"></i> <span className="pt-1">ثبت پرسش برای تمامی افراد آزاد است.</span>
                                                             </div>
                                                         </div>
                                                         {!user && (
                                                             <div className="col-md-6">
-                                                                <label className="font-13 fw-bold text-dark mb-2"><i className="bi bi-person me-1 text-muted"></i> نام شما (اختیاری):</label>
-                                                                <input type="text" className="form-control border-0 py-2 px-3 rounded-pill shadow-sm font-13" placeholder="مثال: رضا جعفری" value={guestName} onChange={(e) => setGuestName(e.target.value)} />
+                                                                <label htmlFor="guestName" className="font-13 fw-bold text-dark mb-2"><i className="bi bi-person me-1 text-muted" aria-hidden="true"></i> نام شما (اختیاری):</label>
+                                                                <input id="guestName" type="text" className="form-control border-0 py-3 px-4 rounded-pill shadow-sm font-13" placeholder="مثال: رضا جعفری" value={guestName} onChange={(e) => setGuestName(e.target.value)} />
                                                             </div>
                                                         )}
                                                         <div className="col-12">
-                                                            <label className="font-13 fw-bold text-dark mb-2"><i className="bi bi-pencil me-1 text-muted"></i> پرسش خود را بنویسید <span className="text-danger">*</span></label>
-                                                            <textarea className="form-control border-0 py-3 px-4 rounded-4 shadow-sm font-13" placeholder="سوال خود را درباره ویژگی‌ها یا کارایی این کالا بنویسید..." rows="3" value={questionText} onChange={(e) => setQuestionText(e.target.value)} required></textarea>
+                                                            <label htmlFor="questionText" className="font-13 fw-bold text-dark mb-2"><i className="bi bi-pencil me-1 text-muted" aria-hidden="true"></i> پرسش خود را بنویسید <span className="text-danger">*</span></label>
+                                                            <textarea id="questionText" className="form-control border-0 py-3 px-4 rounded-4 shadow-sm font-13" placeholder="سوال خود را درباره ویژگی‌ها یا کارایی این کالا بنویسید..." rows="3" value={questionText} onChange={(e) => setQuestionText(e.target.value)} required></textarea>
                                                         </div>
-                                                        <div className="col-12 text-end mt-2">
-                                                            <button className="btn btn-dark text-white px-4 py-2 rounded-pill fw-bold font-13 shadow-sm hover-lift w-100 w-md-auto" type="submit" disabled={submittingQuestion}>
-                                                                {submittingQuestion ? <div className="spinner-border spinner-border-sm"></div> : <i className="bi bi-send-fill me-2"></i>}
+                                                        <div className="col-12 text-end mt-4">
+                                                            <button className="btn btn-dark text-white px-4 py-2 py-md-3 px-md-5 rounded-pill fw-bold font-13 shadow-sm hover-lift w-100 w-md-auto" type="submit" disabled={submittingQuestion}>
+                                                                {submittingQuestion ? <div className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></div> : <i className="bi bi-send-fill me-2" aria-hidden="true"></i>}
                                                                 ارسال پرسش
                                                             </button>
                                                         </div>
@@ -820,7 +923,10 @@ const ProductDetailPage = () => {
                                                 </form>
                                             </div>
 
-                                            <div className="box_filter mt-5 pb-3 border-bottom border-light mb-4">
+                                            <div className="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom border-light mt-5">
+                                                <div className="bg-light text-muted rounded-4 d-flex align-items-center justify-content-center flex-shrink-0" style={{ width: '40px', height: '40px' }}>
+                                                    <i className="bi bi-ui-checks fs-5"></i>
+                                                </div>
                                                 <h4 className="fw-900 text-dark m-0 fs-5">پاسخ‌های تایید شده</h4>
                                             </div>
 
@@ -830,22 +936,22 @@ const ProductDetailPage = () => {
                                                         <div key={q.uuid} className="box_questions border border-ui rounded-4 p-3 p-md-4 bg-white shadow-sm hover-shadow transition">
                                                             <div className="row bs-qu align-items-start mb-3">
                                                                 <div className="col-2 col-lg-2 bq1 text-center border-end border-light pe-2 pe-md-3">
-                                                                    <i className="bi bi-person-circle text-muted fs-1 d-none d-md-block"></i>
-                                                                    <i className="bi bi-person-circle text-muted fs-3 d-block d-md-none"></i>
+                                                                    <i className="bi bi-person-circle text-muted fs-1 d-none d-md-block" aria-hidden="true"></i>
+                                                                    <i className="bi bi-person-circle text-muted fs-3 d-block d-md-none" aria-hidden="true"></i>
                                                                 </div>
                                                                 <div className="col-10 col-lg-10 bq2 ps-2 ps-md-4 d-flex flex-column justify-content-center">
                                                                     <div className="d-flex align-items-center justify-content-between mb-2">
                                                                         <span className="span2 font-13 fw-bold text-dark">{q.user_name}</span>
-                                                                        <span className="font-11 text-muted">{new Date(q.created_at).toLocaleDateString('fa-IR')}</span>
+                                                                        <span className="font-11 text-muted"><time dateTime={q.created_at}>{new Date(q.created_at).toLocaleDateString('fa-IR')}</time></span>
                                                                     </div>
-                                                                    <h6 className="fw-bold text-danger mb-2 font-13"><i className="bi bi-question-circle-fill me-1"></i> پرسش:</h6>
+                                                                    <div className="fw-bold text-danger mb-2 font-13"><i className="bi bi-question-circle-fill me-1" aria-hidden="true"></i> پرسش:</div>
                                                                     <p className="font-14 text-dark lh-lg text-justify m-0 bg-light p-2 p-md-3 rounded-3">{q.text}</p>
                                                                 </div>
                                                             </div>
                                                             {q.answer_text && (
                                                                 <div className="row bs-qu align-items-start pt-3 border-top border-light">
                                                                     <div className="col-2 col-lg-2 bq1 text-center border-end border-light pe-2 pe-md-3">
-                                                                        <div className="bg-success rounded-circle d-flex align-items-center justify-content-center mx-auto shadow-sm" style={{width:'35px', height:'35px'}}><i className="bi bi-headset text-white font-16"></i></div>
+                                                                        <div className="bg-success rounded-circle d-flex align-items-center justify-content-center mx-auto shadow-sm" style={{width:'35px', height:'35px'}}><i className="bi bi-headset text-white font-16" aria-hidden="true"></i></div>
                                                                     </div>
                                                                     <div className="col-10 col-lg-10 bq2 ps-2 ps-md-4 d-flex flex-column justify-content-center">
                                                                         <span className="span1 font-12 fw-bold text-success d-block mb-2">پشتیبانی آرک کالا</span>
@@ -858,8 +964,8 @@ const ProductDetailPage = () => {
                                                 </div>
                                             ) : (
                                                 <div className="text-center py-5 bg-light border border-light rounded-4">
-                                                    <i className="bi bi-chat-left-dots fs-1 text-muted opacity-50 d-block mb-3"></i>
-                                                    <h6 className="font-15 fw-bold text-dark mb-2">سوالی ثبت نشده است</h6>
+                                                    <i className="bi bi-chat-left-dots fs-1 text-muted opacity-50 d-block mb-3" aria-hidden="true"></i>
+                                                    <h5 className="font-15 fw-bold text-dark mb-2">سوالی ثبت نشده است</h5>
                                                 </div>
                                             )}
                                         </div>
@@ -876,11 +982,12 @@ const ProductDetailPage = () => {
                 <section className="product-slider mt-5 mb-5 pb-5">
                     <div className="container-fluid">
                         <div className="section-title mb-4 border-bottom border-2 border-ui pb-3 d-flex align-items-center justify-content-between">
-                            <h2 className="fw-900 h5 text-dark m-0 d-flex align-items-center gap-2"><i className="bi bi-bag-heart text-danger"></i> محصولات <span className="text-danger">مرتبط</span></h2>
-                            {product.category && <Link to={`/shop?category__slug=${product.category.slug}`} className="btn btn-outline-danger rounded-pill px-3 py-1 font-12 fw-bold shadow-sm hover-lift">مشاهده همه <i className="bi bi-chevron-left"></i></Link>}
+                            <h2 className="fw-900 h5 text-dark m-0 d-flex align-items-center gap-2"><i className="bi bi-bag-heart text-danger" aria-hidden="true"></i> محصولات <span className="text-danger">مرتبط</span></h2>
+                            {product.category && <Link to={`/shop?category__slug=${product.category.slug}`} className="btn btn-outline-danger rounded-pill px-3 py-1 font-12 fw-bold shadow-sm hover-lift" aria-label={`مشاهده همه محصولات ${product.category.title}`}>مشاهده همه <i className="bi bi-chevron-left" aria-hidden="true"></i></Link>}
                         </div>
                         
                         <Swiper
+                            dir="rtl"
                             spaceBetween={15}
                             slidesPerView={1.2}
                             breakpoints={{
@@ -893,6 +1000,7 @@ const ProductDetailPage = () => {
                             autoplay={{ delay: 4000, disableOnInteraction: false }}
                             modules={[Navigation, Autoplay]}
                             className="py-4 px-2"
+                            aria-label="لیست محصولات مرتبط"
                         >
                             {suggestedProducts.map(prod => (
                                 <SwiperSlide key={prod.uuid}>
@@ -900,12 +1008,21 @@ const ProductDetailPage = () => {
                                         <div className="product-box border border-ui shadow-sm rounded-4 p-3 p-md-4 bg-white hover-shadow transition h-100 d-flex flex-column position-relative">
                                             {prod.is_wholesale && <span className="position-absolute top-0 start-0 badge bg-danger text-white rounded-end-pill py-1 px-2 mt-3 shadow-sm font-11 z-1">فروش عمده</span>}
                                             <div className="text-center mb-3 pt-2">
-                                                <img src={resolveImageUrl(prod.image_url || prod.image || (prod.gallery && prod.gallery.length > 0 ? prod.gallery[0].url : ''))} alt={prod.title} className="img-fluid object-fit-contain transition hover-lift" style={{height: '140px'}} onError={(e)=>{e.target.src='/assets/image/product/product-no-bg.png';}} />
+                                                <img 
+                                                    src={resolveImageUrl(prod.image_url || prod.image || (prod.gallery && prod.gallery.length > 0 ? prod.gallery[0].url : ''))} 
+                                                    alt={prod.gallery?.[0]?.image_alt || prod.title}
+                                                    title={prod.gallery?.[0]?.image_alt || prod.title}
+                                                    className="img-fluid object-fit-contain transition hover-lift" 
+                                                    style={{height: '140px'}} 
+                                                    loading="lazy"
+                                                    decoding="async"
+                                                    onError={(e)=>{e.target.src='/assets/image/product/product-no-bg.png';}} 
+                                                />
                                             </div>
-                                            <h6 className="font-13 text-dark lh-lg text-overflow-2 fw-bold mb-3">{prod.title}</h6>
+                                            <h3 className="font-13 text-dark lh-lg text-overflow-2 fw-bold mb-3">{prod.title}</h3>
                                             <div className="mt-auto d-flex justify-content-between align-items-center">
-                                                <div className="d-flex align-items-center text-warning font-12 bg-warning bg-opacity-10 px-2 py-1 rounded-pill">
-                                                    <i className="bi bi-star-fill me-1"></i> {prod.average_rating ? prod.average_rating.toFixed(1) : '5.0'}
+                                                <div className="d-flex align-items-center text-warning font-12 bg-warning bg-opacity-10 px-2 py-1 rounded-pill" aria-label={`امتیاز ${prod.average_rating ? prod.average_rating.toFixed(1) : '5.0'} از 5`}>
+                                                    <i className="bi bi-star-fill me-1" aria-hidden="true"></i> {prod.average_rating ? prod.average_rating.toFixed(1) : '5.0'}
                                                 </div>
                                                 <div className="text-end">
                                                     <strong className="text-dark font-16 fw-900">{Number(prod.base_price).toLocaleString()} <span className="font-11 text-muted fw-normal">تومان</span></strong>
@@ -920,17 +1037,17 @@ const ProductDetailPage = () => {
                 </section>
             )}
 
-            <div className="modal fade" id="videoModal" tabIndex="-1">
+            <div className="modal fade" id="videoModal" tabIndex="-1" aria-labelledby="videoModalLabel" aria-hidden="true">
                 <div className="modal-dialog modal-lg modal-dialog-centered">
                     <div className="modal-content bg-dark border-0 overflow-hidden rounded-4 shadow-lg">
                         <div className="modal-header border-0 position-absolute top-0 end-0 z-3 w-100 p-3 d-flex justify-content-end bg-gradient-dark">
-                            <button type="button" className="btn-close btn-close-white shadow-none" data-bs-dismiss="modal" aria-label="Close"></button>
+                            <button type="button" className="btn-close btn-close-white shadow-none" data-bs-dismiss="modal" aria-label="بستن"></button>
                         </div>
                         <div className="modal-body p-0 d-flex align-items-center justify-content-center bg-black" style={{minHeight:'400px'}}>
                             {mainVideo ? (
-                                <video src={mainVideo.url} controls className="w-100 h-100" style={{maxHeight:'85vh'}}></video>
+                                <video src={mainVideo.url} controls className="w-100 h-100" style={{maxHeight:'85vh'}} title="ویدیو معرفی محصول"></video>
                             ) : (
-                                <div className="p-5 text-center text-white font-15 d-flex flex-column align-items-center"><i className="bi bi-camera-video-off fs-1 mb-3 text-muted"></i> ویدیویی آپلود نشده است.</div>
+                                <div className="p-5 text-center text-white font-15 d-flex flex-column align-items-center"><i className="bi bi-camera-video-off fs-1 mb-3 text-muted" aria-hidden="true"></i> ویدیویی آپلود نشده است.</div>
                             )}
                         </div>
                     </div>
@@ -938,21 +1055,21 @@ const ProductDetailPage = () => {
             </div>
 
             <div className="share-modal py-0">
-                <div className="modal fade" id="shareModal" tabIndex="-1">
+                <div className="modal fade" id="shareModal" tabIndex="-1" aria-labelledby="shareModalLabel" aria-hidden="true">
                     <div className="modal-dialog modal-sm modal-dialog-centered">
                         <div className="modal-content border-0 rounded-4 shadow-lg overflow-hidden glass-panel">
                             <div className="modal-header bg-light border-0 px-4 py-3">
-                                <h6 className="modal-title font-15 fw-900 text-dark m-0 d-flex align-items-center gap-2"><i className="bi bi-share-fill text-danger fs-5"></i> اشتراک گذاری</h6>
-                                <button type="button" className="btn-close shadow-none" data-bs-dismiss="modal"></button>
+                                <h5 className="modal-title font-15 fw-900 text-dark m-0 d-flex align-items-center gap-2" id="shareModalLabel"><i className="bi bi-share-fill text-danger fs-5" aria-hidden="true"></i> اشتراک گذاری</h5>
+                                <button type="button" className="btn-close shadow-none" data-bs-dismiss="modal" aria-label="بستن"></button>
                             </div>
                             <div className="modal-body text-center p-4">
                                 <p className="font-13 text-muted mb-4 lh-base">ارسال این محصول شگفت‌انگیز به دوستان!</p>
                                 <button type="button" onClick={copyToClipboard} className="btn my-3 d-block text-center btn-dark w-100 rounded-pill py-2 font-14 fw-bold transition shadow-sm hover-lift">
-                                    <i className="bi bi-files me-2 fs-5 align-middle"></i> کپی لینک محصول
+                                    <i className="bi bi-files me-2 fs-5 align-middle" aria-hidden="true"></i> کپی لینک محصول
                                 </button>
                                 <div className="d-flex justify-content-center gap-4 social-link fs-3 mt-4">
-                                    <a href={`https://t.me/share/url?url=${window.location.href}`} target="_blank" rel="noreferrer" className="text-primary transition hover-lift"><i className="bi bi-telegram"></i></a>
-                                    <a href={`https://wa.me/?text=${window.location.href}`} target="_blank" rel="noreferrer" className="text-success transition hover-lift"><i className="bi bi-whatsapp"></i></a>
+                                    <a href={`https://t.me/share/url?url=${window.location.href}`} target="_blank" rel="noreferrer" className="text-primary transition hover-lift" aria-label="اشتراک‌گذاری در تلگرام"><i className="bi bi-telegram" aria-hidden="true"></i></a>
+                                    <a href={`https://wa.me/?text=${window.location.href}`} target="_blank" rel="noreferrer" className="text-success transition hover-lift" aria-label="اشتراک‌گذاری در واتساپ"><i className="bi bi-whatsapp" aria-hidden="true"></i></a>
                                 </div>
                             </div>
                         </div>
@@ -960,19 +1077,19 @@ const ProductDetailPage = () => {
                 </div>
             </div>
 
-            <div className="modal fade" id="chartModal" tabIndex="-1" aria-labelledby="chartModalLabel">
+            <div className="modal fade" id="chartModal" tabIndex="-1" aria-labelledby="chartModalLabel" aria-hidden="true">
                 <div className="modal-dialog modal-dialog-centered modal-lg">
                     <div className="modal-content border-0 rounded-4 shadow-lg overflow-hidden">
                         <div className="modal-header bg-light border-0 px-4 py-3 d-flex align-items-start">
                             <div>
-                                <h5 className="modal-title fw-900 text-dark font-16 d-flex align-items-center gap-2" id="chartModalLabel"><i className="bi bi-graph-up-arrow text-danger fs-4"></i> نمودار تغییرات قیمت فروش</h5>
+                                <h5 className="modal-title fw-900 text-dark font-16 d-flex align-items-center gap-2" id="chartModalLabel"><i className="bi bi-graph-up-arrow text-danger fs-4" aria-hidden="true"></i> نمودار تغییرات قیمت فروش</h5>
                                 <p className="text-muted mt-2 font-12 m-0 text-overflow-1">{product.title}</p>
                             </div>
-                            <button type="button" className="btn-close shadow-none mt-1" data-bs-dismiss="modal"></button>
+                            <button type="button" className="btn-close shadow-none mt-1" data-bs-dismiss="modal" aria-label="بستن"></button>
                         </div>
                         <div className="modal-body p-3 p-md-4 bg-white">
                             <div className="w-100 d-flex justify-content-center chart-container">
-                                <canvas id="myChart" ref={chartRef}></canvas>
+                                <canvas id="myChart" ref={chartRef} aria-label="نمودار قیمت محصول"></canvas>
                             </div>
                         </div>
                     </div>
@@ -989,6 +1106,8 @@ const ProductDetailPage = () => {
                 .hover-text-danger:hover { color: #dc3545!important; }
                 .transition { transition: all 0.3s ease; }
                 .w-fit-content { width: fit-content; }
+                
+                .visually-hidden { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important; overflow: hidden !important; clip: rect(0, 0, 0, 0) !important; white-space: nowrap !important; border: 0 !important; }
                 
                 .text-overflow-1 { overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; }
                 .text-overflow-2 { overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
@@ -1040,6 +1159,10 @@ const ProductDetailPage = () => {
                 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
                 .custom-scrollbar::-webkit-scrollbar-thumb { background: #e0e0e0; border-radius: 10px; }
                 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #bdbdbd; }
+
+                .hide-panel { max-height: 0; opacity: 0; transition: all 0.3s ease; }
+                .show-panel { max-height: 1000px; opacity: 1; transition: all 0.4s ease; }
+                .rotate-180 { transform: rotate(180deg); }
             `}</style>
         </React.Fragment>
     );

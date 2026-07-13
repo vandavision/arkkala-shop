@@ -19,7 +19,9 @@ const ProductCard = ({ product }) => {
     const [isFav, setIsFav] = useState(product.is_favorite || false);
     const [isAdding, setIsAdding] = useState(false);
 
-    const mainImage = product.gallery?.find(img => img.is_main)?.url || product.gallery?.[0]?.url || '/assets/image/product/product-no-bg.png';
+    const mainImageObj = product.gallery?.find(img => img.is_main) || product.gallery?.[0];
+    const mainImage = mainImageObj?.url || '/assets/image/product/product-no-bg.png';
+    const mainImageAlt = mainImageObj?.image_alt || product.title;
     
     const discountPercent = product.special_discount_percent || 0;
     const originalPrice = product.base_price || 0;
@@ -72,7 +74,7 @@ const ProductCard = ({ product }) => {
             </div>
 
             <div className="position-absolute top-0 end-0 p-3 z-2 d-flex flex-column gap-2">
-                <button onClick={handleFavorite} className={`btn btn-sm rounded-circle shadow-sm d-flex align-items-center justify-content-center transition ${isFav ? 'bg-danger text-white border-danger' : 'bg-white text-muted border-ui hover-text-danger'}`} style={{width: '35px', height: '35px'}}>
+                <button onClick={handleFavorite} className={`btn btn-sm rounded-circle shadow-sm d-flex align-items-center justify-content-center transition ${isFav ? 'bg-danger text-white border-danger' : 'bg-white text-muted border-ui hover-text-danger'}`} style={{width: '35px', height: '35px'}} aria-label="افزودن به علاقه‌مندی‌ها">
                     <i className={isFav ? "bi bi-heart-fill font-14" : "bi bi-heart font-14"}></i>
                 </button>
             </div>
@@ -80,9 +82,12 @@ const ProductCard = ({ product }) => {
             <Link to={`/product/${product.slug}`} className="d-block text-center mb-3 pt-4 pb-2 text-decoration-none">
                 <img 
                     src={resolveImageUrl(mainImage)} 
-                    alt={product.title} 
+                    alt={mainImageAlt} 
+                    title={mainImageAlt}
                     className="img-fluid object-fit-contain transition hover-scale" 
                     style={{ height: '180px', width: '100%' }} 
+                    loading="lazy"
+                    decoding="async"
                     onError={(e)=>{e.target.src='/assets/image/product/product-no-bg.png'}} 
                 />
             </Link>

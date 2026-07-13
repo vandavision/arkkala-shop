@@ -52,7 +52,7 @@ const CartDrawer = () => {
                 <ul className="navbar-nav cart-canvas-parent flex-grow-1 overflow-auto custom-scrollbar p-3 m-0">
                     {cartItems.length === 0 ? (
                         <div className="text-center mt-5">
-                            <img src="/assets/image/cart/empty-cart.svg" alt="empty" width="150" className="mb-4 opacity-75 mx-auto d-block" />
+                            <img src="/assets/image/cart/empty-cart.svg" alt="empty" width="150" className="mb-4 opacity-75 mx-auto d-block" loading="lazy" decoding="async" />
                             <h5 className="fw-bold text-dark font-16">سبد خرید شما خالی است</h5>
                             <button onClick={() => { closeOffcanvas(); navigate('/shop'); }} className="btn btn-outline-danger rounded-pill px-4 py-2 mt-3 font-14 fw-bold shadow-sm hover-lift">بازگشت به فروشگاه</button>
                         </div>
@@ -78,6 +78,8 @@ const CartDrawer = () => {
                                                         alt={product.title || 'تصویر کالا'} 
                                                         className="img-thumbnail border-ui rounded-4 w-100 object-fit-contain shadow-sm p-2 bg-light mb-3 hover-lift transition" 
                                                         style={{height: '110px'}} 
+                                                        loading="lazy"
+                                                        decoding="async"
                                                         onError={(e) => { e.target.onerror = null; e.target.src = '/assets/image/product/product-no-bg.png'; }} 
                                                     />
                                                 </Link>
