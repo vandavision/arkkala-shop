@@ -1,13 +1,11 @@
-"""
-API Views for Blog App.
-"""
+from django.db.models import Prefetch
 from rest_framework import viewsets, status, filters
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.request import Request
 from django_filters.rest_framework import DjangoFilterBackend
 
-from .models import Post, Category
+from .models import Post, Category, Comment
 from .serializers import PostListSerializer, PostDetailSerializer, BlogCategorySerializer
 from .services import PostService
 
@@ -24,8 +22,6 @@ class PostViewSet(viewsets.ReadOnlyModelViewSet):
     """
     ViewSet for retrieving and filtering blog posts.
     """
-    queryset = Post.objects.filter(is_published=True).select_related('category', 'author').prefetch_related('tags')
-    
     lookup_field = 'slug'
     
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -33,6 +29,15 @@ class PostViewSet(viewsets.ReadOnlyModelViewSet):
     search_fields = ['title', 'short_description', 'body']
     ordering_fields = ['view_count', 'created_at']
     ordering = ['-created_at']
+
+    def get_queryset(self):
+        # Deep prefetch to solve the comments N+1 issue
+        return Post.objects.filter(is_published=True).select_related(
+            'category', 'author'
+        ).prefetch_related(
+            'tags',
+            Prefetch('comments', queryset=Comment.objects.filter(is_approved=True), to_attr='approved_comments')
+        )
 
     def get_serializer_class(self):
         if self.action == 'list':

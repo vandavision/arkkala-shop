@@ -1,6 +1,4 @@
-"""
-Views for Orders and Cart.
-"""
+from django.db.models import Prefetch
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -8,6 +6,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.request import Request
 
 from .models import Order, ShippingMethod
+from shop.models import Comment, Question
 from .serializers import (
     CartItemSerializer, OrderSerializer, CheckoutSerializer, ShippingMethodSerializer
 )
@@ -29,6 +28,7 @@ class CartViewSet(viewsets.ViewSet):
         return request.headers.get('X-Guest-ID')
 
     def list(self, request: Request) -> Response:
+        """List items inside the cart with extensive Prefetch logic for performance."""
         guest_id = self.get_guest_id(request)
         user = request.user
         
@@ -36,7 +36,20 @@ class CartViewSet(viewsets.ViewSet):
             return Response([])
 
         cart = CartService.get_or_create_cart(user=user if user.is_authenticated else None, guest_id=guest_id)
-        serializer = CartItemSerializer(cart.items.all(), many=True)
+        
+        items = cart.items.select_related(
+            'product', 'product__brand', 'product__category', 'variant'
+        ).prefetch_related(
+            'variant__attribute_values',
+            'product__variants__attribute_values',
+            'product__gallery',
+            'product__videos',
+            'product__price_history',
+            Prefetch('product__comments', queryset=Comment.objects.filter(is_approved=True), to_attr='approved_comments'),
+            Prefetch('product__questions', queryset=Question.objects.filter(is_approved=True), to_attr='approved_questions')
+        ).all()
+
+        serializer = CartItemSerializer(items, many=True, context={'request': request})
         return Response(serializer.data)
 
     @action(detail=False, methods=['post'])

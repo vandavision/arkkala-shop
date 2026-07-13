@@ -1,9 +1,7 @@
-"""
-API Views for Shop App.
-"""
 import uuid
 from typing import Optional
 from django.shortcuts import get_object_or_404
+from django.db.models import Prefetch, Exists, OuterRef
 from rest_framework import viewsets, status, filters
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -13,7 +11,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
 from django_filters.rest_framework import DjangoFilterBackend
 
-from .models import Product, Comment
+from .models import Product, Comment, Question, ProductGallery
 from .serializers import ProductDetailSerializer, UserCommentSerializer
 from .services import ProductService, QuestionService
 from .filters import ProductFilter
@@ -42,11 +40,8 @@ class ProductPagination(PageNumberPagination):
 
 class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     """
-    ViewSet for retrieving and filtering products.
+    ViewSet for retrieving and filtering products with completely optimized queries.
     """
-    queryset = Product.objects.filter(is_active=True).prefetch_related(
-        'variants__attribute_values', 'comments', 'gallery', 'brand', 'category', 'questions'
-    )
     serializer_class = ProductDetailSerializer
     pagination_class = ProductPagination 
     
@@ -58,6 +53,30 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     search_fields = ['title', 'english_title', 'description', 'short_description']
     ordering_fields = ['base_price', 'sold_count', 'view_count', 'average_rating', 'created_at']
     ordering = ['-created_at']
+
+    def get_queryset(self):
+
+        qs = Product.objects.filter(is_active=True).select_related(
+            'brand', 'category'
+        ).prefetch_related(
+            'variants__attribute_values',
+            'gallery',
+            'videos',
+            'price_history',
+            Prefetch('comments', queryset=Comment.objects.filter(is_approved=True), to_attr='approved_comments'),
+            Prefetch('questions', queryset=Question.objects.filter(is_approved=True), to_attr='approved_questions')
+        )
+
+        user = self.request.user
+        if user and user.is_authenticated:
+            # Annotate user favorite status to avoid querying the intermediate table for each product
+            favorite_subquery = Product.favorites.through.objects.filter(
+                product_id=OuterRef('pk'),
+                user_id=user.id
+            )
+            qs = qs.annotate(is_user_favorite=Exists(favorite_subquery))
+            
+        return qs
 
     def get_object(self) -> Product:
         """

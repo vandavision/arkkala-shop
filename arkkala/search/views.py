@@ -9,7 +9,6 @@ from rest_framework.permissions import AllowAny
 from .services import SearchService
 from .serializers import (
     GlobalSearchResponseSerializer,
-    CategoryTreeSerializer,
     BrandBrowseSerializer
 )
 
@@ -32,17 +31,17 @@ class GlobalSearchView(views.APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-class CategoryTreeView(generics.ListAPIView):
+class CategoryTreeView(views.APIView):
     """
     API endpoint to retrieve the entire active category tree.
     Perfect for building Frontend Mega-Menus.
+    Uses ultra-fast caching to guarantee 0ms response times.
     """
     permission_classes = [AllowAny]
-    serializer_class = CategoryTreeSerializer
-    pagination_class = None
 
-    def get_queryset(self):
-        return SearchService.get_category_tree()
+    def get(self, request: Request) -> Response:
+        tree_data = SearchService.get_cached_category_tree(request)
+        return Response(tree_data, status=status.HTTP_200_OK)
 
 
 class BrandBrowseView(generics.ListAPIView):

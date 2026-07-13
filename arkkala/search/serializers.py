@@ -1,10 +1,31 @@
-"""
-Serializers for the Search App APIs.
-"""
 from rest_framework import serializers
 from django.db.models import Q
 from shop.models import Category, Brand, Product
 from shop.serializers import ProductDetailSerializer
+
+
+class SearchProductItemSerializer(serializers.ModelSerializer):
+    """Minimal serializer for products inside search and menus."""
+    image_url = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Product
+        fields = ['uuid', 'title', 'slug', 'base_price', 'image_url']
+        
+    def get_image_url(self, obj: Product) -> str | None:
+        # Avoid .first() DB query by using Python next() on fetched .all()
+        gallery_images = obj.gallery.all()
+        main_image = next((img for img in gallery_images if img.is_main), None)
+        
+        if not main_image and len(gallery_images) > 0:
+            main_image = gallery_images[0]
+            
+        if main_image and main_image.image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(main_image.image.url)
+            return main_image.image.url
+        return None
 
 
 class CategoryTreeSerializer(serializers.ModelSerializer):
@@ -17,9 +38,10 @@ class CategoryTreeSerializer(serializers.ModelSerializer):
         fields = ['uuid', 'title', 'slug', 'image', 'children', 'products']
 
     def get_children(self, obj: Category):
-        if obj.children.exists():
-            active_children = obj.children.filter(is_active=True)
-            return CategoryTreeSerializer(active_children, many=True, context=self.context).data
+        # Prevent secondary DB hitting by using .all() and filtering in Python memory
+        children = [child for child in obj.children.all() if child.is_active]
+        if children:
+            return CategoryTreeSerializer(children, many=True, context=self.context).data
         return []
 
     def get_products(self, obj: Category):
@@ -28,8 +50,10 @@ class CategoryTreeSerializer(serializers.ModelSerializer):
                 Q(category=obj) | Q(category__parent=obj),
                 is_active=True
             ).distinct().order_by('-view_count')[:4]
-            return ProductDetailSerializer(products, many=True, context=self.context).data
+            # Used minimal serializer representation for tree speed
+            return SearchProductItemSerializer(products, many=True, context=self.context).data
         return []
+
 
 class BrandBrowseSerializer(serializers.ModelSerializer):
     """Serializer for Brands Page including product counts."""
@@ -39,34 +63,20 @@ class BrandBrowseSerializer(serializers.ModelSerializer):
         model = Brand
         fields = ['uuid', 'title', 'slug', 'logo', 'product_count']
 
-class SearchProductItemSerializer(serializers.ModelSerializer):
-    image_url = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = Product
-        fields = ['uuid', 'title', 'slug', 'base_price', 'image_url']
-        
-    def get_image_url(self, obj: Product) -> str | None:
-        main_image = obj.gallery.filter(is_main=True).first()
-        if not main_image:
-            main_image = obj.gallery.first()
-            
-        if main_image and main_image.image:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(main_image.image.url)
-            return main_image.image.url
-        return None
 
 class SearchCategoryItemSerializer(serializers.ModelSerializer):
+    """Minimal serializer for categories in global search."""
     class Meta:
         model = Category
-        fields = ['uuid', 'title', 'slug', 'image', 'children']
+        fields = ['uuid', 'title', 'slug', 'image']
+
 
 class SearchBrandItemSerializer(serializers.ModelSerializer):
+    """Minimal serializer for brands in global search."""
     class Meta:
         model = Brand
         fields = ['uuid', 'title', 'slug', 'logo']
+
 
 class GlobalSearchResponseSerializer(serializers.Serializer):
     """Aggregates all store search results into one clean JSON response."""

@@ -1,5 +1,6 @@
 """
 Service Layer for Orders and Cart processing.
+Handles robust integrations with external APIs and safe DB transactions.
 """
 import re
 import logging
@@ -210,6 +211,7 @@ class CartService:
 class OrderService:
     @staticmethod
     def validate_coupon(code: str) -> Coupon:
+        """Public validator to simply check state. Used by views."""
         now = timezone.now()
         coupon: Optional[Coupon] = Coupon.objects.filter(
             code__iexact=code,
@@ -224,7 +226,6 @@ class OrderService:
         return coupon
 
     @staticmethod
-    @transaction.atomic
     def checkout(
         address_data: Dict[str, Any], 
         shipping_method_id: str, 
@@ -237,54 +238,15 @@ class OrderService:
         guest_email: Optional[str] = None,
         guest_password: Optional[str] = None 
     ) -> Order:
-        
+        """
+        Executes order checkout.
+        The external HTTP logic (Postex) executes BEFORE database locking.
+        """
         cart: Cart = CartService.get_or_create_cart(user, guest_id)
-        cart_items = cart.items.select_related('product', 'variant').all()
+        cart_items = list(cart.items.select_related('product', 'variant').all())
 
-        if not cart_items.exists():
+        if not cart_items:
             raise ValueError("سبد خرید شما خالی است.")
-
-
-        if not user:
-            if guest_email and guest_password:
-                user, created = User.objects.get_or_create(
-                    email=guest_email,
-                    defaults={
-                        'username': guest_email,
-                        'first_name': guest_first_name or '',
-                        'last_name': guest_last_name or '',
-                        'is_active': True
-                    }
-                )
-                if created:
-                    user.set_password(guest_password)
-                    user.save()
-            elif guest_phone:
-                user, created = User.objects.get_or_create(
-                    phone_number=guest_phone,
-                    defaults={
-                        'username': guest_phone,
-                        'first_name': guest_first_name or '',
-                        'last_name': guest_last_name or '',
-                        'is_active': True
-                    }
-                )
-        
-        # Update names if they were missing for existing users
-        if user:
-            update_fields = []
-            if not user.first_name and guest_first_name:
-                user.first_name = guest_first_name
-                update_fields.append('first_name')
-            if not user.last_name and guest_last_name:
-                user.last_name = guest_last_name
-                update_fields.append('last_name')
-            if not user.phone_number and guest_phone:
-                user.phone_number = guest_phone
-                update_fields.append('phone_number')
-            
-            if update_fields:
-                user.save(update_fields=update_fields)
 
         shipping: ShippingMethod = ShippingMethod.objects.get(pk=shipping_method_id)
 
@@ -297,73 +259,146 @@ class OrderService:
             item_weight: int = CartService.calculate_item_weight(item)
             total_weight_grams += item_weight * item.quantity
 
+        # -----------------------------------------------------
+        # STEP 1: Process API Requests (NON-BLOCKING)
+        # -----------------------------------------------------
         if shipping.is_pay_on_delivery:
             shipping_cost: Decimal = Decimal(0)
         else:
             calculated_api_cost: Decimal = PostexShippingService.calculate_shipping_cost(
-                cart_items=list(cart_items),
+                cart_items=cart_items,
                 dest_province=address_data.get('province', 'تهران'),
                 total_weight_grams=total_weight_grams
             )
             shipping_cost = calculated_api_cost + shipping.base_cost
 
-        discount_amount: Decimal = Decimal(0)
-        coupon: Optional[Coupon] = None
-
-        if coupon_code:
-            coupon = OrderService.validate_coupon(coupon_code)
-            discount_amount = (total_items_amount * coupon.discount_percent) / Decimal(100)
-            if coupon.max_discount_amount and discount_amount > coupon.max_discount_amount:
-                discount_amount = coupon.max_discount_amount
-
-            coupon.used_count = F('used_count') + 1
-            coupon.save(update_fields=['used_count'])
-
         tax_rate: Decimal = Decimal(getattr(settings, 'VAT_RATE', 0.10))
-        subtotal: Decimal = (total_items_amount - discount_amount)
-        tax_amount: Decimal = subtotal * tax_rate
 
-        payable_amount: Decimal = subtotal + tax_amount + shipping_cost
+        # -----------------------------------------------------
+        # STEP 2: Database Writes (ATOMIC - LOCKING)
+        # -----------------------------------------------------
+        with transaction.atomic():
+            
+            # Re-fetch Cart and ensure it's locked and still contains items
+            cart = Cart.objects.select_for_update().get(pk=cart.pk)
+            
+            if not user:
+                if guest_email and guest_password:
+                    user, created = User.objects.get_or_create(
+                        email=guest_email,
+                        defaults={
+                            'username': guest_email,
+                            'first_name': guest_first_name or '',
+                            'last_name': guest_last_name or '',
+                            'is_active': True
+                        }
+                    )
+                    if created:
+                        user.set_password(guest_password)
+                        user.save()
+                elif guest_phone:
+                    user, created = User.objects.get_or_create(
+                        phone_number=guest_phone,
+                        defaults={
+                            'username': guest_phone,
+                            'first_name': guest_first_name or '',
+                            'last_name': guest_last_name or '',
+                            'is_active': True
+                        }
+                    )
+            
+            # Update user if fields are missing
+            if user:
+                update_fields = []
+                if not user.first_name and guest_first_name:
+                    user.first_name = guest_first_name
+                    update_fields.append('first_name')
+                if not user.last_name and guest_last_name:
+                    user.last_name = guest_last_name
+                    update_fields.append('last_name')
+                if not user.phone_number and guest_phone:
+                    user.phone_number = guest_phone
+                    update_fields.append('phone_number')
+                
+                if update_fields:
+                    user.save(update_fields=update_fields)
 
-        order: Order = Order.objects.create(
-            user=user,
-            guest_first_name=guest_first_name,
-            guest_last_name=guest_last_name,
-            guest_phone=guest_phone,
-            shipping_method=shipping,
-            coupon=coupon,
-            total_items_amount=total_items_amount,
-            discount_amount=discount_amount,
-            shipping_cost=shipping_cost,
-            payable_amount=payable_amount,
-            **address_data
-        )
+            # Re-validate and strictly lock the coupon to avoid usage limit exploits
+            discount_amount: Decimal = Decimal(0)
+            coupon_obj: Optional[Coupon] = None
 
-        order_items_to_create: List[OrderItem] = []
+            if coupon_code:
+                now = timezone.now()
+                coupon_obj = Coupon.objects.select_for_update().filter(
+                    code__iexact=coupon_code,
+                    is_active=True,
+                    valid_from__lte=now,
+                    valid_to__gte=now,
+                    used_count__lt=F('usage_limit')
+                ).first()
 
-        for item in cart_items:
-            unit_price = CartService.calculate_item_price(item)
-            order_items_to_create.append(
-                OrderItem(
-                    order=order,
-                    product=item.product,
-                    variant=item.variant,
-                    quantity=item.quantity,
-                    unit_price=unit_price,
-                    total_price=unit_price * item.quantity
-                )
+                if not coupon_obj:
+                    raise ValueError("کد تخفیف نامعتبر است یا ظرفیت آن پر شده است.")
+                
+                discount_amount = (total_items_amount * coupon_obj.discount_percent) / Decimal(100)
+                if coupon_obj.max_discount_amount and discount_amount > coupon_obj.max_discount_amount:
+                    discount_amount = coupon_obj.max_discount_amount
+
+                coupon_obj.used_count = F('used_count') + 1
+                coupon_obj.save(update_fields=['used_count'])
+
+            subtotal: Decimal = (total_items_amount - discount_amount)
+            tax_amount: Decimal = subtotal * tax_rate
+            payable_amount: Decimal = subtotal + tax_amount + shipping_cost
+
+            order: Order = Order.objects.create(
+                user=user,
+                guest_first_name=guest_first_name,
+                guest_last_name=guest_last_name,
+                guest_phone=guest_phone,
+                shipping_method=shipping,
+                coupon=coupon_obj,
+                total_items_amount=total_items_amount,
+                discount_amount=discount_amount,
+                shipping_cost=shipping_cost,
+                payable_amount=payable_amount,
+                **address_data
             )
 
-            if item.variant:
-                item.variant.inventory = F('inventory') - item.quantity
-                item.variant.save(update_fields=['inventory'])
-            else:
-                item.product.base_inventory = F('base_inventory') - item.quantity
-                item.product.save(update_fields=['base_inventory'])
+            order_items_to_create: List[OrderItem] = []
 
-        OrderItem.objects.bulk_create(order_items_to_create)
-        cart_items.delete()
+            for item in cart_items:
+                unit_price = CartService.calculate_item_price(item)
+                order_items_to_create.append(
+                    OrderItem(
+                        order=order,
+                        product=item.product,
+                        variant=item.variant,
+                        quantity=item.quantity,
+                        unit_price=unit_price,
+                        total_price=unit_price * item.quantity
+                    )
+                )
 
+                if item.variant:
+                    # Select variants for update to prevent negative inventory
+                    locked_variant = ProductVariant.objects.select_for_update().get(pk=item.variant.pk)
+                    locked_variant.inventory = F('inventory') - item.quantity
+                    locked_variant.save(update_fields=['inventory'])
+                else:
+                    # Select products for update
+                    locked_product = Product.objects.select_for_update().get(pk=item.product.pk)
+                    locked_product.base_inventory = F('base_inventory') - item.quantity
+                    locked_product.save(update_fields=['base_inventory'])
+
+            OrderItem.objects.bulk_create(order_items_to_create)
+            
+            # Clear items logic safely inside transaction
+            cart.items.all().delete()
+
+        # -----------------------------------------------------
+        # STEP 3: Post-Transaction Jobs
+        # -----------------------------------------------------
         if user and user.is_authenticated and getattr(user, 'email', None):
              EmailService.send_order_invoice(order=order, user_email=user.email)
 

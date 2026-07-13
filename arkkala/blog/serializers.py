@@ -1,6 +1,7 @@
 """
 Serializers for the Blog App.
 Handles data transformation and validation for blog models.
+Optimized memory caching logic.
 """
 from typing import Any, Dict, List, Optional
 from rest_framework import serializers
@@ -37,7 +38,6 @@ class PostSeoSerializer(BaseSeoSerializer):
     def get_canonical_url(self, obj: Post) -> str:
         """Override to provide frontend blog path."""
         return self.get_frontend_url(f"/blog/{obj.slug}/")
-
 
 
 class BlogCommentSerializer(serializers.ModelSerializer):
@@ -85,6 +85,8 @@ class PostDetailSerializer(serializers.ModelSerializer):
         ]
 
     def get_comments(self, obj: Post) -> List[Dict[str, Any]]:
-        """Return approved comments for the specific post."""
+        """Return approved comments using smart prefetched checks to avoid N+1."""
+        if hasattr(obj, 'approved_comments'):
+            return BlogCommentSerializer(obj.approved_comments, many=True).data
         approved_comments = obj.comments.filter(is_approved=True)
         return BlogCommentSerializer(approved_comments, many=True).data

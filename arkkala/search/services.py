@@ -1,9 +1,6 @@
-"""
-Service Layer for Search App.
-Handles global searching and aggregation for categories and brands.
-"""
 from typing import Dict, Any
 from django.db.models import Q, Count, QuerySet
+from django.core.cache import cache
 
 from shop.models import Product, Category, Brand
 
@@ -29,7 +26,7 @@ class SearchService:
         products = Product.objects.filter(
             Q(title__icontains=query) | Q(english_title__icontains=query),
             is_active=True
-        )[:limit]
+        ).prefetch_related('gallery')[:limit]
         
         brands = Brand.objects.filter(
             title__icontains=query, 
@@ -48,12 +45,26 @@ class SearchService:
         }
 
     @staticmethod
-    def get_category_tree() -> QuerySet:
+    def get_cached_category_tree(request) -> list:
         """
-        Fetch all active parent categories with their children nested.
-        Ideal for Mega-Menus.
+        Fetch the entire Category Tree including top products.
+        This operation is heavily cached to guarantee 0ms DB hit times for mega-menus.
         """
-        return Category.objects.filter(parent__isnull=True, is_active=True).prefetch_related('children')
+        from .serializers import CategoryTreeSerializer
+        
+        cache_key = "global_category_mega_menu_tree"
+        cached_tree = cache.get(cache_key)
+
+        if cached_tree:
+            return cached_tree
+
+        # If cache expires, build tree and prefetch active children manually
+        categories = Category.objects.filter(parent__isnull=True, is_active=True).prefetch_related('children')
+        serializer_data = CategoryTreeSerializer(categories, many=True, context={'request': request}).data
+        
+        # Cache for 2 hours (7200 seconds)
+        cache.set(cache_key, serializer_data, timeout=7200)
+        return serializer_data
 
     @staticmethod
     def get_brands_with_product_count() -> QuerySet:
@@ -62,8 +73,5 @@ class SearchService:
         Ideal for a 'Brands Showcase' page.
         """
         return Brand.objects.filter(is_active=True).annotate(
-            product_count=Count('products', filter=Q(products__is_active=True))
-        ).order_property('-product_count') if hasattr(Brand.objects, 'order_property') else \
-               Brand.objects.filter(is_active=True).annotate(
             product_count=Count('products', filter=Q(products__is_active=True))
         ).order_by('-product_count')

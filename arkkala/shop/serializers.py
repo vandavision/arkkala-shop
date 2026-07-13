@@ -1,7 +1,3 @@
-"""
-Serializers for the Shop App.
-Handles data transformation and validation for shop models.
-"""
 from typing import Any, Dict, List, Optional
 from rest_framework import serializers
 from rest_framework.request import Request
@@ -113,7 +109,7 @@ class PriceHistorySerializer(serializers.ModelSerializer):
 
 class ProductDetailSerializer(serializers.ModelSerializer):
     """
-    Main Product Serializer for detailed view.
+    Main Product Serializer for detailed view optimized for Prefetched data.
     """
     brand = BrandSerializer(read_only=True)
     variants = ProductVariantSerializer(many=True, read_only=True)
@@ -139,19 +135,25 @@ class ProductDetailSerializer(serializers.ModelSerializer):
         ]
 
     def get_is_favorite(self, obj: Product) -> bool:
-        """Check if current user has favorited this product."""
+        """Check annotated favorite data to avoid redundant DB queries."""
+        if hasattr(obj, 'is_user_favorite'):
+            return obj.is_user_favorite
         request = self.context.get('request')
         if request and request.user and request.user.is_authenticated:
             return obj.favorites.filter(id=request.user.id).exists()
         return False
 
     def get_comments(self, obj: Product) -> List[Dict[str, Any]]:
-        """Retrieve approved comments."""
+        """Retrieve approved comments utilizing prefetched data."""
+        if hasattr(obj, 'approved_comments'):
+            return CommentSerializer(obj.approved_comments, many=True).data
         approved_comments = obj.comments.filter(is_approved=True)
         return CommentSerializer(approved_comments, many=True).data
 
     def get_questions(self, obj: Product) -> List[Dict[str, Any]]:
-        """Retrieve approved questions."""
+        """Retrieve approved questions utilizing prefetched data."""
+        if hasattr(obj, 'approved_questions'):
+            return QuestionSerializer(obj.approved_questions, many=True, context=self.context).data
         approved_questions = obj.questions.filter(is_approved=True)
         return QuestionSerializer(approved_questions, many=True, context=self.context).data
 
