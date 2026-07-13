@@ -398,11 +398,11 @@ const Header = () => {
                                     <li className="vr bg-light mx-1" style={{ height: '35px', width: '2px' }}></li>
 
                                     <li className="position-relative" style={{ zIndex: 20 }}>
-                                        <Link to="/compare" className="btn border border-ui rounded-circle bg-white d-flex align-items-center justify-content-center shadow-sm hover-shadow transition text-decoration-none" title="مقایسه محصولات" style={{ width: '45px', height: '45px', padding: 0 }}>
+                                        <Link to="/compare" className="btn border border-ui rounded-circle bg-white d-flex align-items-center justify-content-center shadow-sm hover-shadow transition text-decoration-none overflow-visible-custom" title="مقایسه محصولات" style={{ width: '45px', height: '45px', padding: 0, overflow: 'visible' }}>
                                             <i className="bi bi-shuffle text-dark fs-5"></i>
                                             {compareIds?.length > 0 && (
-                                                <span className="position-absolute bg-warning text-dark shadow-sm fw-bold d-flex align-items-center justify-content-center" 
-                                                      style={{ top: '-3px', right: '-2px', minWidth: '20px', height: '20px', fontSize: '11px', border: '2px solid #fff', borderRadius: '50rem' }}>
+                                                <span className="position-absolute bg-warning text-dark shadow-sm fw-bold d-flex align-items-center justify-content-center px-1"
+                                                      style={{ top: '-4px', right: '-4px', minWidth: '22px', height: '22px', fontSize: '11px', border: '2px solid #fff', borderRadius: '50rem', lineHeight: 1 }}>
                                                     {compareIds.length}
                                                 </span>
                                             )}
@@ -411,10 +411,10 @@ const Header = () => {
 
                                     <li className="position-relative" style={{ zIndex: 20 }}>
                                         <button type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvasCart" aria-controls="offcanvasCart" className="btn border border-ui rounded-pill px-4 py-2 bg-white d-flex align-items-center gap-2 shadow-sm hover-shadow transition text-decoration-none">
-                                            <div className="position-relative d-flex align-items-center justify-content-center" style={{ width: '24px', height: '24px' }}>
+                                            <div className="position-relative d-flex align-items-center justify-content-center overflow-visible-custom" style={{ width: '24px', height: '24px', overflow: 'visible' }}>
                                                 <i className="bi bi-cart3 fs-5 text-dark"></i>
                                                 {cartItems?.length > 0 && (
-                                                    <span className="position-absolute bg-danger text-white shadow-sm fw-bold d-flex align-items-center justify-content-center" 
+                                                    <span className="position-absolute bg-danger text-white shadow-sm fw-bold d-flex align-items-center justify-content-center px-1" 
                                                           style={{ top: '-10px', right: '-12px', minWidth: '22px', height: '22px', fontSize: '11px', border: '2px solid #fff', borderRadius: '50rem', lineHeight: 1 }}>
                                                         {cartItems.length}
                                                     </span>
