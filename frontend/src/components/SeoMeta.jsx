@@ -25,7 +25,7 @@ const SeoMeta = ({ seoData, fallbackTitle, price, inventory, isArticle = false, 
     const robotsContent = seoData.robots || "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1";
     const canonicalUrl = currentUrl || (seoData.canonical_url || `${baseUrl}/`);
     
-    let imageUrl = customImage || seoData.og_image_url || seoData.image || seoData.image_url || '/mediafiles/site/logo/logo.png';
+    let imageUrl = customImage || seoData.og_image_url || seoData.image || seoData.image_url || '/assets/image/logo.png';
     if (imageUrl && imageUrl.startsWith('/')) imageUrl = `${baseUrl}${imageUrl}`;
     
     const twitterCard = seoData.twitter_card || 'summary_large_image';
@@ -33,12 +33,14 @@ const SeoMeta = ({ seoData, fallbackTitle, price, inventory, isArticle = false, 
     const twitterCreator = seoData.twitter_creator || '';
 
     const finalSchema = customSchema || seoData.schema_markup || seoData.json_ld;
+    
     const orgSchema = {
         "@type": "Organization",
         "name": siteName,
         "url": baseUrl,
         "logo": `${baseUrl}/assets/image/logo.png`
     };
+    
     const websiteSchema = {
         "@type": "WebSite",
         "name": siteName,
@@ -50,12 +52,23 @@ const SeoMeta = ({ seoData, fallbackTitle, price, inventory, isArticle = false, 
         }
     };
 
+    let parsedSchema = finalSchema;
+    if (typeof finalSchema === 'string') {
+        try {
+            parsedSchema = JSON.parse(finalSchema);
+        } catch (e) {
+            console.error("Invalid JSON-LD string:", e);
+            parsedSchema = null;
+        }
+    }
+
     let schemaGraph = [orgSchema, websiteSchema];
-    if (finalSchema) {
-        if (finalSchema['@graph']) {
-            schemaGraph = [...schemaGraph, ...finalSchema['@graph']];
+    if (parsedSchema && typeof parsedSchema === 'object') {
+        if (parsedSchema['@graph']) {
+            schemaGraph = [...schemaGraph, ...parsedSchema['@graph']];
         } else {
-            schemaGraph.push(finalSchema);
+            const { '@context': _, ...restSchema } = parsedSchema;
+            schemaGraph.push(restSchema);
         }
     }
 
@@ -93,7 +106,9 @@ const SeoMeta = ({ seoData, fallbackTitle, price, inventory, isArticle = false, 
             {twitterSite && <meta name="twitter:site" content={twitterSite} />}
             {twitterCreator && <meta name="twitter:creator" content={twitterCreator} />}
 
-            <script type="application/ld+json">{JSON.stringify(compiledSchema)}</script>
+            <script type="application/ld+json">
+                {JSON.stringify(compiledSchema)}
+            </script>
 
             {!isArticle && price && <meta property="product:price:amount" content={price.toString()} />}
             {!isArticle && price && <meta property="product:price:currency" content="IRT" />}

@@ -12,5 +12,15 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
+    chunkSizeWarningLimit: 1500,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'ui-vendor': ['swiper', 'chart.js', 'rc-slider'],
+          'utils-vendor': ['axios', 'react-helmet-async']
+        }
+      }
+    }
   },
 });

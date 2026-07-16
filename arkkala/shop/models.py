@@ -145,9 +145,28 @@ class Product(UUIDBaseModel, TimeStampMixin, TitleSlugMixin, SEOMixin, ProductDe
         
         main_img = self.gallery.filter(is_main=True).first() or self.gallery.first()
         
-        image_object = ""
-        if main_img:
-            image_object = {
+        product_schema = {
+            "@type": "Product",
+            "name": self.title,
+            "description": self.meta_description or self.short_description or self.title,
+            "sku": str(self.sku) if hasattr(self, 'sku') else str(self.uuid),
+            "brand": {
+                "@type": "Brand",
+                "name": self.brand.title if self.brand else getattr(settings, 'SITE_NAME', 'ارک کالا')
+            },
+            "offers": {
+                "@type": "Offer",
+                "url": product_url,
+                "priceCurrency": "IRT",
+                "price": str(self.base_price),
+                "availability": "https://schema.org/InStock" if (self.base_inventory > 0 or self.variants.filter(inventory__gt=0).exists()) else "https://schema.org/OutOfStock",
+                "itemCondition": "https://schema.org/NewCondition"
+            }
+        }
+
+        # ONLY append image if a valid URL exists to prevent schema validation failure
+        if main_img and main_img.image:
+            product_schema["image"] = {
                 "@type": "ImageObject",
                 "url": f"{frontend_domain}{main_img.image.url}",
                 "description": main_img.image_alt or self.title
@@ -155,27 +174,7 @@ class Product(UUIDBaseModel, TimeStampMixin, TitleSlugMixin, SEOMixin, ProductDe
 
         json_ld: Dict[str, Any] = {
             "@context": "https://schema.org",
-            "@graph": [
-                {
-                    "@type": "Product",
-                    "name": self.title,
-                    "image": image_object if image_object else "",
-                    "description": self.meta_description or self.short_description or self.title,
-                    "sku": str(self.sku) if hasattr(self, 'sku') else str(self.uuid),
-                    "brand": {
-                        "@type": "Brand",
-                        "name": self.brand.title if self.brand else getattr(settings, 'SITE_NAME', 'ارک کالا')
-                    },
-                    "offers": {
-                        "@type": "Offer",
-                        "url": product_url,
-                        "priceCurrency": "IRT",
-                        "price": str(self.base_price),
-                        "availability": "https://schema.org/InStock" if (self.base_inventory > 0 or self.variants.filter(inventory__gt=0).exists()) else "https://schema.org/OutOfStock",
-                        "itemCondition": "https://schema.org/NewCondition"
-                    }
-                }
-            ]
+            "@graph": [product_schema]
         }
 
         # GEO: Reviews & E-E-A-T
