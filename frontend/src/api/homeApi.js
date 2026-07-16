@@ -44,3 +44,13 @@ export const getStaticPageSeo = async (viewName) => {
         return null;
     }
 };
+
+export const submitContactMessage = async (formData) => {
+    try {
+        const response = await axiosInstance.post('home/contact/', formData);
+        return response.data;
+    } catch (error) {
+        console.error("Error submitting contact message:", error);
+        throw error;
+    }
+};

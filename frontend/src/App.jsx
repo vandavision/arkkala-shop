@@ -18,6 +18,7 @@ import BlogPage from './pages/BlogPage';
 import BlogDetailPage from './pages/BlogDetailPage';
 import FaqPage from './pages/FaqPage';
 import AboutUsPage from './pages/AboutUsPage';
+import ContactPage from './pages/ContactPage';
 import LoginPage from './pages/LoginPage';
 import PaymentResultPage from './pages/PaymentResultPage';
 import OrderInvoicePage from './pages/OrderInvoicePage';
@@ -73,6 +74,7 @@ function App() {
           
           <Route path="/faq" element={<FaqPage />} />
           <Route path="/about" element={<AboutUsPage />} />
+          <Route path="/contact" element={<ContactPage />} />
           <Route path="/return" element={<ReturnPolicyPage />} />
           
           <Route path="/product/:slug" element={<ProductDetailPage />} />

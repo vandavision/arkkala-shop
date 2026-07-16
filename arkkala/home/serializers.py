@@ -8,7 +8,7 @@ from shop.models import Category as ShopCategory
 
 from shop.serializers import ProductDetailSerializer, BrandSerializer
 from blog.serializers import PostListSerializer, BlogCategorySerializer
-
+from .models import ContactMessage
 
 class StorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -106,3 +106,10 @@ class AboutPageSerializer(serializers.ModelSerializer):
             except ValueError:
                 return None
         return None
+
+
+class ContactMessageSerializer(serializers.ModelSerializer):
+    """Serializer for handling incoming contact us data."""
+    class Meta:
+        model = ContactMessage
+        fields = ['full_name', 'phone_number', 'email', 'subject', 'message']

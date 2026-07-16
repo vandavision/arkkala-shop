@@ -2,7 +2,8 @@
 Admin configuration for Home App.
 """
 from django.contrib import admin
-from .models import Story, Slider, Banner, StoreReview, SiteSetting
+from .models import Story, Slider, Banner, StoreReview, SiteSetting, ContactMessage
+
 
 @admin.register(Story)
 class StoryAdmin(admin.ModelAdmin):
@@ -33,3 +34,13 @@ class SiteSettingAdmin(admin.ModelAdmin):
         if self.model.objects.exists():
             return False
         return super().has_add_permission(request)
+
+
+@admin.register(ContactMessage)
+class ContactMessageAdmin(admin.ModelAdmin):
+    list_display = ('full_name', 'phone_number', 'subject', 'is_read', 'created_at')
+    list_filter = ('is_read', 'created_at')
+    search_fields = ('full_name', 'phone_number', 'email', 'subject', 'message')
+    list_editable = ('is_read',)
+    
+    readonly_fields = ('full_name', 'phone_number', 'email', 'subject', 'message', 'created_at')

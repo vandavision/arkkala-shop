@@ -5,6 +5,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework.generics import ListAPIView
+from rest_framework.request import Request
+from rest_framework import status
 
 from .models import Story, Slider, Banner, StoreReview, SiteSetting, AboutPage, FAQ
 from .serializers import (
@@ -15,9 +17,10 @@ from .serializers import (
     SimpleCategorySerializer,
     SiteSettingSerializer,
     FAQSerializer,
-    AboutPageSerializer
+    AboutPageSerializer,
+    ContactMessageSerializer
 )
-
+from .services import ContactService
 from shop.models import Product, Brand, Category as ShopCategory, Comment as ShopComment, Question as ShopQuestion
 from shop.serializers import ProductDetailSerializer, BrandSerializer
 from blog.models import Post, Comment as BlogComment
@@ -142,3 +145,19 @@ class AboutPageDetailView(APIView):
             )
         serializer = AboutPageSerializer(about_content, context={'request': request})
         return Response(serializer.data)
+
+
+class ContactMessageAPIView(APIView):
+    """API Endpoint for receiving contact messages from frontend."""
+    permission_classes = [AllowAny]
+
+    def post(self, request: Request, *args: tuple, **kwargs: dict) -> Response:
+        serializer = ContactMessageSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        ContactService.create_message(serializer.validated_data)
+        
+        return Response(
+            {"message": "پیام شما با موفقیت دریافت شد."}, 
+            status=status.HTTP_201_CREATED
+        )

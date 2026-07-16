@@ -172,3 +172,19 @@ class AboutPage(UUIDBaseModel, TimeStampMixin):
 
     def __str__(self) -> str:
         return self.title
+
+class ContactMessage(UUIDBaseModel, TimeStampMixin):
+    full_name = models.CharField(max_length=150, verbose_name=_('نام و نام خانوادگی'))
+    phone_number = models.CharField(max_length=20, verbose_name=_('شماره تماس'))
+    email = models.EmailField(max_length=255, blank=True, null=True, verbose_name=_('پست الکترونیک'))
+    subject = models.CharField(max_length=255, blank=True, null=True, verbose_name=_('موضوع پیام'))
+    message = models.TextField(verbose_name=_('متن پیام'))
+    is_read = models.BooleanField(default=False, verbose_name=_('خوانده شده'))
+
+    class Meta:
+        verbose_name = _('پیام تماس با ما')
+        verbose_name_plural = _('پیام‌های تماس با ما')
+        ordering = ['-created_at']
+
+    def __str__(self) -> str:
+        return f"{self.full_name} - {self.subject or 'بدون موضوع'}"
