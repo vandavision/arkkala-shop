@@ -60,3 +60,13 @@ export const getOrderDetail = async (orderId) => {
     const response = await axiosInstance.get(`/orders/orders/${orderId}/`, getHeaders());
     return response.data;
 };
+
+export const submitOrderRequest = async (orderId, reason, requestType) => {
+    const response = await axiosInstance.post('/orders/order-requests/', { order: orderId, reason: reason, request_type: requestType }, getHeaders());
+    return response.data;
+};
+
+export const getOrderRequests = async () => {
+    const response = await axiosInstance.get('/orders/order-requests/', getHeaders());
+    return response.data;
+};

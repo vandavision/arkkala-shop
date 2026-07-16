@@ -1,7 +1,3 @@
-"""
-Celery Tasks for the Orders App.
-Contains background jobs such as auto-cancelling unpaid orders.
-"""
 import logging
 from celery import shared_task
 from django.db import transaction
@@ -14,16 +10,6 @@ logger = logging.getLogger(__name__)
 
 @shared_task
 def cancel_unpaid_order(order_uuid: str) -> str:
-    """
-    Checks if an order is still 'pending' after a specific time limit.
-    If it is, the order is cancelled and the reserved inventory is restored.
-
-    Args:
-        order_uuid (str): The UUID of the order to check.
-
-    Returns:
-        str: A message indicating the result of the operation.
-    """
     try:
         with transaction.atomic():
             order = Order.objects.select_for_update().filter(

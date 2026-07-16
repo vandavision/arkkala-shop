@@ -1,15 +1,36 @@
-"""
-Admin Interface for Orders.
-"""
+from typing import Any
 from django.contrib import admin
-from .models import ShippingMethod, Coupon, Order, OrderItem, Cart
+from django.http import HttpRequest
 
-admin.site.register(Cart)
+from .models import ShippingMethod, Coupon, Order, OrderItem, Cart, OrderRequest
+from .services.order import OrderRequestService
+
+
+@admin.register(Cart)
+class CartAdmin(admin.ModelAdmin):
+    list_display = ('uuid', 'user', 'guest_id', 'created_at')
+    search_fields = ('user__username', 'guest_id')
+
+
+@admin.register(OrderRequest)
+class OrderRequestAdmin(admin.ModelAdmin):
+    list_display = ('order', 'request_type', 'status', 'created_at')
+    list_filter = ('request_type', 'status', 'created_at')
+    search_fields = ('order__uuid',)
+    list_editable = ('status',)
+    
+    def save_model(self, request: HttpRequest, obj: OrderRequest, form: Any, change: bool) -> None:
+        super().save_model(request, obj, form, change)
+        
+        if obj.status == OrderRequest.StatusChoices.APPROVED:
+            OrderRequestService.process_approved_request(obj)
+
 
 @admin.register(ShippingMethod)
 class ShippingMethodAdmin(admin.ModelAdmin):
     list_display = ('name', 'base_cost', 'is_pay_on_delivery', 'is_active')
     list_filter = ('is_pay_on_delivery', 'is_active')
+
 
 @admin.register(Coupon)
 class CouponAdmin(admin.ModelAdmin):
@@ -17,10 +38,12 @@ class CouponAdmin(admin.ModelAdmin):
     list_filter = ('is_active',)
     search_fields = ('code',)
 
+
 class OrderItemInline(admin.TabularInline):
     model = OrderItem
     extra = 0
     readonly_fields = ('product', 'variant', 'quantity', 'unit_price', 'total_price')
+
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):

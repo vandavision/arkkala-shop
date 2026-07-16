@@ -21,6 +21,8 @@ import AboutUsPage from './pages/AboutUsPage';
 import LoginPage from './pages/LoginPage';
 import PaymentResultPage from './pages/PaymentResultPage';
 import OrderInvoicePage from './pages/OrderInvoicePage';
+import ReturnPolicyPage from './pages/ReturnPolicyPage';
+
 // Dashboard Pages
 import DashboardLayout from './pages/DashboardLayout';
 import DashboardSummary from './pages/DashboardSummary';
@@ -71,6 +73,7 @@ function App() {
           
           <Route path="/faq" element={<FaqPage />} />
           <Route path="/about" element={<AboutUsPage />} />
+          <Route path="/return" element={<ReturnPolicyPage />} />
           
           <Route path="/product/:slug" element={<ProductDetailPage />} />
           <Route path="/cart" element={<CartPage />} />
