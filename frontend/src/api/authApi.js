@@ -56,3 +56,23 @@ export const updateUserProfile = async (userData) => {
     const response = await axiosInstance.patch('users/profile/', userData, { headers });
     return response.data;
 };
+
+export const getUserAddresses = async () => {
+    const response = await axiosInstance.get('users/addresses/');
+    return response.data;
+};
+
+export const addUserAddress = async (data) => {
+    const response = await axiosInstance.post('users/addresses/', data);
+    return response.data;
+};
+
+export const deleteUserAddress = async (id) => {
+    const response = await axiosInstance.delete(`users/addresses/${id}/`);
+    return response.data;
+};
+
+export const setDefaultAddress = async (id) => {
+    const response = await axiosInstance.post(`users/addresses/${id}/set_default/`);
+    return response.data;
+};

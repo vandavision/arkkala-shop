@@ -38,9 +38,7 @@ const DashboardSidebar = () => {
                         src={user?.avatar || "/assets/image/user/user.png"} 
                         alt="کاربر" 
                         className="rounded-circle object-fit-cover border border-ui shadow-sm p-1 profile-avatar bg-white" 
-                        loading="lazy"
-                        decoding="async"
-                        onError={(e) => { e.target.onerror = null; e.target.src = '/assets/image/user/user.png'; }}
+                        onError={(e) => { e.target.src = '/assets/image/user/user.png'; }}
                     />
                     <span className="position-absolute bottom-0 end-0 bg-success border border-white rounded-circle status-dot"></span>
                 </div>
@@ -69,6 +67,11 @@ const DashboardSidebar = () => {
                     <span className="d-none d-md-inline d-lg-inline">سفارش‌های من</span>
                     <span className="d-inline d-md-none">سفارشات</span>
                 </NavLink>
+                <NavLink to="/dashboard/addresses" className={navLinkClass}>
+                    <i className="bi bi-geo-alt-fill fs-5"></i> 
+                    <span className="d-none d-md-inline d-lg-inline">آدرس‌های من</span>
+                    <span className="d-inline d-md-none">آدرس‌ها</span>
+                </NavLink>
                 <NavLink to="/dashboard/favorites" className={navLinkClass}>
                     <i className="bi bi-heart-fill fs-5"></i> علاقه‌مندی‌ها
                 </NavLink>
@@ -77,7 +80,7 @@ const DashboardSidebar = () => {
                 </NavLink>
                 <NavLink to="/dashboard/profile" className={navLinkClass}>
                     <i className="bi bi-person-vcard-fill fs-5"></i> 
-                    <span className="d-none d-md-inline d-lg-inline">اطلاعات حساب کاربری</span>
+                    <span className="d-none d-md-inline d-lg-inline">اطلاعات کاربری</span>
                     <span className="d-inline d-md-none">پروفایل من</span>
                 </NavLink>
                 

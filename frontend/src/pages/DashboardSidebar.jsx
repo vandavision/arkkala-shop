@@ -67,6 +67,11 @@ const DashboardSidebar = () => {
                     <span className="d-none d-md-inline d-lg-inline">سفارش‌های من</span>
                     <span className="d-inline d-md-none">سفارشات</span>
                 </NavLink>
+                <NavLink to="/dashboard/addresses" className={navLinkClass}>
+                    <i className="bi bi-geo-alt-fill fs-5"></i> 
+                    <span className="d-none d-md-inline d-lg-inline">آدرس‌های من</span>
+                    <span className="d-inline d-md-none">آدرس‌ها</span>
+                </NavLink>
                 <NavLink to="/dashboard/favorites" className={navLinkClass}>
                     <i className="bi bi-heart-fill fs-5"></i> علاقه‌مندی‌ها
                 </NavLink>

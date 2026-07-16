@@ -7,7 +7,8 @@ from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from datetime import timedelta
 import uuid
-
+from platform_tools.mixins.models.base import UUIDBaseModel, TimeStampMixin
+from django.conf import settings
 
 class CustomUserManager(BaseUserManager):
     """Unified Manager to handle both Email and Phone creations."""
@@ -73,4 +74,31 @@ class OTPRequest(models.Model):
             from django.conf import settings
             wait_time = getattr(settings, 'OTP_WAIT_TIME_MINUTES', 2)
             self.expires_at = timezone.now() + timedelta(minutes=wait_time)
+        super().save(*args, **kwargs)
+
+class UserAddress(UUIDBaseModel, TimeStampMixin):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='addresses', verbose_name=_('کاربر'))
+    title = models.CharField(max_length=100, verbose_name=_('عنوان آدرس'), help_text=_('مثال: خانه، محل کار'))
+    recipient_first_name = models.CharField(max_length=150, verbose_name=_('نام تحویل گیرنده'))
+    recipient_last_name = models.CharField(max_length=150, verbose_name=_('نام خانوادگی تحویل گیرنده'))
+    recipient_phone = models.CharField(max_length=20, verbose_name=_('شماره تماس تحویل گیرنده'))
+    province = models.CharField(max_length=100, verbose_name=_('استان'))
+    city = models.CharField(max_length=100, verbose_name=_('شهر'))
+    postal_address = models.TextField(verbose_name=_('آدرس پستی'))
+    postal_code = models.CharField(max_length=20, verbose_name=_('کد پستی'))
+    plaque = models.CharField(max_length=20, verbose_name=_('پلاک'))
+    building_unit = models.CharField(max_length=20, blank=True, null=True, verbose_name=_('واحد'))
+    is_default = models.BooleanField(default=False, verbose_name=_('آدرس پیش‌فرض'))
+
+    class Meta:
+        verbose_name = _('آدرس کاربر')
+        verbose_name_plural = _('آدرس‌های کاربران')
+        ordering = ['-is_default', '-created_at']
+
+    def __str__(self):
+        return f"{self.title} - {self.user}"
+
+    def save(self, *args, **kwargs):
+        if self.is_default:
+            UserAddress.objects.filter(user=self.user).update(is_default=False)
         super().save(*args, **kwargs)

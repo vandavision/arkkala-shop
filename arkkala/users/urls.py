@@ -1,15 +1,19 @@
 """
 URLs mapping for Users App.
 """
-from django.urls import path
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView
 from .views import (
     AuthConfigView,
     OTPSendView, OTPVerifyView, 
     EmailRegisterView, EmailLoginView, 
     PasswordResetRequestView, PasswordResetConfirmView,
-    UserProfileView
+    UserProfileView, UserAddressViewSet
 )
+
+router = DefaultRouter()
+router.register(r'addresses', UserAddressViewSet, basename='user-address')
 
 urlpatterns = [
     # General Profile & Config
@@ -26,4 +30,7 @@ urlpatterns = [
     path('login/', EmailLoginView.as_view(), name='login'),
     path('password-reset/request/', PasswordResetRequestView.as_view(), name='password_reset_request'),
     path('password-reset/confirm/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
+    
+    # Address Book (Router)
+    path('', include(router.urls)),
 ]

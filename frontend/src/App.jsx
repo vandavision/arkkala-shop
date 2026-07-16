@@ -35,6 +35,7 @@ const ProfileInfo = lazy(() => import('./pages/ProfileInfo'));
 const UserOrders = lazy(() => import('./pages/UserOrders'));
 const UserFavorites = lazy(() => import('./pages/UserFavorites'));
 const UserComments = lazy(() => import('./pages/UserComments'));
+const UserAddresses = lazy(() => import('./pages/UserAddresses'));
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
@@ -99,6 +100,7 @@ function App() {
               <Route path="orders/:id" element={<OrderInvoicePage />} />
               <Route path="favorites" element={<UserFavorites />} />
               <Route path="comments" element={<UserComments />} />
+              <Route path="addresses" element={<UserAddresses />} />
             </Route>
 
             <Route path="*" element={

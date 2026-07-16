@@ -2,17 +2,18 @@
 API Views for Unified Authentication (OTP or Email).
 """
 from django.conf import settings
-from rest_framework import status, generics
+from rest_framework import status, generics, viewsets
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.views import APIView
 from rest_framework.request import Request
 from django.contrib.auth import get_user_model
-
+from .models import UserAddress
 from .serializers import (
     EmailRegisterSerializer, EmailLoginSerializer, 
     PasswordResetRequestSerializer, PasswordResetConfirmSerializer,
-    OTPSendSerializer, OTPVerifySerializer, UserProfileSerializer
+    OTPSendSerializer, OTPVerifySerializer, UserProfileSerializer, UserAddressSerializer
 )
 from .services import OTPAuthService
 
@@ -145,3 +146,19 @@ class UserProfileView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+class UserAddressViewSet(viewsets.ModelViewSet):
+    serializer_class = UserAddressSerializer
+    permission_classes = [IsAuthenticated]
+    lookup_field = 'uuid'
+
+    def get_queryset(self):
+        return UserAddress.objects.filter(user=self.request.user)
+
+    @action(detail=True, methods=['post'])
+    def set_default(self, request, uuid=None):
+        address = self.get_object()
+        address.is_default = True
+        address.save()
+        return Response({"message": "آدرس پیش‌فرض با موفقیت تغییر کرد."}, status=status.HTTP_200_OK)
