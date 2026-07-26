@@ -418,7 +418,6 @@ const ProductDetailPage = () => {
                                 <section className="col-12 col-lg-4" aria-label="گالری تصاویر محصول">
                                     <div className="pro_gallery position-relative bg-white p-3 p-md-4 rounded-4 shadow-sm border border-ui h-lg-100">
                                         
-                                        {/* دکمه‌های شناور گالری با استایل مدرن شیشه‌ای (Glassmorphism) */}
                                         <div className="position-absolute z-3 d-flex flex-column gap-2" style={{ top: '24px', left: '24px' }}>
                                             {mainVideo && (
                                                 <button type="button" className="btn p-0 btn-gallery-action text-danger hint--right hint--rounded hint--bounce" data-bs-toggle="modal" data-bs-target="#videoModal" aria-label="مشاهده ویدیو">
@@ -1112,7 +1111,6 @@ const ProductDetailPage = () => {
             </div>
 
             <style jsx="true">{`
-                /* --- Glassmorphism Gallery Actions --- */
                 .btn-gallery-action {
                     width: 45px;
                     height: 45px;
@@ -1144,7 +1142,6 @@ const ProductDetailPage = () => {
                 .btn-gallery-action.active-favorite {
                     background: #ffffff;
                 }
-                /* ------------------------------------- */
                 
                 .cursor-pointer { cursor: pointer; }
                 .hover-shadow:hover { box-shadow: 0 1rem 2rem rgba(0,0,0,.08)!important; transform: translateY(-3px); }
