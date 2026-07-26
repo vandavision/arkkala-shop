@@ -417,23 +417,25 @@ const ProductDetailPage = () => {
                                 
                                 <section className="col-12 col-lg-4" aria-label="گالری تصاویر محصول">
                                     <div className="pro_gallery position-relative bg-white p-3 p-md-4 rounded-4 shadow-sm border border-ui h-lg-100">
-                                        <div className="icon-product-box mt-3 me-3 z-3">
+                                        
+                                        {/* دکمه‌های شناور گالری با استایل مدرن شیشه‌ای (Glassmorphism) */}
+                                        <div className="position-absolute z-3 d-flex flex-column gap-2" style={{ top: '24px', left: '24px' }}>
                                             {mainVideo && (
-                                                <button type="button" className="btn p-0 icon-product-box-item hint--left cursor-pointer bg-light border border-ui shadow-sm hover-lift text-danger" data-bs-toggle="modal" data-bs-target="#videoModal" aria-label="مشاهده ویدیو معرفی محصول">
-                                                    <i className="bi bi-play-fill fs-5" aria-hidden="true"></i>
+                                                <button type="button" className="btn p-0 btn-gallery-action text-danger hint--right hint--rounded hint--bounce" data-bs-toggle="modal" data-bs-target="#videoModal" aria-label="مشاهده ویدیو">
+                                                    <i className="bi bi-play-fill fs-4" aria-hidden="true"></i>
                                                 </button>
                                             )}
-                                            <button type="button" className="btn p-0 icon-product-box-item hint--left cursor-pointer bg-light border border-ui shadow-sm hover-lift" data-bs-toggle="modal" data-bs-target="#shareModal" aria-label="اشتراک‌گذاری این محصول">
+                                            <button type="button" className="btn p-0 btn-gallery-action hint--right hint--rounded hint--bounce" data-bs-toggle="modal" data-bs-target="#shareModal" aria-label="اشتراک‌گذاری">
                                                 <i className="bi bi-share-fill" aria-hidden="true"></i>
                                             </button>
-                                            <button type="button" onClick={handleToggleFavorite} className={`btn p-0 icon-product-box-item hint--left cursor-pointer bg-light border border-ui shadow-sm hover-lift ${isFavorite ? 'active-favorite' : ''}`} aria-label={isFavorite ? "حذف محصول از علاقه‌مندی‌ها" : "افزودن محصول به علاقه‌مندی‌ها"}>
-                                                <i className={isFavorite ? "bi bi-heart-fill text-danger pulse-animation" : "bi bi-heart text-dark"} aria-hidden="true"></i>
+                                            <button type="button" onClick={handleToggleFavorite} className={`btn p-0 btn-gallery-action hint--right hint--rounded hint--bounce ${isFavorite ? 'active-favorite text-danger' : ''}`} aria-label={isFavorite ? "حذف از علاقه‌مندی‌ها" : "افزودن به علاقه‌مندی‌ها"}>
+                                                <i className={isFavorite ? "bi bi-heart-fill pulse-animation" : "bi bi-heart"} aria-hidden="true"></i>
                                             </button>
-                                            <button type="button" className="btn p-0 icon-product-box-item hint--left cursor-pointer bg-light border border-ui shadow-sm hover-lift" data-bs-toggle="modal" data-bs-target="#chartModal" aria-label="مشاهده نمودار تغییرات قیمت">
-                                                <i className="bi bi-bar-chart-line-fill text-primary" aria-hidden="true"></i>
+                                            <button type="button" className="btn p-0 btn-gallery-action text-primary hint--right hint--rounded hint--bounce" data-bs-toggle="modal" data-bs-target="#chartModal" aria-label="نمودار قیمت">
+                                                <i className="bi bi-bar-chart-line-fill" aria-hidden="true"></i>
                                             </button>
-                                            <button type="button" onClick={handleCompareClick} className="btn p-0 icon-product-box-item hint--left cursor-pointer bg-light border border-ui shadow-sm hover-lift" aria-label="افزودن محصول به لیست مقایسه">
-                                                <i className="bi bi-shuffle text-success" aria-hidden="true"></i>
+                                            <button type="button" onClick={handleCompareClick} className="btn p-0 btn-gallery-action text-success hint--right hint--rounded hint--bounce" aria-label="مقایسه کالا">
+                                                <i className="bi bi-shuffle" aria-hidden="true"></i>
                                             </button>
                                         </div>
 
@@ -574,16 +576,6 @@ const ProductDetailPage = () => {
                                         <meta itemProp="price" content={currentPrice} />
                                         <meta itemProp="availability" content={currentInventory > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"} />
                                         <link itemProp="url" href={window.location.href} />
-
-                                        <div className="d-flex align-items-center justify-content-between pb-3 border-bottom border-light mb-4">
-                                            <div className="d-flex align-items-center gap-2">
-                                                <i className="bi bi-shop fs-4 text-primary" aria-hidden="true"></i>
-                                                <div>
-                                                    <strong className="d-block font-14 text-dark">فروشگاه رسمی آرک کالا</strong>
-                                                    <span className="font-12 text-success">تضمین کیفیت</span>
-                                                </div>
-                                            </div>
-                                        </div>
 
                                         <div className="d-flex bg-light border border-ui alert align-items-center justify-content-between rounded-4 mb-4">
                                             <div className="form-check m-0 d-flex align-items-center gap-2">
@@ -1120,6 +1112,40 @@ const ProductDetailPage = () => {
             </div>
 
             <style jsx="true">{`
+                /* --- Glassmorphism Gallery Actions --- */
+                .btn-gallery-action {
+                    width: 45px;
+                    height: 45px;
+                    border-radius: 50% !important;
+                    background: rgba(255, 255, 255, 0.65);
+                    backdrop-filter: blur(8px);
+                    -webkit-backdrop-filter: blur(8px);
+                    border: 1px solid rgba(255, 255, 255, 0.4);
+                    color: #495057;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+                    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                }
+                .btn-gallery-action:hover {
+                    background: #ffffff;
+                    color: #212529;
+                    transform: scale(1.1) translateY(-2px);
+                    box-shadow: 0 8px 18px rgba(0,0,0,0.1);
+                }
+                .btn-gallery-action i {
+                    font-size: 1.15rem;
+                    transition: transform 0.3s;
+                }
+                .btn-gallery-action:hover i {
+                    transform: scale(1.1);
+                }
+                .btn-gallery-action.active-favorite {
+                    background: #ffffff;
+                }
+                /* ------------------------------------- */
+                
                 .cursor-pointer { cursor: pointer; }
                 .hover-shadow:hover { box-shadow: 0 1rem 2rem rgba(0,0,0,.08)!important; transform: translateY(-3px); }
                 .hover-lift { transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s; }
