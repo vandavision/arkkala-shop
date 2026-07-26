@@ -1,12 +1,12 @@
 """
 Production settings for arkkala project.
 """
-from .base import *
 import os
+from .base import *
 
 DEBUG: bool = False
 
-ALLOWED_HOSTS: list[str] = ['api.arkkala.com', 'arkkala_prod_django']
+ALLOWED_HOSTS: list[str] = ['api.arkkala.com', 'arkkala_prod_django', 'localhost', '127.0.0.1']
 
 CORS_ALLOWED_ORIGINS: list[str] = [
     "https://arkkala.com",

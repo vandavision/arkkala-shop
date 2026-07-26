@@ -2,6 +2,13 @@
 
 set -o errexit
 set -o nounset
+set -o pipefail
 
-rm -f './celerybeat.pid'
-celery -A arkkala beat -l INFO
+python /wait_for_deps.py
+
+rm -f /app/celerybeat/celerybeat.pid
+
+exec celery -A arkkala beat \
+    --loglevel=info \
+    --pidfile=/app/celerybeat/celerybeat.pid \
+    --schedule=/app/celerybeat/celerybeat-schedule

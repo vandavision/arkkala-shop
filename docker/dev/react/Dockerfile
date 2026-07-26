@@ -1,12 +1,11 @@
-FROM node:20-alpine AS development
+FROM node:20-alpine
 
-ENV NODE_ENV=development
-WORKDIR /frontend
+WORKDIR /app
 
-COPY frontend/package.json ./
+COPY ./frontend/package.json ./frontend/package-lock.json* /app/
 
 RUN npm install
 
-COPY ./frontend .
+COPY ./frontend /app/
 
-CMD ["npm", "run", "dev"]
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "3000"]

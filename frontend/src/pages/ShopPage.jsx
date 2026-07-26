@@ -5,6 +5,9 @@ import 'rc-slider/assets/index.css';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { FreeMode } from 'swiper/modules';
 
+import 'swiper/css';
+import 'swiper/css/free-mode';
+
 import { getProductsList, getMaxPrice } from '../api/shopApi';
 import { getCategoryTree, getBrandsList } from '../api/searchApi';
 import { getStaticPageSeo } from '../api/homeApi';
@@ -12,7 +15,7 @@ import ProductCard from '../components/ProductCard';
 import { SiteContext } from '../context/SiteContext';
 import SeoMeta from '../components/SeoMeta';
 
-const MAX_PRICE_LIMIT = 50000000; 
+const MAX_PRICE_LIMIT = 50000000;
 
 const resolveImageUrl = (url) => {
     if (!url) return null;
@@ -38,7 +41,7 @@ const ShopPage = () => {
     const location = useLocation();
     const [searchParams, setSearchParams] = useSearchParams();
     const { slug: categorySlugParam } = useParams();
-    const { settings } = useContext(SiteContext); 
+    const { settings } = useContext(SiteContext);
     const topRef = useRef(null);
     
     const isSpecialOffers = location.pathname.includes('special-offers');
@@ -276,14 +279,14 @@ const ShopPage = () => {
                 )}
 
                 <section className="mb-4 border-ui shadow-sm filter-container bg-white p-4 rounded-4 mx-3 mx-lg-0 d-flex flex-column gap-3">
-                    <div className="form-check form-switch d-flex justify-content-between ps-0 m-0 cursor-pointer" onClick={() => updateQueryParam('has_stock', hasStock ? null : 'true')}>
-                        <label className="form-check-label font-13 fw-bold text-dark cursor-pointer pt-1">فقط کالاهای موجود</label>
-                        <input className="form-check-input cursor-pointer m-0 shadow-none border-ui" type="checkbox" role="switch" checked={hasStock} readOnly />
+                    <div className="form-check form-switch d-flex justify-content-between ps-0 m-0 cursor-pointer flex-nowrap align-items-center" onClick={() => updateQueryParam('has_stock', hasStock ? null : 'true')}>
+                        <label className="form-check-label font-13 fw-bold text-dark cursor-pointer m-0">فقط کالاهای موجود</label>
+                        <input className="form-check-input cursor-pointer m-0 shadow-none border-ui flex-shrink-0" type="checkbox" role="switch" checked={hasStock} readOnly />
                     </div>
                     {!isSpecialOffers && (
-                        <div className="form-check form-switch d-flex justify-content-between ps-0 m-0 cursor-pointer" onClick={() => updateQueryParam('has_discount', hasDiscount ? null : 'true')}>
-                            <label className="form-check-label font-13 fw-bold text-dark cursor-pointer pt-1">فقط تخفیف‌دارها</label>
-                            <input className="form-check-input cursor-pointer m-0 shadow-none border-ui" type="checkbox" role="switch" checked={hasDiscount} readOnly />
+                        <div className="form-check form-switch d-flex justify-content-between ps-0 m-0 cursor-pointer flex-nowrap align-items-center" onClick={() => updateQueryParam('has_discount', hasDiscount ? null : 'true')}>
+                            <label className="form-check-label font-13 fw-bold text-dark cursor-pointer m-0">فقط تخفیف‌دارها</label>
+                            <input className="form-check-input cursor-pointer m-0 shadow-none border-ui flex-shrink-0" type="checkbox" role="switch" checked={hasDiscount} readOnly />
                         </div>
                     )}
                 </section>
@@ -330,17 +333,19 @@ const ShopPage = () => {
                         <h2 className="filter-title fw-bold mb-4 font-15">برندها</h2>
                         <div className="brands-list custom-scrollbar pe-2 d-flex flex-column gap-2" style={{maxHeight: '220px', overflowY: 'auto'}}>
                             {brands.map(brand => (
-                                <div key={brand.uuid} className="form-check d-flex align-items-center m-0 p-0 cursor-pointer hover-bg-light rounded-3 transition p-2" onClick={() => handleBrandToggle(brand.slug)}>
+                                <div key={brand.uuid} className="form-check d-flex align-items-center flex-nowrap m-0 p-0 cursor-pointer hover-bg-light rounded-3 transition p-2 w-100" onClick={() => handleBrandToggle(brand.slug)}>
                                     <input 
-                                        className="form-check-input ms-2 cursor-pointer shadow-none flex-shrink-0" 
+                                        className="form-check-input ms-2 cursor-pointer shadow-none flex-shrink-0 m-0" 
                                         type="checkbox" 
                                         checked={selectedBrands.includes(brand.slug)} 
                                         readOnly 
                                     />
-                                    <label className="form-check-label font-13 text-dark flex-grow-1 cursor-pointer pt-1 text-truncate" style={{maxWidth: '130px'}}>
+                                    <label className="form-check-label font-13 text-dark flex-grow-1 cursor-pointer m-0 pe-2 text-truncate">
                                         {brand.title}
                                     </label>
-                                    <span className="badge bg-secondary bg-opacity-10 text-muted font-10 rounded-pill px-2">{brand.product_count || 0}</span>
+                                    <span className="badge bg-secondary bg-opacity-10 text-muted font-10 rounded-pill px-2 flex-shrink-0">
+                                        {brand.product_count || 0}
+                                    </span>
                                 </div>
                             ))}
                         </div>
@@ -429,16 +434,16 @@ const ShopPage = () => {
                     <div className="col-lg-9">
                         
                         <div className="category-sort mb-4 bg-white rounded-4 shadow-sm border border-ui p-3 d-none d-lg-block">
-                            <div className="d-flex align-items-center justify-content-between">
-                                <ul className="list-inline text-start mb-0 d-flex align-items-center m-0 p-0 gap-3">
-                                    <li className="list-inline-item ms-3 fw-bold text-muted font-13"><i className="bi bi-sort-down me-1 fs-5 align-middle"></i> مرتب‌سازی بر اساس:</li>
-                                    <li className="list-inline-item m-0"><button onClick={() => updateQueryParam('ordering', '-created_at')} className={`btn btn-sm rounded-pill font-13 px-3 transition ${ordering === '-created_at' ? 'bg-danger text-white fw-bold shadow-sm' : 'text-muted hover-bg-light'}`}>جدیدترین</button></li>
-                                    <li className="list-inline-item m-0"><button onClick={() => updateQueryParam('ordering', '-sold_count')} className={`btn btn-sm rounded-pill font-13 px-3 transition ${ordering === '-sold_count' ? 'bg-danger text-white fw-bold shadow-sm' : 'text-muted hover-bg-light'}`}>پرفروش‌ترین</button></li>
-                                    <li className="list-inline-item m-0"><button onClick={() => updateQueryParam('ordering', 'base_price')} className={`btn btn-sm rounded-pill font-13 px-3 transition ${ordering === 'base_price' ? 'bg-danger text-white fw-bold shadow-sm' : 'text-muted hover-bg-light'}`}>ارزان‌ترین</button></li>
-                                    <li className="list-inline-item m-0"><button onClick={() => updateQueryParam('ordering', '-base_price')} className={`btn btn-sm rounded-pill font-13 px-3 transition ${ordering === '-base_price' ? 'bg-danger text-white fw-bold shadow-sm' : 'text-muted hover-bg-light'}`}>گران‌ترین</button></li>
-                                    <li className="list-inline-item m-0"><button onClick={() => updateQueryParam('ordering', '-view_count')} className={`btn btn-sm rounded-pill font-13 px-3 transition ${ordering === '-view_count' ? 'bg-danger text-white fw-bold shadow-sm' : 'text-muted hover-bg-light'}`}>محبوب‌ترین</button></li>
+                            <div className="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <ul className="list-inline text-start mb-0 d-flex align-items-center flex-wrap m-0 p-0 gap-2">
+                                    <li className="list-inline-item ms-3 fw-bold text-muted font-13 text-nowrap"><i className="bi bi-sort-down me-1 fs-5 align-middle"></i> مرتب‌سازی بر اساس:</li>
+                                    <li className="list-inline-item m-0"><button onClick={() => updateQueryParam('ordering', '-created_at')} className={`btn btn-sm rounded-pill font-13 px-3 transition text-nowrap ${ordering === '-created_at' ? 'bg-danger text-white fw-bold shadow-sm' : 'text-muted hover-bg-light'}`}>جدیدترین</button></li>
+                                    <li className="list-inline-item m-0"><button onClick={() => updateQueryParam('ordering', '-sold_count')} className={`btn btn-sm rounded-pill font-13 px-3 transition text-nowrap ${ordering === '-sold_count' ? 'bg-danger text-white fw-bold shadow-sm' : 'text-muted hover-bg-light'}`}>پرفروش‌ترین</button></li>
+                                    <li className="list-inline-item m-0"><button onClick={() => updateQueryParam('ordering', 'base_price')} className={`btn btn-sm rounded-pill font-13 px-3 transition text-nowrap ${ordering === 'base_price' ? 'bg-danger text-white fw-bold shadow-sm' : 'text-muted hover-bg-light'}`}>ارزان‌ترین</button></li>
+                                    <li className="list-inline-item m-0"><button onClick={() => updateQueryParam('ordering', '-base_price')} className={`btn btn-sm rounded-pill font-13 px-3 transition text-nowrap ${ordering === '-base_price' ? 'bg-danger text-white fw-bold shadow-sm' : 'text-muted hover-bg-light'}`}>گران‌ترین</button></li>
+                                    <li className="list-inline-item m-0"><button onClick={() => updateQueryParam('ordering', '-view_count')} className={`btn btn-sm rounded-pill font-13 px-3 transition text-nowrap ${ordering === '-view_count' ? 'bg-danger text-white fw-bold shadow-sm' : 'text-muted hover-bg-light'}`}>محبوب‌ترین</button></li>
                                 </ul>
-                                <div className="font-13 text-muted fw-bold bg-light px-3 py-2 rounded-pill border border-ui">
+                                <div className="font-13 text-muted fw-bold bg-light px-3 py-2 rounded-pill border border-ui text-nowrap">
                                     <i className="bi bi-box-seam me-2"></i> {totalCount} کالا
                                 </div>
                             </div>
@@ -484,7 +489,7 @@ const ShopPage = () => {
                         {!loading && totalPages > 1 && (
                             <div className="d-flex justify-content-center mt-5 mb-3">
                                 <nav aria-label="Page navigation">
-                                    <ul className="pagination gap-2 m-0 bg-white p-2 rounded-pill shadow-sm border border-ui">
+                                    <ul className="pagination gap-2 m-0 bg-white p-2 rounded-pill shadow-sm border border-ui flex-wrap justify-content-center">
                                         <li className={`page-item ${page === 1 ? 'disabled' : ''}`}>
                                             <button className="page-link rounded-circle border-0 d-flex align-items-center justify-content-center shadow-none bg-light text-dark hover-bg-danger hover-text-white transition" style={{width:'40px', height:'40px'}} onClick={() => updateQueryParam('page', page - 1)}>
                                                 <i className="bi bi-chevron-right font-14"></i>

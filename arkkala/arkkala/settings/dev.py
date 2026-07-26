@@ -1,8 +1,8 @@
 """
 Development settings for arkkala project.
 """
-from .base import *
 import os
+from .base import *
 
 DEBUG: bool = True
 
@@ -33,3 +33,7 @@ CORS_ALLOWED_ORIGINS: list[str] = [
     "http://127.0.0.1:3000",
 ]
 CORS_ALLOW_CREDENTIALS: bool = True
+
+EMAIL_BACKEND: str = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST: str = "mailhog"
+EMAIL_PORT: int = 1025

@@ -1,0 +1,13 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "Arkkala Dev DB",
+      "Group": "Servers",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "arkkala_dev_db",
+      "Username": "arkkala_dev_user",
+      "SSLMode": "prefer"
+    }
+  }
+}

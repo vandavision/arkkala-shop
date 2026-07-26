@@ -2,5 +2,13 @@
 
 set -o errexit
 set -o nounset
+set -o pipefail
 
-python3 -m celery -A arkkala worker -l INFO
+python /wait_for_deps.py
+
+exec celery -A arkkala worker \
+    --loglevel=info \
+    --concurrency=4 \
+    --max-tasks-per-child=200 \
+    --time-limit=1800 \
+    --soft-time-limit=1500

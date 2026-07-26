@@ -42,7 +42,10 @@ const ProductDetailPage = () => {
     const [suggestedProducts, setSuggestedProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    
+    const [mainSwiper, setMainSwiper] = useState(null);
     const [thumbsSwiper, setThumbsSwiper] = useState(null);
+    
     const [activeTab, setActiveTab] = useState('desc'); 
 
     const [selectedOptions, setSelectedOptions] = useState({});
@@ -213,6 +216,7 @@ const ProductDetailPage = () => {
     const handleOptionChange = (attributeName, value) => {
         const newOptions = { ...selectedOptions, [attributeName]: value };
         setSelectedOptions(newOptions);
+        
         if (product?.variants) {
             const matchedVariant = product.variants.find(variant => 
                 variant.attributes.every(attr => newOptions[attr.attribute_name] === attr.value)
@@ -303,13 +307,22 @@ const ProductDetailPage = () => {
             .catch(() => showToast("خطا در کپی کردن لینک.", "danger"));
     };
 
+    const allImages = product?.gallery && product.gallery.length > 0 
+        ? product.gallery.map(img => ({ ...img, uuid: img.uuid, url: resolveImageUrl(img.url) }))
+        : product ? [{ uuid: 'default-img', url: resolveImageUrl(product.image_url || product.image), is_main: true, image_alt: product.title }] : [];
+
+    useEffect(() => {
+        if (selectedVariant && selectedVariant.gallery_image_id && mainSwiper && allImages.length > 0) {
+            const matchingIndex = allImages.findIndex(img => img.uuid === selectedVariant.gallery_image_id);
+            if (matchingIndex !== -1 && mainSwiper.activeIndex !== matchingIndex) {
+                mainSwiper.slideTo(matchingIndex);
+            }
+        }
+    }, [selectedVariant, mainSwiper, allImages]);
+
     if (loading) return <main className="text-center py-5 my-5 min-vh-100 d-flex align-items-center justify-content-center" aria-label="در حال بارگذاری"><div className="spinner-border text-danger" style={{width: '4rem', height:'4rem', borderWidth:'0.3rem'}}></div></main>;
     if (error || !product) return <main className="text-center py-5 my-5 text-danger min-vh-100 d-flex flex-column align-items-center justify-content-center"><i className="bi bi-exclamation-triangle fs-1 mb-3" aria-hidden="true"></i><h1 className="fw-bold mb-4 h2">{error}</h1><Link to="/shop" className="btn btn-danger rounded-pill px-5 py-3 shadow-sm hover-lift fw-bold">بازگشت به فروشگاه</Link></main>;
 
-    const allImages = product.gallery && product.gallery.length > 0 
-        ? product.gallery.map(img => ({ ...img, url: resolveImageUrl(img.url) }))
-        : [{ url: resolveImageUrl(product.image_url || product.image), is_main: true, image_alt: product.title }];
-        
     const mainVideo = product.videos?.length ? { ...product.videos[0], url: resolveImageUrl(product.videos[0].url) } : null;
     let originalPrice = product.is_variable && selectedVariant ? selectedVariant.price : product.base_price;
     let currentInventory = product.is_variable && selectedVariant ? selectedVariant.inventory : product.base_inventory || 0;
@@ -362,7 +375,6 @@ const ProductDetailPage = () => {
                 slug={product.slug}
             />}
 
-            {/* Content Freshness & Backend Provided JSON-LD Injection */}
             <div dangerouslySetInnerHTML={{ __html: `
                 <!-- SEO Content Freshness Meta -->
                 <meta property="article:published_time" content="${product.created_at}" />
@@ -378,7 +390,6 @@ const ProductDetailPage = () => {
                 <span className="font-14 fw-bold text-white lh-base">{toast.message}</span>
             </div>
 
-            {/* Semantic wrapper replacing plain div */}
             <main className="product-detail-page" itemScope itemType="https://schema.org/Product">
                 <meta itemProp="productID" content={product.uuid} />
                 <meta itemProp="datePublished" content={product.created_at} />
@@ -434,6 +445,7 @@ const ProductDetailPage = () => {
 
                                         <Swiper
                                             dir="rtl"
+                                            onSwiper={setMainSwiper}
                                             style={{ '--swiper-navigation-color': '#ef4056', '--swiper-pagination-color': '#ef4056' }}
                                             spaceBetween={10}
                                             navigation={true}
@@ -445,7 +457,7 @@ const ProductDetailPage = () => {
                                             aria-label="تصاویر اصلی محصول"
                                         >
                                             {allImages.map((img, idx) => (
-                                                <SwiperSlide key={idx} aria-label={`تصویر ${idx + 1} از ${allImages.length}`}>
+                                                <SwiperSlide key={img.uuid} aria-label={`تصویر ${idx + 1} از ${allImages.length}`}>
                                                     <div className="swiper-zoom-container bg-white">
                                                         <img 
                                                             itemProp={idx === 0 ? "image" : undefined}
@@ -475,7 +487,7 @@ const ProductDetailPage = () => {
                                             aria-label="تصاویر بندانگشتی کالا"
                                         >
                                             {allImages.map((img, idx) => (
-                                                <SwiperSlide key={idx} className="cursor-pointer bg-white rounded-3 border border-ui p-1 hover-shadow transition" aria-label={`انتخاب تصویر ${idx + 1}`}>
+                                                <SwiperSlide key={img.uuid} className="cursor-pointer bg-white rounded-3 border border-ui p-1 hover-shadow transition" aria-label={`انتخاب تصویر ${idx + 1}`}>
                                                     <img 
                                                         src={img.url} 
                                                         alt={`پیش‌نمایش تصویر ${idx + 1}`} 
@@ -702,7 +714,6 @@ const ProductDetailPage = () => {
                                                 </div>
                                                 
                                                 <div className="font-14 font-md-15 text-dark lh-lg text-justify custom-html-content">
-                                                    {/* Using a wrapper explicitly instead of dangerouslySet to avoid illegal p nesting if HTML is complex */}
                                                     <div dangerouslySetInnerHTML={{ __html: product.description.replace(/\n/g, '<br/>') }}></div>
                                                 </div>
                                                 
@@ -893,7 +904,6 @@ const ProductDetailPage = () => {
                                             </section>
                                         )}
 
-                                        {/* AEO: Microdata wrapper for FAQPage schema fallback */}
                                         {activeTab === 'qa' && (
                                             <section id="panel-qa" aria-labelledby="tab-qa" className="animate-fade-in" role="tabpanel" itemScope itemType="https://schema.org/FAQPage">
                                                 <div className="d-flex align-items-center gap-3 mb-4 pb-3 border-bottom border-light">

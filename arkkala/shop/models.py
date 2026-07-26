@@ -94,12 +94,10 @@ class Product(UUIDBaseModel, TimeStampMixin, TitleSlugMixin, SEOMixin, ProductDe
     short_description = models.TextField(null=True, blank=True, verbose_name=_('توضیح کوتاه'))
     description = models.TextField(verbose_name=_('توضیحات کامل'))
 
-    # --- GEO (Generative Engine Optimization) Fields ---
     expert_reviewer = models.CharField(max_length=255, null=True, blank=True, verbose_name=_('بررسی‌کننده محصول (E-E-A-T)'), help_text=_('مفید برای محصولات تخصصی، پزشکی یا دیجیتال'))
     key_takeaways = JSONField(schema=STRING_LIST_SCHEMA, null=True, blank=True, verbose_name=_('ویژگی‌های کلیدی (GEO)'), help_text=_('بهترین ویژگی‌ها به صورت بولت‌وار برای هوش مصنوعی.'))
     citations = JSONField(schema=STRING_LIST_SCHEMA, null=True, blank=True, verbose_name=_('منابع کاتالوگ (Citations)'), help_text=_('ارجاعات به وب‌سایت سازنده اصلی.'))
 
-    # --- Pricing & Inventory ---
     base_price = models.DecimalField(max_digits=12, decimal_places=0, verbose_name=_('قیمت پایه (تکی)'))
     base_inventory = models.PositiveIntegerField(default=0, verbose_name=_('موجودی پایه'))
 
@@ -164,7 +162,6 @@ class Product(UUIDBaseModel, TimeStampMixin, TitleSlugMixin, SEOMixin, ProductDe
             }
         }
 
-        # ONLY append image if a valid URL exists to prevent schema validation failure
         if main_img and main_img.image:
             product_schema["image"] = {
                 "@type": "ImageObject",
@@ -177,7 +174,6 @@ class Product(UUIDBaseModel, TimeStampMixin, TitleSlugMixin, SEOMixin, ProductDe
             "@graph": [product_schema]
         }
 
-        # GEO: Reviews & E-E-A-T
         if self.expert_reviewer:
             json_ld["@graph"][0]["reviewedBy"] = {
                 "@type": "Person",
@@ -194,7 +190,6 @@ class Product(UUIDBaseModel, TimeStampMixin, TitleSlugMixin, SEOMixin, ProductDe
                 "reviewCount": str(self.comments.filter(is_approved=True).count())
             }
 
-        # AEO: Dynamic FAQ generation from Questions
         answered_questions = self.questions.filter(is_approved=True).exclude(answer_text__isnull=True).exclude(answer_text__exact='')
         if answered_questions.exists():
             faq_items = []
@@ -212,7 +207,6 @@ class Product(UUIDBaseModel, TimeStampMixin, TitleSlugMixin, SEOMixin, ProductDe
                 "mainEntity": faq_items
             })
 
-        # SEO: Breadcrumbs
         if getattr(self, 'category', None):
             breadcrumbs: List[Dict[str, Any]] = [
                 {"@type": "ListItem", "position": 1, "name": "خانه", "item": f"{frontend_domain}/"},
@@ -239,6 +233,9 @@ class ProductGallery(UUIDBaseModel):
         verbose_name = _('گالری تصویر محصول')
         verbose_name_plural = _('گالری تصاویر محصولات')
 
+    def __str__(self):
+        return f"Image for {self.product.title}"
+
 
 class ProductVideo(UUIDBaseModel):
     """Product Videos."""
@@ -259,6 +256,15 @@ class ProductVariant(UUIDBaseModel, TimeStampMixin):
     """Product Variants for Variable Products."""
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='variants', verbose_name=_('محصول'))
     attribute_values = models.ManyToManyField(AttributeValue, related_name='variants', verbose_name=_('مقادیر ویژگی'))
+    
+    gallery_image = models.ForeignKey(
+        ProductGallery, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        related_name='linked_variants', 
+        verbose_name=_('تصویر مرتبط از گالری')
+    )
 
     price = models.DecimalField(max_digits=12, decimal_places=0, verbose_name=_('قیمت تکی'))
     inventory = models.PositiveIntegerField(default=0, verbose_name=_('موجودی'))

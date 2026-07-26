@@ -65,6 +65,7 @@ TEMPLATES: list[dict] = [
 ]
 
 WSGI_APPLICATION: str = 'arkkala.wsgi.application'
+ASGI_APPLICATION: str = 'arkkala.asgi.application'
 
 AUTH_PASSWORD_VALIDATORS: list[dict] = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -80,35 +81,26 @@ USE_TZ: bool = True
 
 DEFAULT_AUTO_FIELD: str = 'django.db.models.BigAutoField'
 
-WSGI_APPLICATION: str = 'arkkala.wsgi.application'
-ASGI_APPLICATION: str = 'arkkala.asgi.application'
-
-
-REST_FRAMEWORK = {
+REST_FRAMEWORK: dict = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     )
 }
 
-AUTH_USER_MODEL = 'users.User'
+AUTH_USER_MODEL: str = 'users.User'
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-DEFAULT_FROM_EMAIL = 'noreply@arkkala.com'
-VAT_RATE = 0
+EMAIL_BACKEND: str = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL: str = 'noreply@arkkala.com'
+VAT_RATE: int = 0
 
-CORS_ALLOW_HEADERS = list(default_headers) + [
+CORS_ALLOW_HEADERS: list[str] = list(default_headers) + [
     'x-guest-id',
 ]
 
-CORS_ALLOW_ALL_ORIGINS = True
+AUTH_MODE: str = os.environ.get('AUTH_MODE', 'EMAIL')
 
-# Authentication Mode: 'OTP' or 'EMAIL'
-AUTH_MODE: str = os.environ.get('AUTH_MODE', 'EMAIL')  # Default to EMAIL if not set
-
-# Kavenegar SMS Configuration
 KAVENEGAR_API_KEY: str = os.environ.get('KAVENEGAR_API_KEY', 'your_kavenegar_api_key_here')
 KAVENEGAR_OTP_TEMPLATE: str = os.environ.get('KAVENEGAR_OTP_TEMPLATE', 'verify')
 
-# Rate Limiting for SMS (Security)
 OTP_WAIT_TIME_MINUTES: int = 2
 OTP_MAX_DAILY_REQUESTS: int = 5

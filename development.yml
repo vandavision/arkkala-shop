@@ -1,74 +1,32 @@
+name: arkkala_dev
+
 services:
   django:
-      build:
-        context: .
-        dockerfile: ./docker/dev/django/Dockerfile
-      container_name: arkkala_dev_django
-      env_file:
-        - .env.dev
-      command: python manage.py runserver 0.0.0.0:${DJANGO_PORT:-8000}
-      environment:
-            - DJANGO_SETTINGS_MODULE=arkkala.settings.dev
-            - DJANGO_WATCHMAN_TIMEOUT=20
-            - CHOKIDAR_USEPOLLING=true
-      volumes:
-        - ./arkkala:/app
-      ports:
-        - "${DJANGO_PORT:-8000}:${DJANGO_PORT:-8000}"
-      depends_on:
-        - postgres
-
-  postgres:
-    image: postgres:15-alpine
-    container_name: arkkala_dev_postgres
+    build:
+      context: .
+      dockerfile: ./docker/dev/django/Dockerfile
+    container_name: arkkala_dev_django
+    env_file:
+      - .env.dev
+    command: >
+      sh -c "python /wait_for_deps.py &&
+             python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:${DJANGO_PORT:-8000}"
     environment:
-      - POSTGRES_DB=${POSTGRES_DB:-arkkala_dev_db}
-      - POSTGRES_USER=${POSTGRES_USER:-arkkala_dev_user}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-arkkala_dev_pass}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
-
-  redis:
-    image: redis:7-alpine
-    container_name: arkkala_dev_redis
-
-  celery_worker:
-    build:
-      context: .
-      dockerfile: ./docker/dev/celery/Dockerfile
-    container_name: arkkala_dev_celery_worker
-    env_file:
-      - .env.dev
-    command: /start_worker
+      - DJANGO_SETTINGS_MODULE=arkkala.settings.dev
+      - DJANGO_WATCHMAN_TIMEOUT=20
+      - CHOKIDAR_USEPOLLING=true
     volumes:
       - ./arkkala:/app
-    depends_on:
-      - redis
-      - postgres
-
-  celery_beat:
-    build:
-      context: .
-      dockerfile: ./docker/dev/celery/Dockerfile
-    container_name: arkkala_dev_celery_beat
-    env_file:
-      - .env.dev
-    command: /start_beat
-    volumes:
-      - ./arkkala:/app
-    depends_on:
-      - redis
-      - postgres
-
-  pgadmin:
-    image: dpage/pgadmin4
-    container_name: arkkala_dev_pgadmin
-    depends_on:
-      - postgres
-    env_file:
-      - .env.dev
     ports:
-      - "${PGADMIN_LISTEN_PORT:-5050}:80"
+      - "${DJANGO_PORT:-8000}:${DJANGO_PORT:-8000}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - arkkala_dev
 
   react:
     build:
@@ -78,8 +36,126 @@ services:
     ports:
       - "${REACT_PORT:-3000}:3000"
     volumes:
-      - ./frontend:/frontend
-      - /frontend/node_modules
+      - ./frontend:/app
+      - /app/node_modules
     environment:
       - CHOKIDAR_USEPOLLING=true
       - VITE_API_BASE_URL=http://localhost:8000/api/
+    networks:
+      - arkkala_dev
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: arkkala_dev_postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-arkkala_dev_db}
+      POSTGRES_USER: ${POSTGRES_USER:-arkkala_dev_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-arkkala_dev_pass}
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    networks:
+      - arkkala_dev
+    healthcheck:
+      test: pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: arkkala_dev_pgadmin
+    env_file:
+      - .env.dev
+    environment:
+      PGADMIN_SERVER_JSON_FILE: /pgadmin4/servers.json
+    ports:
+      - "${PGADMIN_LISTEN_PORT:-5050}:80"
+    volumes:
+      - pgadmin_dev_data:/var/lib/pgadmin
+      - ./docker/dev/pgadmin/servers.json:/pgadmin4/servers.json:ro
+    entrypoint:
+      - sh
+      - -c
+      - |
+        /entrypoint.sh &
+        PGADMIN_PID=$$!
+        sleep 10
+        /venv/bin/python /pgadmin4/setup.py load-servers /pgadmin4/servers.json --user "$${PGADMIN_DEFAULT_EMAIL}" --replace || true
+        wait $$PGADMIN_PID
+    networks:
+      - arkkala_dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  redis:
+    image: redis:7-alpine
+    container_name: arkkala_dev_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - arkkala_dev
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  celery_worker:
+    build:
+      context: .
+      dockerfile: ./docker/dev/django/Dockerfile
+    container_name: arkkala_dev_celery_worker
+    env_file:
+      - .env.dev
+    command: >
+      sh -c "python /wait_for_deps.py &&
+             celery -A arkkala worker --loglevel=info"
+    volumes:
+      - ./arkkala:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - arkkala_dev
+
+  celery_beat:
+    build:
+      context: .
+      dockerfile: ./docker/dev/django/Dockerfile
+    container_name: arkkala_dev_celery_beat
+    env_file:
+      - .env.dev
+    command: >
+      sh -c "python /wait_for_deps.py &&
+             celery -A arkkala beat --loglevel=info"
+    volumes:
+      - ./arkkala:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - arkkala_dev
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: arkkala_dev_mailhog
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+    networks:
+      - arkkala_dev
+
+networks:
+  arkkala_dev:
+    driver: bridge
+
+volumes:
+  postgres_dev_data:
+  pgadmin_dev_data:

@@ -64,10 +64,11 @@ class AttributeValueSerializer(serializers.ModelSerializer):
 class ProductVariantSerializer(serializers.ModelSerializer):
     """Serializer for Product Variants."""
     attributes = AttributeValueSerializer(source='attribute_values', many=True)
+    gallery_image_id = serializers.UUIDField(source='gallery_image.uuid', read_only=True)
 
     class Meta:
         model = ProductVariant
-        fields = ['uuid', 'price', 'wholesale_price', 'inventory', 'attributes']
+        fields = ['uuid', 'price', 'wholesale_price', 'inventory', 'gallery_image_id', 'attributes']
 
 
 class CommentSerializer(serializers.ModelSerializer):
@@ -91,7 +92,7 @@ class ProductGallerySerializer(serializers.ModelSerializer):
     
     class Meta:
         model = ProductGallery
-        fields = ['url', 'image_alt', 'is_main']
+        fields = ['uuid', 'url', 'image_alt', 'is_main']
 
 
 class ProductVideoSerializer(serializers.ModelSerializer):

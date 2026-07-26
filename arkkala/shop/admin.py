@@ -1,7 +1,3 @@
-"""
-Django Admin configuration for shop models.
-Exposes all SEO, AEO, and GEO functionality flawlessly.
-"""
 from typing import Any, List, Optional, Tuple
 
 from django.contrib import admin
@@ -58,8 +54,20 @@ class ProductVariantInline(admin.StackedInline):
     model = ProductVariant
     extra = 0
     autocomplete_fields = ('attribute_values',)
-    fields = ('attribute_values', 'price', 'wholesale_price', 'inventory')
+    fields = ('attribute_values', 'price', 'wholesale_price', 'inventory', 'gallery_image')
     classes = ['collapse']
+
+    def formfield_for_foreignkey(self, db_field: Any, request: HttpRequest, **kwargs: Any) -> Any:
+        """
+        Filter the gallery_image queryset to include only images of the current product.
+        """
+        if db_field.name == "gallery_image":
+            if getattr(request, 'resolver_match', None) and request.resolver_match.kwargs.get('object_id'):
+                product_id = request.resolver_match.kwargs.get('object_id')
+                kwargs["queryset"] = ProductGallery.objects.filter(product_id=product_id)
+            else:
+                kwargs["queryset"] = ProductGallery.objects.none()
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
 
 class PriceHistoryInline(admin.TabularInline):

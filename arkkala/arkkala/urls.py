@@ -10,6 +10,7 @@ from typing import Any
 
 from platform_seo.sitemaps import ProductSitemap, ShopCategorySitemap, PostSitemap, StaticPagesSitemap
 from platform_seo.views.robot import RobotsTxtView
+from .health import healthz
 
 sitemaps: dict[str, Any] = {
     'static': StaticPagesSitemap,
@@ -28,11 +29,10 @@ urlpatterns: list[Any] = [
     path('api/search/', include('search.urls')),
     path('api/home/', include('home.urls')),
     path('api/platform_seo/', include('platform_seo.urls')),
+    path('healthz/', healthz, name='healthz'),
     
-    # Sitemap Route
     path('sitemap.xml', sitemap, {'sitemaps': sitemaps}, name='django.contrib.sitemaps.views.sitemap'),
-    path(
-        "robots.txt", RobotsTxtView.as_view(), name="robots_txt"),
+    path("robots.txt", RobotsTxtView.as_view(), name="robots_txt"),
 ]
 
 if settings.DEBUG:
