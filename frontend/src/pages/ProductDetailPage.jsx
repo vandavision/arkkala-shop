@@ -385,7 +385,7 @@ const ProductDetailPage = () => {
                 <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schemaMarkup) }} />
             )}
 
-            <div className={`custom-toast ${toast.show ? 'show' : ''} bg-${toast.type} shadow-lg d-flex align-items-center gap-3`} role="alert" aria-live="assertive" aria-atomic="true">
+            <div className={`product-toast ${toast.show ? 'show' : ''} bg-${toast.type} shadow-lg d-flex align-items-center gap-3`} role="alert" aria-live="assertive" aria-atomic="true">
                 <i className={`bi ${toast.type === 'success' ? 'bi-check-circle-fill' : toast.type === 'warning' ? 'bi-exclamation-triangle-fill' : 'bi-x-circle-fill'} fs-3 text-white`} aria-hidden="true"></i>
                 <span className="font-14 fw-bold text-white lh-base">{toast.message}</span>
             </div>
@@ -1175,12 +1175,41 @@ const ProductDetailPage = () => {
                     .chart-container { height: 250px !important; }
                 }
                 
-                .custom-toast { position: fixed; bottom: 30px; left: -400px; min-width: 300px; padding: 16px 24px; border-radius: 16px; z-index: 999999; transition: left 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
-                .custom-toast.show { left: 30px; }
+                .product-toast { 
+                    position: fixed !important; 
+                    top: 30px !important; 
+                    bottom: auto !important;
+                    left: auto !important;
+                    right: -400px !important; 
+                    height: auto !important;
+                    width: auto !important;
+                    min-width: 300px !important;
+                    max-width: 400px !important;
+                    padding: 16px 24px !important; 
+                    border-radius: 16px !important; 
+                    z-index: 999999 !important; 
+                    transition: right 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55), top 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55) !important; 
+                }
+                .product-toast.show { 
+                    right: 30px !important; 
+                }
                 
                 @media (max-width: 768px) {
-                    .custom-toast { left: 50% !important; transform: translateX(-50%); bottom: -100px; width: 90%; min-width: unset; transition: bottom 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
-                    .custom-toast.show { bottom: 20px !important; left: 50% !important; }
+                    .product-toast { 
+                        right: 16px !important; 
+                        left: 16px !important; 
+                        transform: none !important; 
+                        top: -150px !important; 
+                        bottom: auto !important; 
+                        width: auto !important; 
+                        min-width: unset !important; 
+                        max-width: none !important;
+                    }
+                    .product-toast.show { 
+                        top: 20px !important; 
+                        left: 16px !important; 
+                        right: 16px !important;
+                    }
                 }
                 
                 .product-gallery { --swiper-theme-color: #ef4056; }
