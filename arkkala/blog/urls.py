@@ -1,9 +1,8 @@
-"""
-URLs mapping for Blog App.
-"""
+# arkkala/blog/urls.py
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import PostViewSet, BlogCategoryViewSet
+from blog.views.post import PostViewSet
+from blog.views.category import BlogCategoryViewSet
 
 router = DefaultRouter()
 router.register(r'categories', BlogCategoryViewSet, basename='blog-category')

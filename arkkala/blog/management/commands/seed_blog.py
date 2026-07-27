@@ -1,9 +1,10 @@
+# arkkala/blog/management/commands/seed_blog.py
 import json
 import os
 import random
 import ssl
 import urllib.request
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -47,17 +48,17 @@ FALLBACK_DATA: List[Dict[str, Any]] = [
     }
 ]
 
-
 class Command(BaseCommand):
-    help: str = "Clears the blog database and seeds fake posts mapping them to existing local images."
+    """Management command to seed the blog database with initial data."""
+    help = "Clears the blog database and seeds fake posts mapping them to existing local images."
     API_URL: str = "https://jsonplaceholder.typicode.com/posts"
 
     def handle(self, *args: Any, **options: Any) -> None:
         self.stdout.write("Starting blog database cleanup...")
-        self.clear_database()
+        self._clear_database()
         
         self.stdout.write("Fetching external blog data...")
-        data = self.fetch_api_data(self.API_URL)
+        data = self._fetch_api_data(self.API_URL)
         
         if not data:
             self.stdout.write(self.style.WARNING("API failed. Using tailored Persian fallback data."))
@@ -67,17 +68,17 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING("Using generic API data."))
 
         self.stdout.write("Seeding blog models...")
-        self.seed_blog_data(data)
+        self._seed_blog_data(data)
         
         self.stdout.write(self.style.SUCCESS("Blog database seeded successfully with LOCAL images!"))
 
-    def clear_database(self) -> None:
+    def _clear_database(self) -> None:
         Comment.objects.all().delete()
         Post.objects.all().delete()
         Tag.objects.all().delete()
         Category.objects.all().delete()
 
-    def fetch_api_data(self, url: str) -> List[Dict[str, Any]]:
+    def _fetch_api_data(self, url: str) -> List[Dict[str, Any]]:
         try:
             ctx = ssl.create_default_context()
             ctx.check_hostname = False
@@ -88,8 +89,7 @@ class Command(BaseCommand):
         except Exception:
             return []
 
-    def get_random_local_image(self) -> str:
-        """Finds a random image already existing in the mediafiles/blog/posts/ directory."""
+    def _get_random_local_image(self) -> Optional[str]:
         try:
             blog_img_dir = os.path.join(settings.MEDIA_ROOT, 'blog', 'posts')
             if os.path.exists(blog_img_dir):
@@ -98,9 +98,9 @@ class Command(BaseCommand):
                     return f"blog/posts/{random.choice(images)}"
         except Exception as e:
             self.stdout.write(self.style.ERROR(f"Error accessing local media: {e}"))
-        return ""
+        return None
 
-    def get_or_create_user(self) -> Any:
+    def _get_or_create_user(self) -> Any:
         user, _ = User.objects.get_or_create(
             username="blog_author",
             defaults={
@@ -115,26 +115,26 @@ class Command(BaseCommand):
             user.save()
         return user
 
-    def get_or_create_category(self, title: str) -> Category:
+    def _get_or_create_category(self, title: str) -> Category:
         category, _ = Category.objects.get_or_create(
             title=title,
             defaults={'slug': slugify(title, allow_unicode=True)}
         )
         return category
 
-    def get_or_create_tag(self, title: str) -> Tag:
+    def _get_or_create_tag(self, title: str) -> Tag:
         tag, _ = Tag.objects.get_or_create(
             title=title,
             defaults={'slug': slugify(title, allow_unicode=True)}
         )
         return tag
 
-    def seed_blog_data(self, data: List[Dict[str, Any]]) -> None:
-        author = self.get_or_create_user()
+    def _seed_blog_data(self, data: List[Dict[str, Any]]) -> None:
+        author = self._get_or_create_user()
         
         for index, item in enumerate(data):
             cat_title = item.get("category", "اخبار عمومی")
-            category = self.get_or_create_category(cat_title)
+            category = self._get_or_create_category(cat_title)
             
             raw_title = item.get("title", f"مقاله شماره {index}")
             body = item.get("body", "محتوای پیش فرض مقاله.")
@@ -171,11 +171,10 @@ class Command(BaseCommand):
 
             tags_data = item.get("tags", ["عمومی", "مقاله"])
             for tag_title in tags_data:
-                tag = self.get_or_create_tag(tag_title)
+                tag = self._get_or_create_tag(tag_title)
                 post.tags.add(tag)
 
-            # Assign random local image
-            local_image = self.get_random_local_image()
+            local_image = self._get_random_local_image()
             if local_image:
                 post.image.name = local_image
                 post.image_alt = post.title

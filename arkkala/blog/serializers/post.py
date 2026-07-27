@@ -1,31 +1,14 @@
-"""
-Serializers for the Blog App.
-Handles data transformation and validation for blog models including SEO, AEO, and GEO.
-Optimized memory caching logic.
-"""
+# arkkala/blog/serializers/post.py
 from typing import Any, Dict, List
 from rest_framework import serializers
-
-from .models import Category, Tag, Post, Comment
 from platform_seo.serializers import BaseSeoSerializer
-
-
-class BlogCategorySerializer(serializers.ModelSerializer):
-    """Serializer for the Blog Category model."""
-    class Meta:
-        model = Category
-        fields = ['uuid', 'title', 'slug']
-
-
-class TagSerializer(serializers.ModelSerializer):
-    """Serializer for the Blog Tag model."""
-    class Meta:
-        model = Tag
-        fields = ['uuid', 'title', 'slug']
-
+from blog.models.post import Post
+from .category import BlogCategorySerializer
+from .tag import TagSerializer
+from .comment import BlogCommentSerializer
 
 class PostSeoSerializer(BaseSeoSerializer):
-    """SEO fields Serializer for Blog Post."""
+    """Serializer for Post SEO fields."""
     class Meta:
         model = Post
         fields = [
@@ -35,27 +18,11 @@ class PostSeoSerializer(BaseSeoSerializer):
         ]
 
     def get_canonical_url(self, obj: Post) -> str:
-        """Override to provide frontend blog path."""
+        """Returns the canonical frontend URL for the post."""
         return self.get_frontend_url(f"/blog/{obj.slug}/")
 
-
-class BlogCommentSerializer(serializers.ModelSerializer):
-    """Serializer for Blog Comments."""
-    user_name = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Comment
-        fields = ['uuid', 'user_name', 'body', 'created_at']
-        
-    def get_user_name(self, obj: Comment) -> str:
-        """Get User Full Name or return anonymous string."""
-        if obj.user and obj.user.get_full_name():
-            return obj.user.get_full_name()
-        return "کاربر ناشناس"
-
-
 class PostListSerializer(serializers.ModelSerializer):
-    """Serializer for listing Blog Posts (without full body and comments)."""
+    """Serializer for listing Posts."""
     category = BlogCategorySerializer(read_only=True)
     author_name = serializers.CharField(source='author.get_full_name', read_only=True)
 
@@ -66,9 +33,12 @@ class PostListSerializer(serializers.ModelSerializer):
             'short_description', 'view_count', 'read_time', 'created_at'
         ]
 
+class CommentSubmissionSerializer(serializers.Serializer):
+    """Serializer for validating comment submission payload."""
+    body = serializers.CharField(required=True, allow_blank=False)
 
 class PostDetailSerializer(serializers.ModelSerializer):
-    """Serializer for detailed Blog Post view with GEO and AEO injections."""
+    """Serializer for detailed Post view including relational optimizations."""
     category = BlogCategorySerializer(read_only=True)
     tags = TagSerializer(many=True, read_only=True)
     author_name = serializers.CharField(source='author.get_full_name', read_only=True)
@@ -84,8 +54,7 @@ class PostDetailSerializer(serializers.ModelSerializer):
         ]
 
     def get_comments(self, obj: Post) -> List[Dict[str, Any]]:
-        """Return approved comments using smart prefetched checks to avoid N+1."""
+        """Returns serialized approved comments leveraging prefetched datasets."""
         if hasattr(obj, 'approved_comments'):
             return BlogCommentSerializer(obj.approved_comments, many=True).data
-        approved_comments = obj.comments.filter(is_approved=True)
-        return BlogCommentSerializer(approved_comments, many=True).data
+        return BlogCommentSerializer(obj.comments.filter(is_approved=True), many=True).data
