@@ -1,4 +1,3 @@
-// arkkala/frontend/src/pages/BlogDetailPage.jsx
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getPostDetail, getPostsList, submitPostComment } from '../api/blogApi';
@@ -146,7 +145,6 @@ const BlogDetailPage = () => {
                         <div className="bg-white rounded-4 shadow-sm border border-ui p-4 p-md-5 mb-4 animate-fade-in">
                             <h1 className="fw-900 h3 text-dark mb-4 lh-base title-line-bottom pb-3">{post.title}</h1>
                             
-                            {/* GEO: E-E-A-T Badge */}
                             {post.expert_reviewer && (
                                 <div className="alert bg-success bg-opacity-10 border border-success border-opacity-25 rounded-3 d-flex align-items-center gap-3 mb-4 shadow-sm">
                                     <i className="bi bi-patch-check-fill text-success fs-2"></i>
@@ -191,23 +189,19 @@ const BlogDetailPage = () => {
                             </div>
 
                             <div className="text-center mb-5">
-                                <picture>
-                                    <source srcSet={resolveImageUrl(post.image).replace(/\.(jpg|jpeg|png)$/i, '.webp')} type="image/webp" />
-                                    <img 
-                                        src={resolveImageUrl(post.image)} 
-                                        className="img-fluid rounded-4 shadow-sm w-100 object-fit-cover" 
-                                        style={{maxHeight: '450px'}} 
-                                        alt={post.image_alt || post.title} 
-                                        title={post.image_alt || post.title}
-                                        fetchpriority="high"
-                                        loading="eager"
-                                        decoding="async"
-                                        onError={(e) => { e.target.onerror = null; e.target.src = '/assets/image/blog/blog-1.jpg'; }}
-                                    />
-                                </picture>
+                                <img 
+                                    src={resolveImageUrl(post.image)} 
+                                    className="img-fluid rounded-4 shadow-sm w-100 object-fit-cover" 
+                                    style={{maxHeight: '450px'}} 
+                                    alt={post.image_alt || post.title} 
+                                    title={post.image_alt || post.title}
+                                    fetchpriority="high"
+                                    loading="eager"
+                                    decoding="async"
+                                    onError={(e) => { e.target.onerror = null; e.target.src = '/assets/image/blog/blog-1.jpg'; }}
+                                />
                             </div>
 
-                            {/* GEO: Key Takeaways */}
                             {post.key_takeaways && Array.isArray(post.key_takeaways) && post.key_takeaways.length > 0 && (
                                 <div className="bg-light rounded-4 p-4 p-md-5 border border-ui mb-5 shadow-sm">
                                     <h4 className="fw-900 text-dark mb-4 d-flex align-items-center gap-2 fs-5">
@@ -225,7 +219,6 @@ const BlogDetailPage = () => {
 
                             <div className="blog-content-body font-15 text-dark lh-lg text-justify" dangerouslySetInnerHTML={{ __html: post.body || post.content || post.description || '<p>محتوایی برای این مقاله ثبت نشده است.</p>' }}></div>
                             
-                            {/* AEO: Dynamic FAQ Accordion */}
                             {post.faq_data && Array.isArray(post.faq_data) && post.faq_data.length > 0 && (
                                 <div className="mt-5 pt-4 border-top border-light">
                                     <h4 className="fw-900 text-dark mb-4 d-flex align-items-center gap-2 fs-5">
@@ -258,7 +251,6 @@ const BlogDetailPage = () => {
                                 </div>
                             )}
 
-                            {/* GEO: Citations */}
                             {post.citations && Array.isArray(post.citations) && post.citations.length > 0 && (
                                 <div className="mt-5 pt-4 border-top border-light">
                                     <h5 className="fw-bold text-dark mb-3 font-15 d-flex align-items-center gap-2">
@@ -350,18 +342,15 @@ const BlogDetailPage = () => {
                             
                             <div className="bg-white rounded-4 shadow-sm border border-ui p-4 text-center mb-4 hover-shadow transition">
                                 <div className="position-relative d-inline-block mb-3">
-                                    <picture>
-                                        <source srcSet="/assets/image/user/user.webp" type="image/webp" />
-                                        <img 
-                                            src="/assets/image/user/user.jpg" 
-                                            className="rounded-circle border border-3 border-danger p-1 object-fit-cover" 
-                                            style={{width: '90px', height: '90px'}} 
-                                            alt="نویسنده" 
-                                            loading="lazy"
-                                            decoding="async"
-                                            onError={(e)=>{e.target.src='/assets/image/user/user.png'}} 
-                                        />
-                                    </picture>
+                                    <img 
+                                        src="/assets/image/user/user.jpg" 
+                                        className="rounded-circle border border-3 border-danger p-1 object-fit-cover" 
+                                        style={{width: '90px', height: '90px'}} 
+                                        alt="نویسنده" 
+                                        loading="lazy"
+                                        decoding="async"
+                                        onError={(e)=>{e.target.src='/assets/image/user/user.png'}} 
+                                    />
                                     <span className="position-absolute bottom-0 end-0 bg-success border border-white border-2 rounded-circle" style={{width: '20px', height: '20px'}}></span>
                                 </div>
                                 <h5 className="fw-bold text-dark mb-1 font-16">{post.author?.first_name ? `${post.author.first_name} ${post.author.last_name}` : `تیم تحریریه ${siteName}`}</h5>
@@ -381,18 +370,15 @@ const BlogDetailPage = () => {
                                     <div className="d-flex flex-column gap-3">
                                         {latestPosts.map(p => (
                                             <Link to={`/blog/${p.slug}`} key={p.uuid} className="d-flex align-items-center gap-3 text-decoration-none hover-bg-light p-2 rounded-3 transition">
-                                                <picture>
-                                                    <source srcSet={resolveImageUrl(p.image).replace(/\.(jpg|jpeg|png)$/i, '.webp')} type="image/webp" />
-                                                    <img 
-                                                        src={resolveImageUrl(p.image)} 
-                                                        className="rounded-3 object-fit-cover shadow-sm" 
-                                                        style={{width: '70px', height: '70px'}} 
-                                                        alt={p.image_alt || p.title} 
-                                                        loading="lazy"
-                                                        decoding="async"
-                                                        onError={(e)=>{e.target.src='/assets/image/blog/blog-1.jpg'}} 
-                                                    />
-                                                </picture>
+                                                <img 
+                                                    src={resolveImageUrl(p.image)} 
+                                                    className="rounded-3 object-fit-cover shadow-sm" 
+                                                    style={{width: '70px', height: '70px'}} 
+                                                    alt={p.image_alt || p.title} 
+                                                    loading="lazy"
+                                                    decoding="async"
+                                                    onError={(e)=>{e.target.src='/assets/image/blog/blog-1.jpg'}} 
+                                                />
                                                 <div>
                                                     <h6 className="font-13 fw-bold text-dark text-overflow-2 m-0 lh-base hover-text-danger transition">{p.title}</h6>
                                                     <span className="font-11 text-muted d-block mt-2"><i className="bi bi-clock me-1"></i>{new Date(p.created_at).toLocaleDateString('fa-IR')}</span>

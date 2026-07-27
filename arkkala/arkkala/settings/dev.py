@@ -22,10 +22,10 @@ DATABASES: dict = {
 CELERY_BROKER_URL: str = "redis://redis:6379/0"
 CELERY_RESULT_BACKEND: str = "redis://redis:6379/0"
 
-STATIC_URL: str = 'static/'
+STATIC_URL: str = '/static/'
 STATIC_ROOT: Path = BASE_DIR / 'staticfiles'
 
-MEDIA_URL: str = 'media/'
+MEDIA_URL: str = '/media/'
 MEDIA_ROOT: Path = BASE_DIR / 'mediafiles'
 
 CORS_ALLOWED_ORIGINS: list[str] = [

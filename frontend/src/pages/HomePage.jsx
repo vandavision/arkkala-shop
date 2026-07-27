@@ -135,7 +135,6 @@ const MainSlider = ({ sliders }) => {
                         {sliders.map((slider, index) => (
                             <SwiperSlide key={slider.uuid || slider.id}>
                                 <a href={slider.link || '#'}>
-                                    {/* SEO Optimization: First slide loads Eager (for LCP), the rest Lazy */}
                                     <img 
                                         src={slider.image ? resolveImageUrl(slider.image) : '/assets/image/product/product-no-bg.png'} 
                                         className="img-fluid w-100" 
@@ -358,48 +357,6 @@ const BestSellers = ({ products, sideBanner }) => {
     );
 };
 
-const ProductGroupGrid = ({ groups }) => {
-    if (!groups?.length) return null;
-    return (
-        <section className="product-group mt-5">
-            <div className="container-fluid">
-                <div className="border bg-white slider-parent border-ui px-3 rounded-4 py-4 shadow-sm">
-                    <div className="row gy-4">
-                        {groups.map((group, groupIndex) => (
-                            <div className="col-lg-3 col-sm-6 border-end-lg" key={groupIndex}>
-                                <div className="product-group-item px-2">
-                                    <h3 className="h5 fw-bold text-dark ms-1 mb-2">دسته‌بندی {groupIndex + 1}</h3>
-                                    <p className="text-muted font-12 mb-3">بر اساس سلیقه شما</p>
-                                    <div className="row gy-3">
-                                        {group.map((product) => (
-                                            <div className="col-6" key={product.uuid || product.id}>
-                                                <Link to={`/product/${product.slug || product.uuid || product.id}`} className="hover-lift d-block">
-                                                    <img 
-                                                        src={product.gallery?.[0]?.url ? resolveImageUrl(product.gallery[0].url) : '/assets/image/product/product-no-bg.png'} 
-                                                        className="img-fluid rounded border border-ui p-1 transition" 
-                                                        alt={product.title} 
-                                                        loading="lazy"
-                                                        decoding="async"
-                                                        style={{height: '100px', objectFit:'contain', width:'100%'}} 
-                                                        onError={(e) => { e.target.onerror = null; e.target.src = '/assets/image/product/product-no-bg.png'; }} 
-                                                    />
-                                                </Link>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <div className="text-center py-3 mt-2">
-                                        <Link to="/shop" className="text-danger fw-bold font-13 hover-text-dark transition d-flex align-items-center justify-content-center gap-1">مشاهده همه <i className="bi bi-chevron-left font-12"></i></Link>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        </section>
-    );
-};
-
 const BrandsSection = ({ brands }) => {
     if (!brands?.length) return null;
     return (
@@ -519,9 +476,6 @@ const HomePage = () => {
     const topBanners = data.banners?.filter(b => b.position !== 'best_sellers_side');
     const bestSellersBanner = data.banners?.find(b => b.position === 'best_sellers_side');
 
-    const chunkArray = (arr, size) => arr.length ? [arr.slice(0, size), ...chunkArray(arr.slice(size), size)] : [];
-    const productGroups = chunkArray(data.best_sellers || [], 4).slice(0, 4);
-
     return (
         <main>
             <SeoMeta seoData={seoData} fallbackTitle="فروشگاه اینترنتی ارک کالا" />
@@ -532,7 +486,6 @@ const HomePage = () => {
             <SpecialOffers products={data.special_offers} />
             <BannersSection banners={topBanners} />
             <BestSellers products={data.best_sellers} sideBanner={bestSellersBanner} />
-            <ProductGroupGrid groups={productGroups} />
             <BrandsSection brands={data.brands} />
             <BlogSection posts={data.latest_posts} />
 
@@ -554,11 +507,6 @@ const HomePage = () => {
                 .group-cat-item:hover .group-cat-text { color: #ef4056 !important; }
                 
                 .text-overflow-2 { overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-                
-                @media (min-width: 992px) {
-                    .border-end-lg { border-left: 1px solid #dee2e6; }
-                    .border-end-lg:last-child { border-left: none; }
-                }
             `}</style>
         </main>
     );
