@@ -1,3 +1,4 @@
+// frontend/src/pages/ShopPage.jsx
 import React, { useState, useEffect, useRef, useContext } from 'react';
 import { useSearchParams, useParams, Link, useLocation } from 'react-router-dom';
 import Slider from 'rc-slider';
@@ -62,7 +63,13 @@ const ShopPage = () => {
     const page = parseInt(searchParams.get('page') || '1');
     const ordering = searchParams.get('ordering') || (isBestSellers ? '-sold_count' : '-created_at');
     const searchQuery = searchParams.get('search') || '';
-    const categorySlug = searchParams.get('category__slug') || categorySlugParam || '';
+    
+    // فیکس مشکل تداخل مسیرها با دسته‌بندی
+    let categorySlug = searchParams.get('category__slug') || categorySlugParam || '';
+    if (['special-offers', 'best-sellers', 'shop'].includes(categorySlug)) {
+        categorySlug = '';
+    }
+
     const selectedBrands = searchParams.get('brands') ? searchParams.get('brands').split(',') : [];
     const hasDiscount = searchParams.get('has_discount') === 'true' || isSpecialOffers;
     const hasStock = searchParams.get('has_stock') === 'true';
@@ -147,7 +154,15 @@ const ShopPage = () => {
         if (isMaxPriceLoaded) {
             fetchProducts();
         }
-    }, [searchParams, isMaxPriceLoaded]);
+    // اضافه شدن وابستگی‌های مسیر برای جلوگیری از عدم بروزرسانی هنگام تغییر تب‌ها
+    }, [searchParams, isMaxPriceLoaded, location.pathname, categorySlugParam, isSpecialOffers, isBestSellers]);
+
+    // همگام‌سازی اسلایدر قیمت با پارامترهای URL برای جلوگیری از باگ‌های بصری
+    useEffect(() => {
+        if (isMaxPriceLoaded) {
+            setLocalPriceRange([minPriceParam, maxPriceParam || maxPriceLimit]);
+        }
+    }, [minPriceParam, maxPriceParam, maxPriceLimit, isMaxPriceLoaded]);
 
     const updateQueryParam = (key, value) => {
         const newParams = new URLSearchParams(searchParams);
