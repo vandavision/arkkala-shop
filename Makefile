@@ -14,6 +14,9 @@ dev-up: ## Start dev stack
 dev-down: ## Stop dev stack
 	$(COMPOSE_DEV) down
 
+dev-stop: ## Stop dev stack
+	$(COMPOSE_DEV) stop
+
 dev-down-v: ## Stop dev stack -v
 	$(COMPOSE_DEV) down -v
 
