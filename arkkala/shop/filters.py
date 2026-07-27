@@ -1,10 +1,9 @@
-"""
-Filters for Shop App.
-"""
+# shop/filters.py
 import django_filters
 from django.db.models import Q
 from django.utils import timezone
-from .models import Product
+from shop.models.product import Product
+
 
 class ProductFilter(django_filters.FilterSet):
     category__slug = django_filters.CharFilter(field_name='category__slug', lookup_expr='exact')
@@ -18,55 +17,36 @@ class ProductFilter(django_filters.FilterSet):
 
     class Meta:
         model = Product
-        fields = [
-            'category__slug', 'brands', 'min_price', 'max_price', 
-            'search', 'has_discount', 'is_special_offer', 'has_stock'
-        ]
+        fields = ['category__slug', 'brands', 'min_price', 'max_price', 'search', 'has_discount', 'is_special_offer', 'has_stock']
 
     def filter_brands(self, queryset, name, value):
         if value:
-            brands = value.split(',')
-            return queryset.filter(brand__slug__in=brands)
+            return queryset.filter(brand__slug__in=value.split(','))
         return queryset
 
     def filter_min_price(self, queryset, name, value):
-        if value:
-            return queryset.filter(base_price__gte=value)
-        return queryset
+        return queryset.filter(base_price__gte=value) if value else queryset
 
     def filter_max_price(self, queryset, name, value):
-        if value:
-            return queryset.filter(base_price__lte=value)
-        return queryset
+        return queryset.filter(base_price__lte=value) if value else queryset
 
     def filter_search(self, queryset, name, value):
         if value:
-            return queryset.filter(
-                Q(title__icontains=value) | Q(english_title__icontains=value)
-            )
+            return queryset.filter(Q(title__icontains=value) | Q(english_title__icontains=value))
         return queryset
 
     def filter_has_discount(self, queryset, name, value):
         if value:
             now = timezone.now()
             return queryset.filter(
-                Q(discount_percent__gt=0) | 
-                Q(
-                    special_discount_percent__gt=0,
-                    special_offer_end__isnull=False,
-                    special_offer_end__gt=now
-                )
+                Q(special_discount_percent__gt=0, special_offer_end__isnull=False, special_offer_end__gt=now)
             ).distinct()
         return queryset
 
     def filter_is_special_offer(self, queryset, name, value):
         if value:
             now = timezone.now()
-            return queryset.filter(
-                special_discount_percent__gt=0,
-                special_offer_end__isnull=False,
-                special_offer_end__gt=now
-            )
+            return queryset.filter(special_discount_percent__gt=0, special_offer_end__isnull=False, special_offer_end__gt=now)
         return queryset
         
     def filter_has_stock(self, queryset, name, value):

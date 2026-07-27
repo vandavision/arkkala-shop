@@ -1,9 +1,8 @@
-"""
-URLs mapping for Shop App.
-"""
+# shop/urls.py
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import ProductViewSet, MaxPriceAPIView, CommentViewSet
+from shop.views.product import ProductViewSet, MaxPriceAPIView
+from shop.views.interaction import CommentViewSet
 
 router = DefaultRouter()
 router.register(r'products', ProductViewSet, basename='product')
