@@ -24,7 +24,7 @@ const resolveImageUrl = (url) => {
     baseUrl = baseUrl.replace(/\/api\/?$/, '').replace(/\/$/, '');
     
     let path = url.startsWith('/') ? url : `/${url}`;
-    if (!path.startsWith('/media/')) {
+    if (!path.startsWith('/media/') && !path.startsWith('/static/') && !path.startsWith('/staticfiles/')) {
         path = `/media${path}`;
     }
     
@@ -40,7 +40,7 @@ const SectionTitle = ({ title, highlight, linkPath, linkText = "مشاهده ه�
             </h2>
         </div>
         {linkPath && (
-            <Link to={linkPath} className="btn btn-outline-danger rounded-pill px-3 py-1 font-13 fw-bold shadow-sm hover-lift d-flex align-items-center gap-1 transition">
+            <Link to={linkPath} className="btn btn-outline-danger rounded-pill px-3 py-1 font-13 fw-bold shadow-sm custom-hover-lift d-flex align-items-center gap-1 transition">
                 {linkText} <i className="bi bi-chevron-left font-12"></i>
             </Link>
         )}
@@ -50,6 +50,7 @@ const SectionTitle = ({ title, highlight, linkPath, linkText = "مشاهده ه�
 const StoryModal = ({ videoSrc, onClose }) => {
     useEffect(() => {
         if (videoSrc) document.body.style.overflow = 'hidden';
+        else document.body.style.overflow = 'unset';
         return () => { document.body.style.overflow = 'unset'; };
     }, [videoSrc]);
 
@@ -57,21 +58,34 @@ const StoryModal = ({ videoSrc, onClose }) => {
 
     return (
         <div 
-            className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center animate-fade-in"
+            className="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center custom-fade-in"
             style={{ backgroundColor: 'rgba(0, 0, 0, 0.95)', zIndex: 999999 }} 
             onClick={onClose}
         >
             <button 
-                className="position-absolute top-0 end-0 m-4 btn btn-light rounded-circle d-flex align-items-center justify-content-center p-0 shadow-lg hover-lift" 
+                className="position-absolute top-0 end-0 m-4 btn btn-light rounded-circle d-flex align-items-center justify-content-center p-0 shadow-lg custom-hover-lift" 
                 style={{ width: '40px', height: '40px', zIndex: 9999999 }}
-                onClick={onClose}
-                title="بستن"
-                aria-label="بستن ویدیو"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onClose();
+                }}
             >
                 <i className="bi bi-x fs-4 text-dark"></i>
             </button>
-            <div className="position-relative d-flex align-items-center justify-content-center w-100 h-100 p-4" onClick={(e) => e.stopPropagation()}>
-                <video src={videoSrc} controls autoPlay className="rounded-4 shadow-lg bg-black" style={{ maxHeight: '90vh', maxWidth: '100%', objectFit: 'contain' }} />
+            <div 
+                className="position-relative d-flex align-items-center justify-content-center w-100 h-100 p-4" 
+                onClick={(e) => e.stopPropagation()}
+            >
+                <video 
+                    key={videoSrc}
+                    controls 
+                    autoPlay 
+                    playsInline
+                    className="rounded-4 shadow-lg bg-black" 
+                    style={{ maxHeight: '90vh', maxWidth: '100%', objectFit: 'contain' }} 
+                >
+                    <source src={videoSrc} />
+                </video>
             </div>
         </div>
     );
@@ -79,32 +93,51 @@ const StoryModal = ({ videoSrc, onClose }) => {
 
 const StorySection = ({ stories }) => {
     const [activeVideo, setActiveVideo] = useState(null);
-    if (!stories?.length) return null;
+    if (!stories || stories.length === 0) return null;
 
     return (
         <>
-            <section className="story-section">
+            <section className="story-section pb-2">
                 <div className="container-fluid pt-4">
                     <h2 className="section-title visually-hidden">استوری‌ها</h2>
-                    <Swiper dir="rtl" modules={[FreeMode]} freeMode={true} slidesPerView="auto" className="my-unique-free-mode px-2">
+                    <Swiper dir="rtl" modules={[FreeMode]} freeMode={true} slidesPerView="auto" className="px-2">
                         {stories.map((story) => (
-                            <SwiperSlide key={story.uuid || story.id} className="mx-3 pointer storiesList-slide hover-lift transition-all" style={{ width: 'auto' }}>
-                                <div className="stories-Swiper-item d-flex flex-column align-items-center" onClick={() => story.video ? setActiveVideo(story.video) : null}>
-                                    <div className="stories-Swiper-item-imgContainer position-relative d-flex justify-content-center align-items-center radius-circle shadow-sm" style={{ cursor: story.video ? 'pointer' : 'default', padding: '3px', background: 'linear-gradient(45deg, #ef4056, #ffc107)' }}>
-                                        <div className="bg-white overflow-hidden radius-circle d-flex p-1 w-100 h-100">
-                                            <div className="radius-circle overflow-hidden d-flex w-100 h-100">
+                            <SwiperSlide key={story.uuid || story.id} style={{ width: '100px' }} className="mx-2 custom-hover-lift transition-all">
+                                <div 
+                                    className="d-flex flex-column align-items-center"
+                                    style={{ cursor: story.video || story.link ? 'pointer' : 'default' }}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        if (story.video) {
+                                            setActiveVideo(resolveImageUrl(story.video));
+                                        } else if (story.link) {
+                                            window.location.href = story.link;
+                                        }
+                                    }}
+                                >
+                                    <div 
+                                        className="position-relative d-flex justify-content-center align-items-center rounded-circle shadow-sm" 
+                                        style={{ width: '85px', height: '85px', padding: '3px', background: 'linear-gradient(45deg, #ef4056, #ffc107)' }}
+                                    >
+                                        <div className="bg-white overflow-hidden rounded-circle d-flex p-1 w-100 h-100">
+                                            <div className="rounded-circle overflow-hidden d-flex position-relative w-100 h-100">
                                                 <img 
                                                     className="object-fit-cover w-100 h-100" 
                                                     src={story.image ? resolveImageUrl(story.image) : '/assets/image/product/product-no-bg.png'} 
                                                     alt={story.title} 
                                                     loading="lazy"
                                                     decoding="async"
-                                                    onError={(e) => { e.target.onerror = null; e.target.src = '/assets/image/product/product-no-bg.png'; }}
                                                 />
+                                                {story.video && (
+                                                    <div className="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center" style={{ backgroundColor: 'rgba(0,0,0,0.2)' }}>
+                                                        <i className="bi bi-play-fill text-white fs-3"></i>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
-                                    <span className="mt-2 text-subtitle color-gray-800 text-truncate-2 text-center font-12 fw-bold">{story.title}</span>
+                                    <span className="mt-2 text-dark text-truncate text-center font-12 fw-bold w-100 px-1">{story.title}</span>
                                 </div>
                             </SwiperSlide>
                         ))}
@@ -117,33 +150,33 @@ const StorySection = ({ stories }) => {
 };
 
 const MainSlider = ({ sliders }) => {
-    if (!sliders?.length) return null;
+    if (!sliders || sliders.length === 0) return null;
     return (
-        <section className="main-slider mt-4">
+        <section className="main-slider mt-3">
             <div className="container-fluid position-relative">
                 <h2 className="section-title visually-hidden">اسلایدر</h2>
                 <div className="slider">
                     <Swiper
                         dir="rtl"
                         modules={[Autoplay, Pagination, Navigation]}
-                        spaceBetween={0} slidesPerView={1}
-                        autoplay={{ delay: 5000, disableOnInteraction: false }} 
+                        spaceBetween={0} 
+                        slidesPerView={1}
+                        autoplay={{ delay: 6000, disableOnInteraction: false }} 
                         pagination={{ clickable: true }} 
                         navigation
-                        className="rounded-4 overflow-hidden shadow-sm"
+                        className="rounded-4 overflow-hidden shadow-sm w-100 h-100"
                     >
                         {sliders.map((slider, index) => (
                             <SwiperSlide key={slider.uuid || slider.id}>
-                                <a href={slider.link || '#'}>
+                                <a href={slider.link || '#'} className="d-block w-100 h-100">
                                     <img 
                                         src={slider.image ? resolveImageUrl(slider.image) : '/assets/image/product/product-no-bg.png'} 
-                                        className="img-fluid w-100" 
-                                        style={{ maxHeight: '450px', objectFit: 'cover' }} 
-                                        alt={slider.title} 
+                                        className="w-100 d-block" 
+                                        style={{ aspectRatio: '21/9', objectFit: 'cover', minHeight: '180px' }} 
+                                        alt={slider.title || 'اسلایدر'} 
                                         fetchpriority={index === 0 ? "high" : "auto"}
                                         loading={index === 0 ? "eager" : "lazy"}
                                         decoding="async"
-                                        onError={(e) => { e.target.onerror = null; e.target.src = '/assets/image/product/product-no-bg.png'; }}
                                     />
                                 </a>
                             </SwiperSlide>
@@ -168,7 +201,7 @@ const CategoriesSection = ({ categories }) => {
                                     <h2 className="h3 fw-900 mb-0 text-dark">دسته بندی</h2>
                                     <h3 className="h3 fw-900 mb-0 text-danger">محصولات</h3>
                                 </div>
-                                <Link to="/categories" className="btn btn-sm mt-lg-4 px-4 btn-outline-danger rounded-pill fw-bold shadow-sm hover-lift transition-all d-flex align-items-center gap-1">
+                                <Link to="/categories" className="btn btn-sm mt-lg-4 px-4 btn-outline-danger rounded-pill fw-bold shadow-sm custom-hover-lift transition-all d-flex align-items-center gap-1">
                                     مشاهده <i className="bi bi-chevron-left font-12"></i>
                                 </Link>
                             </div>
@@ -191,7 +224,6 @@ const CategoriesSection = ({ categories }) => {
                                                         className="cat-img"
                                                         loading="lazy"
                                                         decoding="async"
-                                                        onError={(e) => { e.target.onerror = null; e.target.src = '/assets/image/category/kalaye-degital.png'; }} 
                                                     />
                                                 </div>
                                             </div>
@@ -253,7 +285,7 @@ const SpecialOffers = ({ products }) => {
                             </div>
                         )}
 
-                        <Link to="/special-offers" className="btn btn-light rounded-pill px-4 py-2 fw-bold text-danger font-14 shadow-sm transition hover-lift d-flex align-items-center gap-1">
+                        <Link to="/special-offers" className="btn btn-light rounded-pill px-4 py-2 fw-bold text-danger font-14 shadow-sm transition custom-hover-lift d-flex align-items-center gap-1">
                             مشاهده همه <i className="bi bi-chevron-left align-middle"></i>
                         </Link>
                     </div>
@@ -291,16 +323,15 @@ const BannersSection = ({ banners }) => {
                 <div className="row gy-3">
                     {banners.slice(0, 2).map((banner) => (
                         <div className="col-md-6" key={banner.uuid || banner.id}>
-                            <a href={banner.link || '#'}>
-                                <div className="banner-image-parent shadow-sm rounded-4 overflow-hidden d-block hover-lift">
+                            <a href={banner.link || '#'} className="d-block w-100 h-100">
+                                <div className="banner-image-parent shadow-sm rounded-4 overflow-hidden d-block custom-hover-lift w-100 h-100">
                                     <img 
-                                        className="img-fluid w-100" 
+                                        className="img-fluid w-100 h-100 object-fit-cover d-block" 
                                         style={{transition: 'transform 0.4s ease'}} 
                                         src={banner.image ? resolveImageUrl(banner.image) : '/assets/image/product/product-no-bg.png'} 
                                         alt={banner.title} 
                                         loading="lazy" 
                                         decoding="async"
-                                        onError={(e) => { e.target.onerror = null; e.target.src = '/assets/image/product/product-no-bg.png'; }}
                                     />
                                 </div>
                             </a>
@@ -320,8 +351,8 @@ const BestSellers = ({ products, sideBanner }) => {
                 <SectionTitle title="پرفروش ترین" highlight="محصولات" linkPath="/best-sellers" />
                 <div className="row gy-3 mt-3">
                     <div className="col-md-3 d-none d-md-block">
-                        <a href={sideBanner?.link || "/best-sellers"}>
-                            <div className="banner-image-parent h-100 shadow-sm rounded-4 overflow-hidden d-block hover-lift">
+                        <a href={sideBanner?.link || "/best-sellers"} className="d-block w-100 h-100">
+                            <div className="banner-image-parent h-100 shadow-sm rounded-4 overflow-hidden d-block custom-hover-lift">
                                 <img 
                                     className="img-fluid w-100 h-100 object-fit-cover" 
                                     style={{transition: 'transform 0.4s ease'}} 
@@ -329,7 +360,6 @@ const BestSellers = ({ products, sideBanner }) => {
                                     alt={sideBanner?.title || "بنر محصولات پرفروش"} 
                                     loading="lazy"
                                     decoding="async"
-                                    onError={(e) => { e.target.onerror = null; e.target.src = '/assets/image/product/product_cover_1.png'; }}
                                 />
                             </div>
                         </a>
@@ -366,7 +396,7 @@ const BrandsSection = ({ brands }) => {
                 <Swiper dir="rtl" modules={[Autoplay, Navigation]} slidesPerView={2.5} spaceBetween={15} breakpoints={{ 576: { slidesPerView: 4 }, 768: { slidesPerView: 6 }, 1024: { slidesPerView: 8 } }} autoplay={{ delay: 3000 }} navigation className="pro-slider py-3 px-1">
                     {brands.map(brand => (
                         <SwiperSlide key={brand.uuid || brand.id}>
-                            <Link to={`/shop?brands=${brand.slug}`} className="d-block text-center border-ui bg-white rounded-3 p-3 shadow-sm hover-lift">
+                            <Link to={`/shop?brands=${brand.slug}`} className="d-block text-center border-ui bg-white rounded-3 p-3 shadow-sm custom-hover-lift">
                                 <img 
                                     src={brand.logo ? resolveImageUrl(brand.logo) : '/assets/image/brand/brand1-1.png'} 
                                     className="img-fluid" 
@@ -376,7 +406,6 @@ const BrandsSection = ({ brands }) => {
                                     alt={brand.title} 
                                     loading="lazy"
                                     decoding="async"
-                                    onError={(e) => { e.target.onerror = null; e.target.src = '/assets/image/brand/brand1-1.png'; }}
                                 />
                             </Link>
                         </SwiperSlide>
@@ -405,7 +434,7 @@ const BlogSection = ({ posts }) => {
                 >
                     {posts.map(post => (
                         <SwiperSlide key={post.uuid || post.id}>
-                            <div className="card blog-card border-0 bg-transparent overflow-visible hover-lift">
+                            <div className="card blog-card border-0 bg-transparent overflow-visible custom-hover-lift">
                                 <div className="card-img position-relative z-0">
                                     <img 
                                         src={post.image ? resolveImageUrl(post.image) : '/assets/image/blog/blog-1.jpg'} 
@@ -414,14 +443,13 @@ const BlogSection = ({ posts }) => {
                                         alt={post.title} 
                                         loading="lazy" 
                                         decoding="async"
-                                        onError={(e) => { e.target.onerror = null; e.target.src = '/assets/image/blog/blog-1.jpg'; }}
                                     />
                                 </div>
                                 <div 
                                     className="card-body bg-white rounded-4 shadow-sm border-ui position-relative mx-3" 
                                     style={{ marginTop: '-40px', zIndex: 2 }}
                                 >
-                                    <h3 className="text-overflow-2 h6 fw-bold mb-3 text-dark lh-lg">{post.title}</h3>
+                                    <h3 className="custom-text-overflow-2 h6 fw-bold mb-3 text-dark lh-lg">{post.title}</h3>
                                     <div className="d-flex mt-4 align-items-center justify-content-between border-top pt-3">
                                         <div className="text-muted font-12 d-flex align-items-center">
                                             <i className="bi bi-calendar2-week fs-5 ms-2"></i>
@@ -467,7 +495,7 @@ const HomePage = () => {
     if (loading) return (
         <div className="d-flex flex-column justify-content-center align-items-center min-vh-100 bg-light">
             <div className="spinner-border text-danger mb-3" style={{width: '3.5rem', height:'3.5rem', borderWidth: '0.25rem'}} role="status"></div>
-            <h6 className="fw-bold text-muted animate-pulse">در حال بارگذاری صفحه اصلی...</h6>
+            <h6 className="fw-bold text-muted custom-animate-pulse">در حال بارگذاری صفحه اصلی...</h6>
         </div>
     );
 
@@ -489,14 +517,16 @@ const HomePage = () => {
             <BrandsSection brands={data.brands} />
             <BlogSection posts={data.latest_posts} />
 
-            <style jsx="true">{`
-                .hover-lift { transition: transform 0.2s ease, box-shadow 0.2s ease; }
-                .hover-lift:hover { transform: translateY(-4px); box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important; }
-                .hover-text-danger:hover { color: #ef4056 !important; }
-                .hover-text-dark:hover { color: #212529 !important; }
+            <style>{`
+                .custom-hover-lift { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+                .custom-hover-lift:hover { transform: translateY(-4px); box-shadow: 0 10px 20px rgba(0,0,0,0.08) !important; }
+                
                 .transition-all { transition: all 0.3s ease; }
-                .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
+                .custom-fade-in { animation: fadeIn 0.3s ease-in-out; }
+                
                 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+                @keyframes customPulse { 0% { opacity: 1; } 50% { opacity: .5; } 100% { opacity: 1; } }
+                .custom-animate-pulse { animation: customPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
                 
                 .group-cat-item { cursor: pointer; }
                 .group-cat-item:hover .inner-cat-circle { 
@@ -506,7 +536,12 @@ const HomePage = () => {
                 .group-cat-item:hover .cat-img { transform: scale(1.15) !important; }
                 .group-cat-item:hover .group-cat-text { color: #ef4056 !important; }
                 
-                .text-overflow-2 { overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+                .custom-text-overflow-2 { 
+                    display: -webkit-box;
+                    -webkit-line-clamp: 2;
+                    -webkit-box-orient: vertical;  
+                    overflow: hidden;
+                }
             `}</style>
         </main>
     );

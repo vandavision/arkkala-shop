@@ -16,6 +16,7 @@ services:
       - DJANGO_SETTINGS_MODULE=arkkala.settings.dev
       - DJANGO_WATCHMAN_TIMEOUT=20
       - CHOKIDAR_USEPOLLING=true
+      - PYTHONUNBUFFERED=1
     volumes:
       - ./arkkala:/app
     ports:
@@ -110,6 +111,9 @@ services:
     container_name: arkkala_dev_celery_worker
     env_file:
       - .env.dev
+    environment:
+      - DJANGO_SETTINGS_MODULE=arkkala.settings.dev
+      - PYTHONUNBUFFERED=1
     command: >
       sh -c "python /wait_for_deps.py &&
              celery -A arkkala worker --loglevel=info"
@@ -130,6 +134,9 @@ services:
     container_name: arkkala_dev_celery_beat
     env_file:
       - .env.dev
+    environment:
+      - DJANGO_SETTINGS_MODULE=arkkala.settings.dev
+      - PYTHONUNBUFFERED=1
     command: >
       sh -c "python /wait_for_deps.py &&
              celery -A arkkala beat --loglevel=info"

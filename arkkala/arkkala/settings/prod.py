@@ -1,17 +1,11 @@
-"""
-Production settings for arkkala project.
-"""
 import os
 from .base import *
 
 DEBUG: bool = False
 
-ALLOWED_HOSTS: list[str] = ['api.arkkala.com', 'arkkala_prod_django', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS: list[str] = os.environ.get('ALLOWED_HOSTS', '').split(',')
 
-CORS_ALLOWED_ORIGINS: list[str] = [
-    "https://arkkala.com",
-    "https://www.arkkala.com",
-]
+CORS_ALLOWED_ORIGINS: list[str] = os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',')
 CORS_ALLOW_CREDENTIALS: bool = True
 
 DATABASES: dict = {
@@ -25,8 +19,8 @@ DATABASES: dict = {
     }
 }
 
-CELERY_BROKER_URL: str = "redis://redis:6379/0"
-CELERY_RESULT_BACKEND: str = "redis://redis:6379/0"
+CELERY_BROKER_URL: str = os.environ.get('CELERY_BROKER_URL', "redis://redis:6379/0")
+CELERY_RESULT_BACKEND: str = os.environ.get('CELERY_BROKER_URL', "redis://redis:6379/0")
 CELERY_ACCEPT_CONTENT: list[str] = ['json']
 CELERY_TASK_SERIALIZER: str = 'json'
 

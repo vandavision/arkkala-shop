@@ -18,6 +18,7 @@ services:
       - .env.prod
     environment:
       - DJANGO_SETTINGS_MODULE=arkkala.settings.prod
+      - PYTHONUNBUFFERED=1
     volumes:
       - static_prod_volume:/app/staticfiles
       - media_prod_volume:/app/mediafiles
@@ -82,7 +83,7 @@ services:
     environment:
       PGADMIN_SERVER_JSON_FILE: /pgadmin4/servers.json
     ports:
-      - "5050:80"
+      - "127.0.0.1:5050:80"
     volumes:
       - pgadmin_prod_data:/var/lib/pgadmin
       - ./docker/prod/pgadmin/servers.json:/pgadmin4/servers.json:ro
@@ -142,6 +143,7 @@ services:
         condition: service_healthy
     networks:
       - arkkala_internal
+      - arkkala_public
     logging: *default-logging
     deploy:
       resources:
@@ -174,6 +176,7 @@ services:
         condition: service_healthy
     networks:
       - arkkala_internal
+      - arkkala_public
     logging: *default-logging
     deploy:
       resources:
