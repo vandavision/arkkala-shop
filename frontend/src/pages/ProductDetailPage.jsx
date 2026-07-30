@@ -85,7 +85,7 @@ const ProductDetailPage = () => {
                     setProduct(data);
                     setIsFavorite(data.is_favorite || false);
                     
-                    if (data.is_variable && data.variants && data.variants.length > 0) {
+                    if (data.variants && data.variants.length > 0) {
                         const initialOptions = {};
                         data.variants[0].attributes.forEach(attr => {
                             initialOptions[attr.attribute_name] = attr.value;
@@ -214,15 +214,32 @@ const ProductDetailPage = () => {
     }, [product]);
 
     const handleOptionChange = (attributeName, value) => {
-        const newOptions = { ...selectedOptions, [attributeName]: value };
-        setSelectedOptions(newOptions);
+        let newOptions = { ...selectedOptions, [attributeName]: value };
         
-        if (product?.variants) {
-            const matchedVariant = product.variants.find(variant => 
+        if (product?.variants && product.variants.length > 0) {
+            let matchedVariant = product.variants.find(variant => 
                 variant.attributes.every(attr => newOptions[attr.attribute_name] === attr.value)
             );
+            
+            // If combination is strictly invalid, fallback to the first variant that at least contains this new value
+            if (!matchedVariant) {
+                matchedVariant = product.variants.find(variant =>
+                    variant.attributes.some(attr => attr.attribute_name === attributeName && attr.value === value)
+                );
+                
+                if (matchedVariant) {
+                    newOptions = {};
+                    matchedVariant.attributes.forEach(attr => {
+                        newOptions[attr.attribute_name] = attr.value;
+                    });
+                }
+            }
+
+            setSelectedOptions(newOptions);
             setSelectedVariant(matchedVariant || null);
             setQuantity(1); 
+        } else {
+            setSelectedOptions(newOptions);
         }
     };
 
@@ -324,15 +341,15 @@ const ProductDetailPage = () => {
     if (error || !product) return <main className="text-center py-5 my-5 text-danger min-vh-100 d-flex flex-column align-items-center justify-content-center"><i className="bi bi-exclamation-triangle fs-1 mb-3" aria-hidden="true"></i><h1 className="fw-bold mb-4 h2">{error}</h1><Link to="/shop" className="btn btn-danger rounded-pill px-5 py-3 shadow-sm hover-lift fw-bold">بازگشت به فروشگاه</Link></main>;
 
     const mainVideo = product.videos?.length ? { ...product.videos[0], url: resolveImageUrl(product.videos[0].url) } : null;
-    let originalPrice = product.is_variable && selectedVariant ? selectedVariant.price : product.base_price;
-    let currentInventory = product.is_variable && selectedVariant ? selectedVariant.inventory : product.base_inventory || 0;
+    let originalPrice = product.variants?.length > 0 && selectedVariant ? selectedVariant.price : product.base_price;
+    let currentInventory = product.variants?.length > 0 && selectedVariant ? selectedVariant.inventory : product.base_inventory || 0;
     let currentPrice = originalPrice;
     let hasDiscount = false;
     let discountPercent = 0;
     let isWholesaleActive = false;
 
     if (product.is_wholesale && quantity >= product.wholesale_min_quantity) {
-        let wholesalePr = product.is_variable && selectedVariant ? selectedVariant.wholesale_price : product.wholesale_base_price;
+        let wholesalePr = product.variants?.length > 0 && selectedVariant ? selectedVariant.wholesale_price : product.wholesale_base_price;
         if (wholesalePr) {
             currentPrice = wholesalePr;
             isWholesaleActive = true;
@@ -352,7 +369,7 @@ const ProductDetailPage = () => {
     }
 
     const availableAttributes = {};
-    if (product.is_variable && product.variants) {
+    if (product.variants && product.variants.length > 0) {
         product.variants.forEach(variant => {
             variant.attributes.forEach(attr => {
                 if (!availableAttributes[attr.attribute_name]) availableAttributes[attr.attribute_name] = new Set();
@@ -555,7 +572,7 @@ const ProductDetailPage = () => {
                                                 <p itemProp="description" className="font-14 text-muted text-justify lh-lg m-0">{product.short_description}</p>
                                             ) : (
                                                 <ul className="list-unstyled m-0 p-0 d-flex flex-column gap-3">
-                                                    {product.variants?.[0]?.attributes.slice(0,5).map((attr, idx) => (
+                                                    {(product.variants?.[0]?.attributes || []).slice(0,5).map((attr, idx) => (
                                                         <li key={idx} className="font-13 text-muted d-flex align-items-center"><i className="bi bi-check2-circle text-success me-2 fs-5" aria-hidden="true"></i><span className="fw-bold text-dark me-2">{attr.attribute_name}:</span> {attr.value}</li>
                                                     ))}
                                                 </ul>
@@ -583,7 +600,7 @@ const ProductDetailPage = () => {
                                             </div>
                                         </div>
 
-                                        {product.is_variable && Object.keys(availableAttributes).map((attrName, index) => {
+                                        {product.variants && product.variants.length > 0 && Object.keys(availableAttributes).map((attrName, index) => {
                                             const isColor = attrName.includes('رنگ') || attrName.includes('Color');
                                             return (
                                                 <div key={index} className="mb-4">
@@ -749,7 +766,7 @@ const ProductDetailPage = () => {
                                                                 <th scope="row" className="bg-light text-muted fw-bold font-13 align-middle py-3 px-4">وزن و ابعاد پایه</th>
                                                                 <td className="text-dark font-14 fw-bold align-middle py-3 px-4">{product.weight} گرم</td>
                                                             </tr>
-                                                            {product.is_variable && Object.keys(availableAttributes).map((attrName, idx) => (
+                                                            {product.variants && product.variants.length > 0 && Object.keys(availableAttributes).map((attrName, idx) => (
                                                                 <tr key={idx} className="transition">
                                                                     <th scope="row" className="bg-light text-muted fw-bold font-13 align-middle py-3 px-4">{attrName}</th>
                                                                     <td className="text-dark font-14 fw-bold align-middle py-3 px-4">
