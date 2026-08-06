@@ -1,50 +1,46 @@
-"""
-Serializers for User Authentication and Profile Management.
-"""
+from typing import Dict, Any
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import UserAddress
 
 User = get_user_model()
 
-
-class EmailRegisterSerializer(serializers.ModelSerializer):
-    """Serializer for Email/Password registration (Mode 2)."""
+class EmailRegisterSerializer(serializers.Serializer):
+    """
+    Schema validation for Email-based registration requests.
+    """
+    email = serializers.EmailField(required=True)
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
     password_confirm = serializers.CharField(write_only=True, required=True)
 
-    class Meta:
-        model = User
-        fields = ('email', 'password', 'password_confirm')
-
-    def validate(self, attrs):
+    def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Validates password matching strictly.
+        """
         if attrs['password'] != attrs['password_confirm']:
             raise serializers.ValidationError({"password": "رمز عبور و تکرار آن مطابقت ندارند."})
-        if User.objects.filter(email=attrs.get('email')).exists():
-            raise serializers.ValidationError({"email": "این ایمیل قبلاً ثبت شده است."})
         return attrs
 
-    def create(self, validated_data):
-        validated_data.pop('password_confirm')
-        return User.objects.create_user(
-            username=validated_data['email'],
-            email=validated_data['email'],
-            password=validated_data['password']
-        )
-
 class EmailLoginSerializer(TokenObtainPairSerializer):
-    """Custom JWT Serializer to login using Email (Mode 2)."""
-    def __init__(self, *args, **kwargs):
+    """
+    JWT generation override tailored specifically for exact Email matching.
+    """
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """
+        Initializes JWT override safely.
+        """
         super().__init__(*args, **kwargs)
         self.fields['email'] = serializers.EmailField(required=True)
-        del self.fields[self.username_field]
+        if self.username_field in self.fields:
+            del self.fields[self.username_field]
 
-    def validate(self, attrs):
+    def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Validates payload manually.
+        """
         email = attrs.get('email')
         password = attrs.get('password')
-        
         user = User.objects.filter(email=email).first()
         if user and user.check_password(password):
             refresh = self.get_token(user)
@@ -55,50 +51,37 @@ class EmailLoginSerializer(TokenObtainPairSerializer):
         raise serializers.ValidationError('ایمیل یا رمز عبور اشتباه است.')
 
 class PasswordResetRequestSerializer(serializers.Serializer):
+    """
+    Schema validation for requesting a password reset email.
+    """
     email = serializers.EmailField(required=True)
 
 class PasswordResetConfirmSerializer(serializers.Serializer):
+    """
+    Schema validation for finalizing a new password with an OTP code.
+    """
     email = serializers.EmailField(required=True)
     code = serializers.CharField(max_length=6, required=True)
     new_password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
     new_password_confirm = serializers.CharField(write_only=True, required=True)
 
-    def validate(self, attrs):
+    def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Validates password rules properly.
+        """
         if attrs['new_password'] != attrs['new_password_confirm']:
             raise serializers.ValidationError({"new_password": "رمز عبور و تکرار آن مطابقت ندارند."})
         return attrs
 
-
-
 class OTPSendSerializer(serializers.Serializer):
-    """Serializer for requesting OTP SMS (Mode 1)."""
+    """
+    Schema validation for submitting mobile numbers for OTP.
+    """
     phone_number = serializers.CharField(max_length=15, required=True)
 
 class OTPVerifySerializer(serializers.Serializer):
-    """Serializer for verifying OTP and generating Token (Mode 1)."""
+    """
+    Schema validation for submitting mobile numbers with verification codes.
+    """
     phone_number = serializers.CharField(max_length=15, required=True)
     code = serializers.CharField(max_length=6, required=True)
-
-
-
-class UserProfileSerializer(serializers.ModelSerializer):
-    """Serializer for viewing and updating user profile."""
-    class Meta:
-        model = User
-        fields = ('id', 'email', 'phone_number', 'first_name', 'last_name', 'avatar', 'date_joined')
-        read_only_fields = ('date_joined',)
-
-
-class UserAddressSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = UserAddress
-        fields = [
-            'uuid', 'title', 'recipient_first_name', 'recipient_last_name',
-            'recipient_phone', 'province', 'city', 'postal_address',
-            'postal_code', 'plaque', 'building_unit', 'is_default', 'created_at'
-        ]
-        read_only_fields = ['uuid', 'created_at']
-
-    def create(self, validated_data):
-        validated_data['user'] = self.context['request'].user
-        return super().create(validated_data)

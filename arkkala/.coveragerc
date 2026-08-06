@@ -1,0 +1,28 @@
+[run]
+source = .
+omit =
+    */migrations/*
+    */__init__.py
+    */apps.py
+    */admin.py
+    */admin/*
+    */management/*
+    */tests/*
+    */conftest.py
+    manage.py
+    arkkala/settings/*
+    arkkala/wsgi.py
+    arkkala/asgi.py
+    arkkala/celery.py
+    platform_painless/*
+    platform_tools/*
+    platform_seo/*
+
+[report]
+show_missing = True
+exclude_lines =
+    pragma: no cover
+    def __str__
+    def __repr__
+    raise NotImplementedError
+    if __name__ == .__main__.:

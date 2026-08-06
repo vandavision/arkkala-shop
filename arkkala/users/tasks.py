@@ -1,37 +1,26 @@
-"""
-Celery Tasks for the Users App.
-"""
 import logging
 from celery import shared_task
-from .models import OTPRequest
+from users.repositories.otp import OTPRepository
 
 logger = logging.getLogger(__name__)
-
 
 @shared_task
 def cleanup_expired_otps(otp_uuid: str) -> str:
     """
-    Deletes an OTP request from the database after its expiration time.
-    This keeps the database clean and prevents table bloat.
-
-    Args:
-        otp_uuid (str): The UUID of the OTPRequest to delete.
-
-    Returns:
-        str: Result message.
+    Executes precise removal of sensitive request hashes cleanly to minimize DB bloat.
     """
     try:
-        otp_qs = OTPRequest.objects.filter(uuid=otp_uuid)
-        if otp_qs.exists():
-            otp_qs.delete()
-            msg = f"OTP {otp_uuid} was successfully deleted from the database."
+        repo = OTPRepository()
+        otp_obj = repo.get_by_uuid(otp_uuid)
+        if otp_obj:
+            repo.delete(otp_obj)
+            msg: str = f"OTP {otp_uuid} was successfully deleted from the database."
             logger.info(msg)
             return msg
-        else:
-            msg = f"OTP {otp_uuid} not found. Perhaps already deleted."
-            logger.info(msg)
-            return msg
+        msg = f"OTP {otp_uuid} not found. Perhaps already deleted."
+        logger.info(msg)
+        return msg
     except Exception as e:
-        error_msg = f"Failed to delete OTP {otp_uuid}: {str(e)}"
+        error_msg: str = f"Failed to delete OTP {otp_uuid}: {str(e)}"
         logger.error(error_msg)
         raise e
