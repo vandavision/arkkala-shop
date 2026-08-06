@@ -5,9 +5,13 @@ import os
 from pathlib import Path
 from corsheaders.defaults import default_headers
 
+os.environ["GIT_PYTHON_REFRESH"] = "quiet"
+
 BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent
 
 SECRET_KEY: str = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-arkkala-default-key')
+
+DJANGO_ADMIN_URL_PREFIX: str = 'admin'
 
 INSTALLED_APPS: list[str] = [
     'django.contrib.admin',

@@ -1,8 +1,6 @@
 from django.conf import settings
 from platform_tools.decorators import AdminBypassDecorator
 
-settings.configure(DJANGO_ADMIN_URL_PREFIX="admin")
-
 
 def example_view(request, *args, **kwargs):
     return {"key": "value"}
@@ -23,7 +21,7 @@ class TestAdminBypassDecorator:
             The mock request object used for testing.
 
         """
-        mock_request2.path = "/admin/some_admin_page/"
+        mock_request2.path = f"/{settings.DJANGO_ADMIN_URL_PREFIX}/some_admin_page/"
 
         result = decorated_view(mock_request2)
 
@@ -53,7 +51,7 @@ class TestAdminBypassDecorator:
             The mock request object used for testing.
 
         """
-        mock_request2.path = "/admin/some_admin_page/"
+        mock_request2.path = f"/{settings.DJANGO_ADMIN_URL_PREFIX}/some_admin_page/"
         assert AdminBypassDecorator.is_admin_request(mock_request2) is True
 
     def test_is_admin_request_false_for_non_admin_path(self, mock_request2):
