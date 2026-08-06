@@ -1,5 +1,4 @@
 import pytest
-from typing import Any, Dict
 from django.core.exceptions import ValidationError
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -9,6 +8,8 @@ from django.contrib.auth import get_user_model
 from shop.models import Product, Comment, Category, Brand
 from shop.application.commands.product import ProductCommandService
 from shop.application.queries.product import ProductQueryService
+from shop.application.dtos import InteractionCreateDTO
+from shop.application.commands.interaction import InteractionCommandService
 
 User = get_user_model()
 
@@ -23,18 +24,14 @@ def test_brand() -> Brand:
 @pytest.fixture
 def test_product(test_category: Category, test_brand: Brand) -> Product:
     return Product.objects.create(
-        title="Test Product",
-        slug="test-prod",
-        category=test_category,
-        brand=test_brand,
-        description="A cool product",
-        base_price=1000,
-        is_active=True
+        title="Test Product", slug="test-prod",
+        category=test_category, brand=test_brand,
+        description="A cool product", base_price=1000, is_active=True
     )
 
 @pytest.fixture
 def test_user() -> User:
-    return User.objects.create_user(username="testuser", email="test@arkkala.com", password="password123")
+    return User.objects.create_user(username="testuser_ent", email="test@arkkala.com", password="password123")
 
 @pytest.mark.django_db
 class TestSeniorGradeQuality:
@@ -47,13 +44,11 @@ class TestSeniorGradeQuality:
         )
         with pytest.raises(ValidationError) as exc:
             product.clean()
-            
         assert "حداقل تعداد" in str(exc.value)
         
         product.wholesale_min_quantity = 5
         with pytest.raises(ValidationError) as exc:
             product.clean()
-            
         assert "کمتر از قیمت پایه" in str(exc.value)
 
     def test_comment_rating_validation(self, test_user: User, test_product: Product) -> None:
@@ -68,15 +63,13 @@ class TestSeniorGradeQuality:
         assert test_product.view_count == initial_views + 1
 
     def test_comment_data_leak_secured(self, test_user: User, test_product: Product) -> None:
-        user2 = User.objects.create_user(username="otheruser", email='other@arkkala.com', password='pwd')
-        Comment.objects.create(product=test_product, user=user2, body='User 2 Secret Comment', rating=5)
+        user2 = User.objects.create_user(username="other_ent", email='other@arkkala.com', password='pwd')
+        Comment.objects.create(product=test_product, user=user2, body='Secret Comment', rating=5)
 
         client = APIClient()
         client.force_authenticate(user=test_user)
-        
         url: str = reverse('comment-list')
         response = client.get(url)
-        
         assert response.status_code == status.HTTP_200_OK
         assert len(response.data['results']) == 0
 
@@ -85,6 +78,12 @@ class TestSeniorGradeQuality:
         assert cached_price == 1000
         
         Product.objects.create(title="Max Prod", slug="max", description="Max", base_price=5000, is_active=True)
-        
         new_cached_price: int = ProductQueryService.get_max_price()
         assert new_cached_price == 5000
+
+    def test_interaction_command_invalid_product(self) -> None:
+        dto = InteractionCreateDTO(product_slug="invalid-slug", body="Test")
+        with pytest.raises(ValueError, match="Product not found"):
+            InteractionCommandService.create_comment(dto)
+        with pytest.raises(ValueError, match="Product not found"):
+            InteractionCommandService.create_question(dto)
