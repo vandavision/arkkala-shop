@@ -1,8 +1,8 @@
-# shop/models/product.py
 from typing import Dict, Any, List
 from django.db import models
 from django.contrib.auth import get_user_model
-from django.core.validators import FileExtensionValidator
+from django.core.validators import FileExtensionValidator, MaxValueValidator, MinValueValidator
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.conf import settings
 from platform_tools.mixins.models.base import UUIDBaseModel, TimeStampMixin, TitleSlugMixin
@@ -18,12 +18,12 @@ except ImportError:
     JSONField = models.JSONField
 
 User = get_user_model()
-
 STRING_LIST_SCHEMA: Dict[str, Any] = {'type': 'array', 'items': {'type': 'string'}}
 
-
 class Product(UUIDBaseModel, TimeStampMixin, TitleSlugMixin, SEOMixin, ProductDetailJsonLdMixin):
-    """Main Product Model with SEO, AEO, and GEO validations."""
+    """
+    Enterprise Product Entity with Strict Validation Rules.
+    """
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, related_name='products', verbose_name='دسته بندی')
     brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, blank=True, related_name='products', verbose_name='برند')
 
@@ -35,22 +35,26 @@ class Product(UUIDBaseModel, TimeStampMixin, TitleSlugMixin, SEOMixin, ProductDe
     key_takeaways = JSONField(schema=STRING_LIST_SCHEMA, null=True, blank=True, verbose_name='ویژگی‌های کلیدی (GEO)')
     citations = JSONField(schema=STRING_LIST_SCHEMA, null=True, blank=True, verbose_name='منابع کاتالوگ (Citations)')
 
-    base_price = models.DecimalField(max_digits=12, decimal_places=0, verbose_name='قیمت پایه (تکی)')
+    base_price = models.DecimalField(max_digits=12, decimal_places=0, validators=[MinValueValidator(0)], verbose_name='قیمت پایه (تکی)')
     base_inventory = models.PositiveIntegerField(default=0, verbose_name='موجودی پایه')
     weight = models.PositiveIntegerField(default=500, verbose_name='وزن (گرم)')
     volume = models.PositiveIntegerField(default=1000, verbose_name='حجم بسته (سانتی‌متر مکعب)')
     favorites = models.ManyToManyField(User, related_name='favorite_products', blank=True, verbose_name='علاقه‌مندی‌ها')
 
-    special_discount_percent = models.PositiveIntegerField(default=0, verbose_name='درصد تخفیف شگفت‌انگیز')
+    special_discount_percent = models.PositiveIntegerField(
+        default=0, 
+        validators=[MaxValueValidator(100)], 
+        verbose_name='درصد تخفیف شگفت‌انگیز'
+    )
     special_offer_end = models.DateTimeField(null=True, blank=True, verbose_name='زمان پایان شگفت‌انگیز')
 
     is_wholesale = models.BooleanField(default=False, verbose_name='قابلیت فروش عمده دارد؟')
     wholesale_min_quantity = models.PositiveIntegerField(default=10, verbose_name='حداقل تعداد برای خرید عمده')
-    wholesale_base_price = models.DecimalField(max_digits=12, decimal_places=0, null=True, blank=True, verbose_name='قیمت پایه عمده')
+    wholesale_base_price = models.DecimalField(max_digits=12, decimal_places=0, null=True, blank=True, validators=[MinValueValidator(0)], verbose_name='قیمت پایه عمده')
 
     sold_count = models.PositiveIntegerField(default=0, verbose_name='تعداد فروش')
     view_count = models.PositiveIntegerField(default=0, verbose_name='تعداد بازدید')
-    average_rating = models.FloatField(default=0.0, verbose_name='میانگین امتیاز')
+    average_rating = models.FloatField(default=0.0, validators=[MinValueValidator(0.0), MaxValueValidator(5.0)], verbose_name='میانگین امتیاز')
 
     is_variable = models.BooleanField(default=False, verbose_name='محصول متغیر است؟')
     is_active = models.BooleanField(default=True, verbose_name='فعال')
@@ -60,6 +64,26 @@ class Product(UUIDBaseModel, TimeStampMixin, TitleSlugMixin, SEOMixin, ProductDe
     class Meta:
         verbose_name = 'محصول'
         verbose_name_plural = 'محصولات'
+        indexes = [
+            models.Index(fields=['slug', 'is_active']),
+            models.Index(fields=['category', 'is_active']),
+            models.Index(fields=['base_price', 'is_active']),
+            models.Index(fields=['special_discount_percent', 'special_offer_end']),
+            models.Index(fields=['created_at']),
+        ]
+
+    def clean(self) -> None:
+        """
+        Enforce complex business validation rules.
+        """
+        super().clean()
+        if self.is_wholesale:
+            if not self.wholesale_min_quantity or self.wholesale_min_quantity < 2:
+                raise ValidationError({"wholesale_min_quantity": "برای فروش عمده، حداقل تعداد باید بیشتر از ۱ باشد."})
+            if self.wholesale_base_price is None:
+                raise ValidationError({"wholesale_base_price": "برای فروش عمده، تعیین قیمت پایه عمده الزامی است."})
+            if self.wholesale_base_price >= self.base_price:
+                raise ValidationError({"wholesale_base_price": "قیمت عمده باید کمتر از قیمت پایه باشد."})
 
     def __str__(self) -> str:
         return str(self.title)
@@ -71,17 +95,22 @@ class Product(UUIDBaseModel, TimeStampMixin, TitleSlugMixin, SEOMixin, ProductDe
         return False
 
     def generate_json_ld(self) -> Dict[str, Any]:
-        """Generates schema.org structured data."""
+        """
+        Generates schema.org structured data.
+        """
         frontend_domain: str = getattr(settings, 'FRONTEND_URL', 'https://arkkala.com').rstrip('/')
         product_url: str = f"{frontend_domain}/product/{self.slug}/"
         main_img = self.gallery.filter(is_main=True).first() or self.gallery.first()
 
-        product_schema = {
+        product_schema: Dict[str, Any] = {
             "@type": "Product",
             "name": self.title,
             "description": self.meta_description or self.short_description or self.title,
             "sku": str(getattr(self, 'sku', self.uuid)),
-            "brand": {"@type": "Brand", "name": self.brand.title if self.brand else getattr(settings, 'SITE_NAME', 'ارک کالا')},
+            "brand": {
+                "@type": "Brand", 
+                "name": self.brand.title if self.brand else getattr(settings, 'SITE_NAME', 'ارک کالا')
+            },
             "offers": {
                 "@type": "Offer",
                 "url": product_url,
@@ -137,9 +166,7 @@ class Product(UUIDBaseModel, TimeStampMixin, TitleSlugMixin, SEOMixin, ProductDe
 
         return json_ld
 
-
 class ProductGallery(UUIDBaseModel):
-    """Product Images."""
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='gallery', verbose_name='محصول')
     image = models.ImageField(upload_to='products/gallery/', verbose_name='تصویر')
     image_alt = models.CharField(max_length=255, null=True, blank=True, verbose_name='متن جایگزین تصویر (Alt)')
@@ -148,10 +175,9 @@ class ProductGallery(UUIDBaseModel):
     class Meta:
         verbose_name = 'گالری تصویر محصول'
         verbose_name_plural = 'گالری تصاویر محصولات'
-
+        indexes = [models.Index(fields=['product', 'is_main'])]
 
 class ProductVideo(UUIDBaseModel):
-    """Product Videos."""
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='videos', verbose_name='محصول')
     video_file = models.FileField(
         upload_to='products/videos/', verbose_name='فایل ویدیو',
@@ -162,10 +188,9 @@ class ProductVideo(UUIDBaseModel):
     class Meta:
         verbose_name = 'ویدیو محصول'
         verbose_name_plural = 'ویدیوهای محصول'
-
+        ordering = []
 
 class ProductVariant(UUIDBaseModel, TimeStampMixin):
-    """Product Variants for Variable Products."""
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='variants', verbose_name='محصول')
     attribute_values = models.ManyToManyField(AttributeValue, related_name='variants', verbose_name='مقادیر ویژگی')
     gallery_image = models.ForeignKey(
@@ -179,10 +204,12 @@ class ProductVariant(UUIDBaseModel, TimeStampMixin):
     class Meta:
         verbose_name = 'تنوع محصول'
         verbose_name_plural = 'تنوع محصولات'
-
+        indexes = [
+            models.Index(fields=['product', 'price']),
+            models.Index(fields=['inventory']),
+        ]
 
 class PriceHistory(UUIDBaseModel):
-    """Tracks historical price changes."""
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='price_history', verbose_name='محصول')
     price = models.DecimalField(max_digits=12, decimal_places=0, verbose_name='قیمت')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاریخ ثبت')
@@ -191,3 +218,4 @@ class PriceHistory(UUIDBaseModel):
         verbose_name = 'تاریخچه قیمت'
         verbose_name_plural = 'تاریخچه قیمت‌ها'
         ordering = ['created_at']
+        indexes = [models.Index(fields=['product', 'created_at'])]

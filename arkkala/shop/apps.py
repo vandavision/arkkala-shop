@@ -1,6 +1,3 @@
-"""
-App configuration for the shop module.
-"""
 from django.apps import AppConfig
 
 class ShopConfig(AppConfig):
@@ -8,5 +5,5 @@ class ShopConfig(AppConfig):
     name: str = 'shop'
     verbose_name: str = 'مدیریت فروشگاه'
 
-    def ready(self):
+    def ready(self) -> None:
         import shop.signals

@@ -2,15 +2,12 @@ import json
 import ssl
 import urllib.request
 from typing import Any, Dict, List, Optional
-from urllib.error import URLError
-
 from django.core.files.base import ContentFile
 from django.core.management.base import BaseCommand
 from django.utils.text import slugify
 
 from shop.models import (
-    Attribute, AttributeValue, Brand, Category, Product, ProductGallery,
-    ProductVideo, ProductVariant
+    Attribute, Brand, Category, Product, ProductGallery, ProductVideo
 )
 
 FALLBACK_DATA: List[Dict[str, Any]] = [
@@ -58,21 +55,20 @@ FALLBACK_DATA: List[Dict[str, Any]] = [
 
 DUMMY_IMAGE_BYTES: bytes = b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82'
 
-
 class Command(BaseCommand):
-    """Management command to seed the database robustly with fallbacks."""
-
+    """
+    Management command to seed the database robustly with fallbacks.
+    """
     help: str = "Clears the database and seeds products using API or fallback data."
     API_URL: str = "https://fakestoreapi.com/products"
     VIDEO_URL: str = "https://www.w3schools.com/html/mov_bbb.mp4"
 
     def handle(self, *args: Any, **options: Any) -> None:
-        """Main entry point for the command."""
         self.stdout.write("Starting database cleanup...")
         self.clear_database()
         
         self.stdout.write("Fetching product data...")
-        data = self.fetch_api_data(self.API_URL)
+        data: List[Dict[str, Any]] = self.fetch_api_data(self.API_URL)
         
         if not data:
             self.stdout.write(self.style.WARNING("API failed. Using fallback data."))
@@ -84,14 +80,12 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("Database seeded successfully."))
 
     def clear_database(self) -> None:
-        """Deletes all existing shop data to prevent duplicates."""
         Product.objects.all().delete()
         Category.objects.all().delete()
         Brand.objects.all().delete()
         Attribute.objects.all().delete()
 
     def fetch_api_data(self, url: str) -> List[Dict[str, Any]]:
-        """Fetches JSON data from the provided URL, ignoring SSL verification."""
         try:
             ctx = ssl.create_default_context()
             ctx.check_hostname = False
@@ -103,7 +97,6 @@ class Command(BaseCommand):
             return []
 
     def download_file(self, url: str, filename: str, is_image: bool = True) -> Optional[ContentFile]:
-        """Downloads a file from a URL, returns a dummy file on failure if it is an image."""
         try:
             ctx = ssl.create_default_context()
             ctx.check_hostname = False
@@ -117,7 +110,6 @@ class Command(BaseCommand):
             return None
 
     def get_or_create_category(self, title: str) -> Category:
-        """Retrieves or creates a Category by title."""
         category, _ = Category.objects.get_or_create(
             title=title,
             defaults={'slug': slugify(title, allow_unicode=True)}
@@ -125,7 +117,6 @@ class Command(BaseCommand):
         return category
 
     def get_or_create_brand(self, title: str) -> Brand:
-        """Retrieves or creates a Brand by title."""
         brand, _ = Brand.objects.get_or_create(
             title=title,
             defaults={'slug': slugify(title, allow_unicode=True)}
@@ -133,21 +124,20 @@ class Command(BaseCommand):
         return brand
 
     def seed_products(self, data: List[Dict[str, Any]]) -> None:
-        """Iterates over the data list to create products, galleries, and videos."""
         brand = self.get_or_create_brand("Global Brand")
         
         for index, item in enumerate(data):
             category = self.get_or_create_category(item.get("category", "General"))
             
-            price_irt = int(float(item.get("price", 0)) * 50000)
+            price_irt: int = int(float(item.get("price", 0)) * 50000)
             
             product = Product.objects.create(
                 category=category,
                 brand=brand,
-                title=item.get("title")[:250],
-                english_title=item.get("title")[:250],
-                short_description=item.get("description")[:500],
-                description=item.get("description"),
+                title=item.get("title", "")[:250],
+                english_title=item.get("title", "")[:250],
+                short_description=item.get("description", "")[:500],
+                description=item.get("description", ""),
                 base_price=price_irt,
                 base_inventory=100,
                 weight=500,
@@ -157,7 +147,7 @@ class Command(BaseCommand):
                 view_count=item.get("rating", {}).get("count", 0),
             )
             
-            image_url = item.get("image")
+            image_url: Optional[str] = item.get("image")
             if image_url:
                 filename = f"product_{product.uuid}.png"
                 image_file = self.download_file(image_url, filename, is_image=True)

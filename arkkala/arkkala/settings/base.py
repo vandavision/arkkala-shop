@@ -24,6 +24,7 @@ INSTALLED_APPS: list[str] = [
     'platform_tools',
     'platform_seo',
     'django_jsonform',
+    'drf_spectacular',
 
     'rest_framework_simplejwt',
     'users',
@@ -84,7 +85,15 @@ DEFAULT_AUTO_FIELD: str = 'django.db.models.BigAutoField'
 REST_FRAMEWORK: dict = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    )
+    ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+SPECTACULAR_SETTINGS: dict = {
+    'TITLE': 'Arkkala Enterprise API',
+    'DESCRIPTION': 'CQRS and Event-Driven E-Commerce API',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
 }
 
 AUTH_USER_MODEL: str = 'users.User'

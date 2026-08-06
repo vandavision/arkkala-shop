@@ -1,4 +1,3 @@
-# shop/admin/product.py
 from typing import Tuple, Any, Optional
 from django.contrib import admin
 from django.http import HttpRequest
@@ -19,17 +18,17 @@ SEO_FIELDSET: Tuple[str, dict] = (
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ('title', 'category', 'brand', 'base_price', 'base_inventory', 'is_variable', 'is_active', 'special_offer_status')
-    list_filter = ('is_active', 'is_variable', 'category', 'brand')
-    search_fields = ('title', 'english_title', 'slug')
-    list_editable = ('is_active', 'is_variable', 'base_price', 'base_inventory')
-    autocomplete_fields = ('category', 'brand', 'favorites')
-    readonly_fields = ('uuid', 'sold_count', 'view_count', 'average_rating', 'created_at', 'modified_at')
-    inlines = [ProductGalleryInline, ProductVideoInline, ProductVariantInline, PriceHistoryInline]
-    filter_horizontal = ('favorites',)
-    save_on_top = True
+    list_display: tuple = ('title', 'category', 'brand', 'base_price', 'base_inventory', 'is_variable', 'is_active', 'special_offer_status')
+    list_filter: tuple = ('is_active', 'is_variable', 'category', 'brand')
+    search_fields: tuple = ('title', 'english_title', 'slug')
+    list_editable: tuple = ('is_active', 'is_variable', 'base_price', 'base_inventory')
+    autocomplete_fields: tuple = ('category', 'brand', 'favorites')
+    readonly_fields: tuple = ('uuid', 'sold_count', 'view_count', 'average_rating', 'created_at', 'modified_at')
+    inlines: list = [ProductGalleryInline, ProductVideoInline, ProductVariantInline, PriceHistoryInline]
+    filter_horizontal: tuple = ('favorites',)
+    save_on_top: bool = True
 
-    fieldsets = (
+    fieldsets: tuple = (
         ('اطلاعات اصلی', {'fields': ('title', 'english_title', 'slug', 'category', 'brand', 'short_description', 'description')}),
         ('هوش مصنوعی مولد و اعتبار (GEO)', {'fields': ('expert_reviewer', 'key_takeaways', 'citations')}),
         ('مشخصات فیزیکی', {'fields': ('weight', 'volume'), 'classes': ('collapse',)}),
@@ -45,13 +44,12 @@ class ProductAdmin(admin.ModelAdmin):
     def special_offer_status(self, obj: Product) -> bool:
         return obj.is_special_offer_active
 
-
 @admin.register(PriceHistory)
 class PriceHistoryAdmin(admin.ModelAdmin):
-    list_display = ('product', 'price', 'created_at')
-    search_fields = ('product__title',)
-    autocomplete_fields = ('product',)
-    readonly_fields = ('uuid', 'product', 'price', 'created_at')
+    list_display: tuple = ('product', 'price', 'created_at')
+    search_fields: tuple = ('product__title',)
+    autocomplete_fields: tuple = ('product',)
+    readonly_fields: tuple = ('uuid', 'product', 'price', 'created_at')
 
     def has_add_permission(self, request: HttpRequest) -> bool:
         return False
