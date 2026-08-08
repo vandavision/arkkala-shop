@@ -5,9 +5,6 @@ from blog.models.comment import Comment
 
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):
-    """
-    Management tool exposing review actions explicitly targeting secure query boundaries.
-    """
     list_display: tuple = ('post', 'user', 'is_approved', 'created_at')
     list_filter: tuple = ('is_approved', 'created_at')
     search_fields: tuple = ('body', 'user__first_name', 'user__last_name', 'user__phone_number')
@@ -18,8 +15,5 @@ class CommentAdmin(admin.ModelAdmin):
 
     @admin.action(description='تایید نظرات انتخاب شده')
     def approve_comments(self, request: HttpRequest, queryset: QuerySet) -> None:
-        """
-        Executes bulk state transition cleanly triggering notification events directly.
-        """
         updated: int = queryset.update(is_approved=True)
         self.message_user(request, f"{updated} نظر با موفقیت تایید شد.")

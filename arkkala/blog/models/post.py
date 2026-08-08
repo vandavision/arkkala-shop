@@ -1,7 +1,6 @@
 from typing import Dict, Any, List
 from django.db import models
 from django.contrib.auth import get_user_model
-from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 from platform_tools.mixins.models.base import UUIDBaseModel, TimeStampMixin, TitleSlugMixin
 from platform_seo.models.mixins.seo import SEOMixin, BlogDetailJsonLdMixin
@@ -31,49 +30,35 @@ STRING_LIST_SCHEMA: Dict[str, Any] = {
 }
 
 class Post(UUIDBaseModel, TimeStampMixin, TitleSlugMixin, SEOMixin, BlogDetailJsonLdMixin):
-    """
-    Main Post entity integrating SEO, GEO, and AEO structured mapping logic.
-    """
-    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='posts', verbose_name=_('نویسنده'))
-    category = models.ForeignKey('blog.Category', on_delete=models.SET_NULL, null=True, related_name='posts', verbose_name=_('دسته بندی'))
-    tags = models.ManyToManyField('blog.Tag', blank=True, related_name='posts', verbose_name=_('برچسب ها'))
-    
-    image = models.ImageField(upload_to='blog/posts/', null=True, blank=True, verbose_name=_('تصویر کاور'))
-    image_alt = models.CharField(max_length=255, null=True, blank=True, verbose_name=_('متن جایگزین تصویر (Alt)'))
-    
-    short_description = models.TextField(verbose_name=_('توضیح کوتاه (چکیده)'))
-    body = models.TextField(verbose_name=_('متن کامل مقاله'))
-    
-    expert_reviewer = models.CharField(max_length=255, null=True, blank=True, verbose_name=_('تایید کننده متخصص (E-E-A-T)'))
-    key_takeaways = JSONField(schema=STRING_LIST_SCHEMA, null=True, blank=True, verbose_name=_('نکات کلیدی (GEO)'))
-    citations = JSONField(schema=STRING_LIST_SCHEMA, null=True, blank=True, verbose_name=_('منابع و ارجاعات (Citations)'))
-
-    faq_data = JSONField(schema=FAQ_SCHEMA, null=True, blank=True, verbose_name=_('سوالات متداول (FAQ)'))
-
-    view_count = models.PositiveIntegerField(default=0, verbose_name=_('تعداد بازدید'))
-    read_time = models.PositiveIntegerField(default=5, verbose_name=_('زمان مطالعه (دقیقه)'))
-    is_published = models.BooleanField(default=True, verbose_name=_('منتشر شده'))
+    author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='posts', verbose_name='نویسنده')
+    category = models.ForeignKey('blog.Category', on_delete=models.SET_NULL, null=True, related_name='posts', verbose_name='دسته بندی')
+    tags = models.ManyToManyField('blog.Tag', blank=True, related_name='posts', verbose_name='برچسب ها')
+    image = models.ImageField(upload_to='blog/posts/', null=True, blank=True, verbose_name='تصویر کاور')
+    image_alt = models.CharField(max_length=255, null=True, blank=True, verbose_name='متن جایگزین تصویر (Alt)')
+    short_description = models.TextField(verbose_name='توضیح کوتاه (چکیده)')
+    body = models.TextField(verbose_name='متن کامل مقاله')
+    expert_reviewer = models.CharField(max_length=255, null=True, blank=True, verbose_name='تایید کننده متخصص (E-E-A-T)')
+    key_takeaways = JSONField(schema=STRING_LIST_SCHEMA, null=True, blank=True, verbose_name='نکات کلیدی (GEO)')
+    citations = JSONField(schema=STRING_LIST_SCHEMA, null=True, blank=True, verbose_name='منابع و ارجاعات (Citations)')
+    faq_data = JSONField(schema=FAQ_SCHEMA, null=True, blank=True, verbose_name='سوالات متداول (FAQ)')
+    view_count = models.PositiveIntegerField(default=0, verbose_name='تعداد بازدید')
+    read_time = models.PositiveIntegerField(default=5, verbose_name='زمان مطالعه (دقیقه)')
+    is_published = models.BooleanField(default=True, verbose_name='منتشر شده')
 
     class Meta:
-        verbose_name: str = _('مقاله')
-        verbose_name_plural: str = _('مقالات')
-        ordering: list = ['-created_at']
-        indexes: list = [
+        verbose_name = 'مقاله'
+        verbose_name_plural = 'مقالات'
+        ordering = ['-created_at']
+        indexes = [
             models.Index(fields=['slug', 'is_published']),
             models.Index(fields=['category', 'is_published']),
             models.Index(fields=['created_at']),
         ]
 
     def __str__(self) -> str:
-        """
-        Returns the string representation of the Post.
-        """
         return str(self.title)
 
     def generate_json_ld(self) -> Dict[str, Any]:
-        """
-        Generates comprehensive JSON-LD including Article Schema, BreadcrumbList, FAQPage, and E-E-A-T signals.
-        """
         frontend_domain: str = getattr(settings, 'FRONTEND_URL', 'https://arkkala.com').rstrip('/')
         post_url: str = f"{frontend_domain}/blog/{self.slug}/"
         author_name: str = self.article_author or (self.author.get_full_name() if self.author else getattr(settings, 'SITE_NAME', 'ارک کالا'))

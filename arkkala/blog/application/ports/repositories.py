@@ -1,0 +1,16 @@
+from typing import Protocol, Optional
+from django.db.models import QuerySet
+from blog.models.post import Post
+from blog.models.comment import Comment
+from blog.models.category import Category
+
+class PostRepositoryPort(Protocol):
+    def get_by_slug(self, slug: str) -> Optional[Post]: ...
+    def increment_view_count(self, slug: str) -> bool: ...
+    def get_published_posts_optimized(self) -> QuerySet: ...
+
+class CommentRepositoryPort(Protocol):
+    def save_comment(self, comment: Comment) -> Comment: ...
+
+class CategoryRepositoryPort(Protocol):
+    def get_active_categories(self) -> QuerySet: ...

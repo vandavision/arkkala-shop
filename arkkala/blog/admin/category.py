@@ -4,9 +4,6 @@ from .constants import SEO_FIELDSET
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    """
-    Administration projection isolating basic hierarchy controls reliably.
-    """
     list_display: tuple = ('title', 'slug', 'is_active', 'created_at')
     search_fields: tuple = ('title', 'slug')
     list_editable: tuple = ('is_active',)

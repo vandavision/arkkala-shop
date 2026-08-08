@@ -4,9 +4,6 @@ from blog.models.comment import Comment
 from .constants import SEO_FIELDSET
 
 class CommentInline(admin.TabularInline):
-    """
-    Configures embedded object modification securely preventing layout errors completely.
-    """
     model = Comment
     extra: int = 0
     readonly_fields: tuple = ('user', 'body', 'created_at')
@@ -14,9 +11,6 @@ class CommentInline(admin.TabularInline):
 
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
-    """
-    Provides broad metadata definitions managing heavy associations gracefully.
-    """
     list_display: tuple = ('title', 'category', 'author', 'view_count', 'is_published', 'created_at')
     list_filter: tuple = ('is_published', 'category', 'tags', 'created_at')
     search_fields: tuple = ('title', 'short_description', 'slug')

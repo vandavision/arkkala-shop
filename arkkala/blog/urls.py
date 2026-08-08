@@ -1,12 +1,5 @@
 from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from blog.views.post import PostViewSet
-from blog.views.category import BlogCategoryViewSet
 
-router = DefaultRouter()
-router.register(r'categories', BlogCategoryViewSet, basename='blog-category')
-router.register(r'posts', PostViewSet, basename='post')
-
-urlpatterns: list = [
-    path('', include(router.urls)),
+urlpatterns = [
+    path('', include('blog.api.urls')),
 ]
