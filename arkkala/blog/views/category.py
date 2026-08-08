@@ -1,11 +1,20 @@
-# arkkala/blog/views/category.py
 from rest_framework import viewsets
-from blog.models.category import Category
+from django.db.models import QuerySet
+from drf_spectacular.utils import extend_schema
 from blog.serializers.category import BlogCategorySerializer
+from blog.application.queries.category import CategoryQueryService
 
 class BlogCategoryViewSet(viewsets.ReadOnlyModelViewSet):
-    """API endpoints for Blog Categories."""
-    queryset = Category.objects.filter(is_active=True)
+    """
+    Thin routing integration completely delegating DB extractions.
+    """
     serializer_class = BlogCategorySerializer
     pagination_class = None
-    lookup_field = 'slug'
+    lookup_field: str = 'slug'
+
+    @extend_schema(summary="List all active blog categories")
+    def get_queryset(self) -> QuerySet:
+        """
+        Receives validated records dynamically through specific Query interface safely.
+        """
+        return CategoryQueryService.get_active_categories()

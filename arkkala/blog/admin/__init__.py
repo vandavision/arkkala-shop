@@ -1,4 +1,3 @@
-# arkkala/blog/admin/__init__.py
 from .category import CategoryAdmin
 from .tag import TagAdmin
 from .post import PostAdmin

@@ -1,4 +1,3 @@
-# arkkala/blog/serializers/__init__.py
 from .category import BlogCategorySerializer
 from .tag import TagSerializer
 from .comment import BlogCommentSerializer

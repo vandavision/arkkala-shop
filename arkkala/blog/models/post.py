@@ -1,12 +1,15 @@
-# arkkala/blog/models/post.py
 from typing import Dict, Any, List
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
-from django_jsonform.models.fields import JSONField
 from platform_tools.mixins.models.base import UUIDBaseModel, TimeStampMixin, TitleSlugMixin
 from platform_seo.models.mixins.seo import SEOMixin, BlogDetailJsonLdMixin
+
+try:
+    from django_jsonform.models.fields import JSONField
+except ImportError:
+    JSONField = models.JSONField
 
 User = get_user_model()
 
@@ -28,7 +31,9 @@ STRING_LIST_SCHEMA: Dict[str, Any] = {
 }
 
 class Post(UUIDBaseModel, TimeStampMixin, TitleSlugMixin, SEOMixin, BlogDetailJsonLdMixin):
-    """Main Post model containing SEO, GEO, and AEO specific fields."""
+    """
+    Main Post entity integrating SEO, GEO, and AEO structured mapping logic.
+    """
     author = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='posts', verbose_name=_('نویسنده'))
     category = models.ForeignKey('blog.Category', on_delete=models.SET_NULL, null=True, related_name='posts', verbose_name=_('دسته بندی'))
     tags = models.ManyToManyField('blog.Tag', blank=True, related_name='posts', verbose_name=_('برچسب ها'))
@@ -50,15 +55,25 @@ class Post(UUIDBaseModel, TimeStampMixin, TitleSlugMixin, SEOMixin, BlogDetailJs
     is_published = models.BooleanField(default=True, verbose_name=_('منتشر شده'))
 
     class Meta:
-        verbose_name = _('مقاله')
-        verbose_name_plural = _('مقالات')
-        ordering = ['-created_at']
+        verbose_name: str = _('مقاله')
+        verbose_name_plural: str = _('مقالات')
+        ordering: list = ['-created_at']
+        indexes: list = [
+            models.Index(fields=['slug', 'is_published']),
+            models.Index(fields=['category', 'is_published']),
+            models.Index(fields=['created_at']),
+        ]
 
     def __str__(self) -> str:
+        """
+        Returns the string representation of the Post.
+        """
         return str(self.title)
 
     def generate_json_ld(self) -> Dict[str, Any]:
-        """Generates comprehensive JSON-LD including Article Schema, BreadcrumbList, FAQPage, and E-E-A-T signals."""
+        """
+        Generates comprehensive JSON-LD including Article Schema, BreadcrumbList, FAQPage, and E-E-A-T signals.
+        """
         frontend_domain: str = getattr(settings, 'FRONTEND_URL', 'https://arkkala.com').rstrip('/')
         post_url: str = f"{frontend_domain}/blog/{self.slug}/"
         author_name: str = self.article_author or (self.author.get_full_name() if self.author else getattr(settings, 'SITE_NAME', 'ارک کالا'))

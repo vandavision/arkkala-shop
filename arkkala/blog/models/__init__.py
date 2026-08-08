@@ -1,4 +1,3 @@
-# arkkala/blog/models/__init__.py
 from .category import Category
 from .tag import Tag
 from .post import Post

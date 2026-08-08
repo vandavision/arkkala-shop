@@ -1,4 +1,3 @@
-# arkkala/blog/management/commands/seed_blog.py
 import json
 import os
 import random
@@ -49,16 +48,21 @@ FALLBACK_DATA: List[Dict[str, Any]] = [
 ]
 
 class Command(BaseCommand):
-    """Management command to seed the blog database with initial data."""
-    help = "Clears the blog database and seeds fake posts mapping them to existing local images."
+    """
+    Executes deep database alterations establishing base scenarios logically configured perfectly.
+    """
+    help: str = "Clears the blog database and seeds fake posts mapping them to existing local images."
     API_URL: str = "https://jsonplaceholder.typicode.com/posts"
 
     def handle(self, *args: Any, **options: Any) -> None:
+        """
+        Coordinates complex internal setups applying initial values smoothly maintaining stability.
+        """
         self.stdout.write("Starting blog database cleanup...")
         self._clear_database()
         
         self.stdout.write("Fetching external blog data...")
-        data = self._fetch_api_data(self.API_URL)
+        data: List[Dict[str, Any]] = self._fetch_api_data(self.API_URL)
         
         if not data:
             self.stdout.write(self.style.WARNING("API failed. Using tailored Persian fallback data."))
@@ -73,12 +77,18 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("Blog database seeded successfully with LOCAL images!"))
 
     def _clear_database(self) -> None:
+        """
+        Erases complete relation cascades safely enforcing blank slate architectures completely.
+        """
         Comment.objects.all().delete()
         Post.objects.all().delete()
         Tag.objects.all().delete()
         Category.objects.all().delete()
 
     def _fetch_api_data(self, url: str) -> List[Dict[str, Any]]:
+        """
+        Dispatches remote requests resolving configurations precisely avoiding certificate boundaries naturally.
+        """
         try:
             ctx = ssl.create_default_context()
             ctx.check_hostname = False
@@ -90,10 +100,13 @@ class Command(BaseCommand):
             return []
 
     def _get_random_local_image(self) -> Optional[str]:
+        """
+        Injects local logic randomly targeting distinct entities generating explicit file mappings safely.
+        """
         try:
-            blog_img_dir = os.path.join(settings.MEDIA_ROOT, 'blog', 'posts')
+            blog_img_dir: str = os.path.join(settings.MEDIA_ROOT, 'blog', 'posts')
             if os.path.exists(blog_img_dir):
-                images = [f for f in os.listdir(blog_img_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp'))]
+                images: List[str] = [f for f in os.listdir(blog_img_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp'))]
                 if images:
                     return f"blog/posts/{random.choice(images)}"
         except Exception as e:
@@ -101,6 +114,9 @@ class Command(BaseCommand):
         return None
 
     def _get_or_create_user(self) -> Any:
+        """
+        Determines user structure providing correct access configurations reliably identifying active authors.
+        """
         user, _ = User.objects.get_or_create(
             username="blog_author",
             defaults={
@@ -116,6 +132,9 @@ class Command(BaseCommand):
         return user
 
     def _get_or_create_category(self, title: str) -> Category:
+        """
+        Processes generic data parsing components accurately defining models implicitly safely.
+        """
         category, _ = Category.objects.get_or_create(
             title=title,
             defaults={'slug': slugify(title, allow_unicode=True)}
@@ -123,6 +142,9 @@ class Command(BaseCommand):
         return category
 
     def _get_or_create_tag(self, title: str) -> Tag:
+        """
+        Resolves tag parameters systematically bridging internal metadata logically securely.
+        """
         tag, _ = Tag.objects.get_or_create(
             title=title,
             defaults={'slug': slugify(title, allow_unicode=True)}
@@ -130,16 +152,19 @@ class Command(BaseCommand):
         return tag
 
     def _seed_blog_data(self, data: List[Dict[str, Any]]) -> None:
+        """
+        Translates raw input converting fields directly generating structured domain representations effortlessly.
+        """
         author = self._get_or_create_user()
         
         for index, item in enumerate(data):
-            cat_title = item.get("category", "اخبار عمومی")
-            category = self._get_or_create_category(cat_title)
+            cat_title: str = item.get("category", "اخبار عمومی")
+            category: Category = self._get_or_create_category(cat_title)
             
-            raw_title = item.get("title", f"مقاله شماره {index}")
-            body = item.get("body", "محتوای پیش فرض مقاله.")
+            raw_title: str = item.get("title", f"مقاله شماره {index}")
+            body: str = item.get("body", "محتوای پیش فرض مقاله.")
             
-            post = Post.objects.create(
+            post: Post = Post.objects.create(
                 author=author,
                 category=category,
                 title=raw_title[:250],
@@ -169,17 +194,17 @@ class Command(BaseCommand):
                 ]
             )
 
-            tags_data = item.get("tags", ["عمومی", "مقاله"])
+            tags_data: List[str] = item.get("tags", ["عمومی", "مقاله"])
             for tag_title in tags_data:
-                tag = self._get_or_create_tag(tag_title)
+                tag: Tag = self._get_or_create_tag(tag_title)
                 post.tags.add(tag)
 
-            local_image = self._get_random_local_image()
+            local_image: Optional[str] = self._get_random_local_image()
             if local_image:
                 post.image.name = local_image
                 post.image_alt = post.title
                 post.save(update_fields=['image', 'image_alt'])
-                image_status = "Local Image Assigned"
+                image_status: str = "Local Image Assigned"
             else:
                 image_status = "No Local Image Found"
 

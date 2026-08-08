@@ -1,4 +1,3 @@
-# arkkala/blog/admin/constants.py
 from typing import Tuple
 
 SEO_FIELDSET: Tuple[str, dict] = (
