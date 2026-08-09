@@ -7,9 +7,7 @@ from .product import Product
 User = get_user_model()
 
 class Comment(UUIDBaseModel, TimeStampMixin):
-    """
-    Product Comments & Ratings with strict input validation.
-    """
+    """Product Comments & Ratings with strict input validation."""
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='comments', verbose_name='محصول')
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='کاربر')
     body = models.TextField(verbose_name='متن نظر', validators=[MinLengthValidator(2)])
@@ -29,6 +27,7 @@ class Comment(UUIDBaseModel, TimeStampMixin):
         ]
 
 class Question(UUIDBaseModel, TimeStampMixin):
+    """Product Questions."""
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='questions', verbose_name='محصول')
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='کاربر ثبت‌نام شده')
     name = models.CharField(max_length=255, null=True, blank=True, verbose_name='نام نویسنده مهمان')

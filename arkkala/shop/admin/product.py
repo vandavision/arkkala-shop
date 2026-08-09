@@ -22,10 +22,9 @@ class ProductAdmin(admin.ModelAdmin):
     list_filter: tuple = ('is_active', 'is_variable', 'category', 'brand')
     search_fields: tuple = ('title', 'english_title', 'slug')
     list_editable: tuple = ('is_active', 'is_variable', 'base_price', 'base_inventory')
-    autocomplete_fields: tuple = ('category', 'brand', 'favorites')
+    autocomplete_fields: tuple = ('category', 'brand')
     readonly_fields: tuple = ('uuid', 'sold_count', 'view_count', 'average_rating', 'created_at', 'modified_at')
     inlines: list = [ProductGalleryInline, ProductVideoInline, ProductVariantInline, PriceHistoryInline]
-    filter_horizontal: tuple = ('favorites',)
     save_on_top: bool = True
 
     fieldsets: tuple = (
@@ -36,7 +35,7 @@ class ProductAdmin(admin.ModelAdmin):
         ('تخفیف و فروش عمده', {'fields': ('special_discount_percent', 'special_offer_end', 'is_wholesale', 'wholesale_min_quantity', 'wholesale_base_price'), 'classes': ('collapse',)}),
         SEO_FIELDSET,
         ('داده‌های ساختاریافته (JSON-LD)', {'fields': ('json_ld',), 'classes': ('collapse',)}),
-        ('آمار سیستم', {'fields': ('favorites', 'sold_count', 'view_count', 'average_rating'), 'classes': ('collapse',)}),
+        ('آمار سیستم', {'fields': ('sold_count', 'view_count', 'average_rating'), 'classes': ('collapse',)}),
         ('اطلاعات سیستمی', {'fields': ('uuid', 'created_at', 'modified_at'), 'classes': ('collapse',)}),
     )
 

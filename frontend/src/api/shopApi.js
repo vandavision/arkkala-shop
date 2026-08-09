@@ -74,7 +74,7 @@ export const getFavoritesList = async (queryString = '') => {
 
 export const getUserComments = async (queryString = '') => {
     try {
-        const url = queryString ? `/shop/comments/my_comments/?${queryString}` : '/shop/comments/my_comments/';
+        const url = queryString ? `/shop/comments/?${queryString}` : '/shop/comments/';
         const response = await axios.get(url);
         return response.data;
     } catch (error) {

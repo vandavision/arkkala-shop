@@ -3,8 +3,7 @@ from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.pagination import PageNumberPagination
-from shop.models.interaction import Comment
-from shop.serializers.interaction import UserCommentSerializer
+from shop.api.serializers.outputs.interaction import UserCommentSerializer
 
 class CommentViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     """
@@ -15,12 +14,13 @@ class CommentViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        """
-        Security Enforcement: No generic `.all()` leak. User isolation applied at DB level.
-        """
-        return Comment.objects.filter(user=self.request.user).select_related('product').order_by('-created_at')
+        """Security Enforcement: Delegates fetching logic to Application layer to prevent leaks."""
+        import shop.dependencies as deps
+        query = deps.get_user_comments_query()
+        return query.execute(self.request.user)
 
     def list(self, request: Request, *args, **kwargs) -> Response:
+        """Paginates the resolved user comments safely."""
         qs = self.filter_queryset(self.get_queryset())
         paginator = PageNumberPagination()
         paginator.page_size = 10

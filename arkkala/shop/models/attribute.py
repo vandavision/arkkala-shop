@@ -2,9 +2,7 @@ from django.db import models
 from platform_tools.mixins.models.base import UUIDBaseModel, TimeStampMixin, TitleSlugMixin
 
 class Attribute(UUIDBaseModel, TimeStampMixin, TitleSlugMixin):
-    """
-    Product Attribute Key.
-    """
+    """Product Attribute Key."""
     class Meta:
         verbose_name: str = 'ویژگی'
         verbose_name_plural: str = 'ویژگی ها'
@@ -16,9 +14,7 @@ class Attribute(UUIDBaseModel, TimeStampMixin, TitleSlugMixin):
         return str(self.title)
 
 class AttributeValue(UUIDBaseModel):
-    """
-    Product Attribute Value.
-    """
+    """Product Attribute Value."""
     attribute = models.ForeignKey(Attribute, on_delete=models.CASCADE, related_name='values', verbose_name='ویژگی')
     value = models.CharField(max_length=255, verbose_name='مقدار')
 

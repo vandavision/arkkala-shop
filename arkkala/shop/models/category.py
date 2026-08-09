@@ -3,9 +3,7 @@ from platform_tools.mixins.models.base import UUIDBaseModel, TimeStampMixin, Tit
 from platform_seo.models.mixins.seo import SEOMixin
 
 class Category(UUIDBaseModel, TimeStampMixin, TitleSlugMixin, SEOMixin):
-    """
-    Product Category Model.
-    """
+    """Product Category Model."""
     parent = models.ForeignKey(
         'self', on_delete=models.CASCADE, null=True, blank=True,
         related_name='children', verbose_name='دسته بندی پدر'

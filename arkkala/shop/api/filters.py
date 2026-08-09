@@ -5,6 +5,7 @@ from typing import Any
 from shop.models.product import Product
 
 class ProductFilter(django_filters.FilterSet):
+    """Filters API requests for Products."""
     category__slug = django_filters.CharFilter(field_name='category__slug', lookup_expr='exact')
     brands = django_filters.CharFilter(method='filter_brands')
     min_price = django_filters.NumberFilter(method='filter_min_price')

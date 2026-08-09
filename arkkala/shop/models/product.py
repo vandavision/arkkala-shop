@@ -1,4 +1,4 @@
-from typing import Dict, Any, List
+from typing import Dict, Any
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.core.validators import FileExtensionValidator, MaxValueValidator, MinValueValidator
@@ -7,10 +7,10 @@ from django.utils import timezone
 from django.conf import settings
 from platform_tools.mixins.models.base import UUIDBaseModel, TimeStampMixin, TitleSlugMixin
 from platform_seo.models.mixins.seo import SEOMixin, ProductDetailJsonLdMixin
-from shop.managers import ProductManager
-from .category import Category
-from .brand import Brand
-from .attribute import AttributeValue
+from shop.models.managers import ProductManager
+from shop.models.category import Category
+from shop.models.brand import Brand
+from shop.models.attribute import AttributeValue
 
 try:
     from django_jsonform.models.fields import JSONField
@@ -21,9 +21,7 @@ User = get_user_model()
 STRING_LIST_SCHEMA: Dict[str, Any] = {'type': 'array', 'items': {'type': 'string'}}
 
 class Product(UUIDBaseModel, TimeStampMixin, TitleSlugMixin, SEOMixin, ProductDetailJsonLdMixin):
-    """
-    Enterprise Product Entity with Strict Validation Rules.
-    """
+    """Enterprise Product Entity with Strict Validation Rules."""
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, related_name='products', verbose_name='دسته بندی')
     brand = models.ForeignKey(Brand, on_delete=models.SET_NULL, null=True, blank=True, related_name='products', verbose_name='برند')
 
@@ -39,7 +37,7 @@ class Product(UUIDBaseModel, TimeStampMixin, TitleSlugMixin, SEOMixin, ProductDe
     base_inventory = models.PositiveIntegerField(default=0, verbose_name='موجودی پایه')
     weight = models.PositiveIntegerField(default=500, verbose_name='وزن (گرم)')
     volume = models.PositiveIntegerField(default=1000, verbose_name='حجم بسته (سانتی‌متر مکعب)')
-    favorites = models.ManyToManyField(User, related_name='favorite_products', blank=True, verbose_name='علاقه‌مندی‌ها')
+    favorites = models.ManyToManyField(User, through='ProductFavorite', related_name='favorite_products', blank=True, verbose_name='علاقه‌مندی‌ها')
 
     special_discount_percent = models.PositiveIntegerField(
         default=0, 
@@ -73,9 +71,7 @@ class Product(UUIDBaseModel, TimeStampMixin, TitleSlugMixin, SEOMixin, ProductDe
         ]
 
     def clean(self) -> None:
-        """
-        Enforce complex business validation rules.
-        """
+        """Enforces model level validation for admin usage."""
         super().clean()
         if self.is_wholesale:
             if not self.wholesale_min_quantity or self.wholesale_min_quantity < 2:
@@ -90,14 +86,13 @@ class Product(UUIDBaseModel, TimeStampMixin, TitleSlugMixin, SEOMixin, ProductDe
 
     @property
     def is_special_offer_active(self) -> bool:
+        """Checks if special offer is valid."""
         if self.special_discount_percent > 0 and self.special_offer_end:
             return self.special_offer_end > timezone.now()
         return False
 
     def generate_json_ld(self) -> Dict[str, Any]:
-        """
-        Generates schema.org structured data.
-        """
+        """Generates schema.org structured data."""
         frontend_domain: str = getattr(settings, 'FRONTEND_URL', 'https://arkkala.com').rstrip('/')
         product_url: str = f"{frontend_domain}/product/{self.slug}/"
         main_img = self.gallery.filter(is_main=True).first() or self.gallery.first()
@@ -166,7 +161,23 @@ class Product(UUIDBaseModel, TimeStampMixin, TitleSlugMixin, SEOMixin, ProductDe
 
         return json_ld
 
+
+class ProductFavorite(UUIDBaseModel, TimeStampMixin):
+    """Explicit Many-To-Many relationship for optimized favorite queries."""
+    product = models.ForeignKey('Product', on_delete=models.CASCADE, related_name='favorited_by_users')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_product_favorites')
+
+    class Meta:
+        verbose_name = 'علاقه‌مندی'
+        verbose_name_plural = 'علاقه‌مندی‌ها'
+        unique_together = ('product', 'user')
+        indexes = [
+            models.Index(fields=['user', 'product']),
+        ]
+
+
 class ProductGallery(UUIDBaseModel):
+    """Images for the product."""
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='gallery', verbose_name='محصول')
     image = models.ImageField(upload_to='products/gallery/', verbose_name='تصویر')
     image_alt = models.CharField(max_length=255, null=True, blank=True, verbose_name='متن جایگزین تصویر (Alt)')
@@ -178,6 +189,7 @@ class ProductGallery(UUIDBaseModel):
         indexes = [models.Index(fields=['product', 'is_main'])]
 
 class ProductVideo(UUIDBaseModel):
+    """Videos for the product."""
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='videos', verbose_name='محصول')
     video_file = models.FileField(
         upload_to='products/videos/', verbose_name='فایل ویدیو',
@@ -191,6 +203,7 @@ class ProductVideo(UUIDBaseModel):
         ordering = []
 
 class ProductVariant(UUIDBaseModel, TimeStampMixin):
+    """Product variations."""
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='variants', verbose_name='محصول')
     attribute_values = models.ManyToManyField(AttributeValue, related_name='variants', verbose_name='مقادیر ویژگی')
     gallery_image = models.ForeignKey(
@@ -210,6 +223,7 @@ class ProductVariant(UUIDBaseModel, TimeStampMixin):
         ]
 
 class PriceHistory(UUIDBaseModel):
+    """Historical records of price changes."""
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='price_history', verbose_name='محصول')
     price = models.DecimalField(max_digits=12, decimal_places=0, verbose_name='قیمت')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='تاریخ ثبت')

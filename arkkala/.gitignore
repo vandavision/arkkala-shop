@@ -44,10 +44,16 @@ local_settings.py
 settings/local.py
 
 # ==========================================
-# Migrations (optional)
+# Migrations
 # ==========================================
 */migrations/000*.py
+**/migrations/000*.py
+
 !*/migrations/__init__.py
+!**/migrations/__init__.py
+
+!users/migrations/000*.py
+!**/users/migrations/000*.py
 
 # ==========================================
 # Coverage / Testing

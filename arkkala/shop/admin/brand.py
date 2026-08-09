@@ -1,9 +1,7 @@
-# shop/admin/brand.py
 from django.contrib import admin
 from django.utils.html import format_html
 from shop.models.brand import Brand
 from .product import SEO_FIELDSET
-
 
 @admin.register(Brand)
 class BrandAdmin(admin.ModelAdmin):

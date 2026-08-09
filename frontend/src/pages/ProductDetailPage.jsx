@@ -9,6 +9,7 @@ import { AuthContext } from '../context/AuthContext';
 import { CompareContext } from '../context/CompareContext';
 import SeoMeta from '../components/SeoMeta';
 import CountdownTimer from '../components/CountdownTimer';
+import ProductCard from '../components/ProductCard';
 
 import 'swiper/css';
 import 'swiper/css/free-mode';
@@ -101,7 +102,7 @@ const ProductDetailPage = () => {
                         const filteredRelated = (related.results || related).filter(p => p.uuid !== data.uuid);
                         if (isMounted) setSuggestedProducts(filteredRelated);
                     } catch (err) {
-                        console.error("Error fetching related products:", err);
+                        console.error(err);
                     }
                 }
             } catch (err) {
@@ -221,7 +222,6 @@ const ProductDetailPage = () => {
                 variant.attributes.every(attr => newOptions[attr.attribute_name] === attr.value)
             );
             
-            // If combination is strictly invalid, fallback to the first variant that at least contains this new value
             if (!matchedVariant) {
                 matchedVariant = product.variants.find(variant =>
                     variant.attributes.some(attr => attr.attribute_name === attributeName && attr.value === value)
@@ -393,7 +393,6 @@ const ProductDetailPage = () => {
             />}
 
             <div dangerouslySetInnerHTML={{ __html: `
-                <!-- SEO Content Freshness Meta -->
                 <meta property="article:published_time" content="${product.created_at}" />
                 <meta property="article:modified_time" content="${product.modified_at || product.created_at}" />
             `}} />
@@ -1010,55 +1009,39 @@ const ProductDetailPage = () => {
                 {suggestedProducts && suggestedProducts.length > 0 && (
                     <section className="product-slider mt-5 mb-5 pb-5" aria-label="محصولات مرتبط">
                         <div className="container-fluid">
-                            <header className="section-title mb-4 border-bottom border-2 border-ui pb-3 d-flex align-items-center justify-content-between">
-                                <h2 className="fw-900 h5 text-dark m-0 d-flex align-items-center gap-2"><i className="bi bi-bag-heart text-danger" aria-hidden="true"></i> محصولات <span className="text-danger">مرتبط</span></h2>
-                                {product.category && <Link to={`/shop?category__slug=${product.category.slug}`} className="btn btn-outline-danger rounded-pill px-3 py-1 font-12 fw-bold shadow-sm hover-lift" aria-label={`مشاهده همه محصولات ${product.category.title}`}>مشاهده همه <i className="bi bi-chevron-left" aria-hidden="true"></i></Link>}
-                            </header>
+                            <div className="d-flex align-items-center justify-content-between mb-4">
+                                <div className="d-flex align-items-center gap-2">
+                                    <span className="bg-danger rounded-pill" style={{ width: '6px', height: '24px' }}></span>
+                                    <h2 className="fw-900 font-18 text-dark m-0">محصولات مشابه</h2>
+                                </div>
+                                {product.category && (
+                                    <Link to={`/shop?category__slug=${product.category.slug}`} className="text-danger font-13 fw-bold text-decoration-none hover-text-dark transition d-flex align-items-center gap-1" aria-label={`مشاهده همه محصولات ${product.category.title}`}>
+                                        مشاهده همه <i className="bi bi-arrow-left"></i>
+                                    </Link>
+                                )}
+                            </div>
                             
                             <Swiper
                                 dir="rtl"
                                 spaceBetween={15}
-                                slidesPerView={1.2}
+                                freeMode={true}
+                                grabCursor={true}
                                 breakpoints={{
+                                    0: { slidesPerView: 1.2 },
+                                    400: { slidesPerView: 1.8 },
                                     576: { slidesPerView: 2.2 },
                                     768: { slidesPerView: 3.2 },
-                                    992: { slidesPerView: 4 },
-                                    1200: { slidesPerView: 5 },
+                                    992: { slidesPerView: 4.2 },
+                                    1200: { slidesPerView: 5.2 },
                                 }}
                                 navigation={true}
-                                autoplay={{ delay: 4000, disableOnInteraction: false }}
-                                modules={[Navigation, Autoplay]}
-                                className="py-4 px-2"
+                                modules={[Navigation, FreeMode]}
+                                className="py-2 px-2"
                                 aria-label="لیست محصولات مرتبط"
                             >
                                 {suggestedProducts.map(prod => (
-                                    <SwiperSlide key={prod.uuid} aria-label={prod.title}>
-                                        <article className="product-box border border-ui shadow-sm rounded-4 p-3 p-md-4 bg-white hover-shadow transition h-100 d-flex flex-column position-relative">
-                                            <Link to={`/product/${prod.slug}`} className="text-decoration-none h-100 d-flex flex-column" aria-label={`مشاهده جزئیات ${prod.title}`}>
-                                                {prod.is_wholesale && <span className="position-absolute top-0 start-0 badge bg-danger text-white rounded-end-pill py-1 px-2 mt-3 shadow-sm font-11 z-1">فروش عمده</span>}
-                                                <figure className="text-center mb-3 pt-2 m-0">
-                                                    <img 
-                                                        src={resolveImageUrl(prod.image_url || prod.image || (prod.gallery && prod.gallery.length > 0 ? prod.gallery[0].url : ''))} 
-                                                        alt={prod.gallery?.[0]?.image_alt || `تصویر ${prod.title}`}
-                                                        title={prod.gallery?.[0]?.image_alt || prod.title}
-                                                        className="img-fluid object-fit-contain transition hover-lift" 
-                                                        style={{height: '140px'}} 
-                                                        loading="lazy"
-                                                        decoding="async"
-                                                        onError={(e)=>{e.target.src='/assets/image/product/product-no-bg.png';}} 
-                                                    />
-                                                </figure>
-                                                <h3 className="font-13 text-dark lh-lg text-overflow-2 fw-bold mb-3">{prod.title}</h3>
-                                                <div className="mt-auto d-flex justify-content-between align-items-center">
-                                                    <div className="d-flex align-items-center text-warning font-12 bg-warning bg-opacity-10 px-2 py-1 rounded-pill" aria-label={`امتیاز ${prod.average_rating ? prod.average_rating.toFixed(1) : '5.0'} از 5`}>
-                                                        <i className="bi bi-star-fill me-1" aria-hidden="true"></i> {prod.average_rating ? prod.average_rating.toFixed(1) : '5.0'}
-                                                    </div>
-                                                    <div className="text-end">
-                                                        <strong className="text-dark font-16 fw-900">{Number(prod.base_price).toLocaleString()} <span className="font-11 text-muted fw-normal">تومان</span></strong>
-                                                    </div>
-                                                </div>
-                                            </Link>
-                                        </article>
+                                    <SwiperSlide key={prod.uuid}>
+                                        <ProductCard product={prod} />
                                     </SwiperSlide>
                                 ))}
                             </Swiper>
