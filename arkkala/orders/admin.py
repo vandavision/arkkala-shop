@@ -2,8 +2,11 @@ from typing import Any
 from django.contrib import admin
 from django.http import HttpRequest
 
-from .models import ShippingMethod, Coupon, Order, OrderItem, Cart, OrderRequest
-from .services.order import OrderRequestService
+from orders.models.shipping import ShippingMethod
+from orders.models.coupon import Coupon
+from orders.models.order import Order, OrderItem, OrderRequest
+from orders.models.cart import Cart
+from orders.services.order import OrderRequestService
 
 
 @admin.register(Cart)

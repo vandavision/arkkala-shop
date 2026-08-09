@@ -3,8 +3,8 @@ from decimal import Decimal
 from typing import List, Optional, Tuple, Iterable
 from django.contrib.auth.models import AbstractUser
 
-from orders.models import Cart, CartItem
-from shop.models import Product, ProductVariant
+from orders.models.cart import Cart, CartItem
+from shop.models.product import Product, ProductVariant
 
 
 class CartService:
@@ -12,7 +12,6 @@ class CartService:
     
     @staticmethod
     def get_or_create_cart(user: Optional[AbstractUser] = None, guest_id: Optional[str] = None) -> Cart:
-        """Retrieves cart safely for both users and guests, merging if needed."""
         if user and user.is_authenticated:
             cart, _ = Cart.objects.get_or_create(user=user)
             if guest_id:
@@ -56,7 +55,6 @@ class CartService:
 
     @staticmethod
     def get_cart_totals(cart_items: Iterable[CartItem]) -> Tuple[Decimal, int]:
-        """Calculates total price and total weight for a list of items (DRY Optimization)."""
         total_amount = Decimal(0)
         total_weight = 0
         for item in cart_items:

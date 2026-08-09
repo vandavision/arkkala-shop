@@ -1,9 +1,9 @@
-from .cart import CartService
-from .customer import CustomerService
-from .shipping import ShippingCalculatorService, PostexShippingService
-from .coupon import CouponService
-from .checkout import CheckoutService
-from .order import OrderRequestService
+from orders.services.cart import CartService
+from orders.services.customer import CustomerService
+from orders.services.shipping import ShippingCalculatorService, PostexShippingService
+from orders.services.coupon import CouponService
+from orders.services.checkout import CheckoutService
+from orders.services.order import OrderRequestService
 
 __all__ = [
     'CartService',

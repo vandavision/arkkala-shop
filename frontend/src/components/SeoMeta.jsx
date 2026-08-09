@@ -1,7 +1,7 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
 
-const SeoMeta = ({ seoData, fallbackTitle, price, inventory, isArticle = false, customImage, customSchema, slug }) => {
+const SeoMeta = ({ seoData, fallbackTitle, price, oldPrice, inventory, isArticle = false, customImage, customSchema, slug, productId, guarantee }) => {
     if (!seoData) return null;
 
     const currentUrl = typeof window !== 'undefined' ? window.location.href.split('?')[0] : '';
@@ -57,7 +57,6 @@ const SeoMeta = ({ seoData, fallbackTitle, price, inventory, isArticle = false, 
         try {
             parsedSchema = JSON.parse(finalSchema);
         } catch (e) {
-            console.error("Invalid JSON-LD string:", e);
             parsedSchema = null;
         }
     }
@@ -84,9 +83,9 @@ const SeoMeta = ({ seoData, fallbackTitle, price, inventory, isArticle = false, 
             <meta name="robots" content={robotsContent} />
             <meta name="theme-color" content="#ef4056" />
 
-            <link rel="preconnect" href={baseUrl} crossorigin="use-credentials" />
+            <link rel="preconnect" href={baseUrl} crossOrigin="use-credentials" />
             <link rel="dns-prefetch" href={baseUrl} />
-            {imageUrl && <link rel="preload" as="image" href={imageUrl} fetchpriority="high" />}
+            {imageUrl && <link rel="preload" as="image" href={imageUrl} fetchPriority="high" />}
 
             {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
 
@@ -110,11 +109,18 @@ const SeoMeta = ({ seoData, fallbackTitle, price, inventory, isArticle = false, 
                 {JSON.stringify(compiledSchema)}
             </script>
 
-            {!isArticle && price && <meta property="product:price:amount" content={price.toString()} />}
-            {!isArticle && price && <meta property="product:price:currency" content="IRT" />}
+            {!isArticle && price !== undefined && <meta property="product:price:amount" content={price.toString()} />}
+            {!isArticle && price !== undefined && <meta property="product:price:currency" content="IRT" />}
             {!isArticle && inventory !== undefined && <meta property="product:availability" content={inventory > 0 ? "instock" : "oos"} />}
             {isArticle && seoData.article_author && <meta property="article:author" content={seoData.article_author} />}
             {isArticle && <meta property="article:modified_time" content={modifiedAt} />}
+
+            {!isArticle && productId && <meta name="product_id" content={productId} />}
+            {!isArticle && metaTitle && <meta name="product_name" content={metaTitle} />}
+            {!isArticle && price !== undefined && <meta name="product_price" content={price.toString()} />}
+            {!isArticle && oldPrice !== undefined && <meta name="product_old_price" content={oldPrice.toString()} />}
+            {!isArticle && inventory !== undefined && <meta name="availability" content={inventory > 0 ? "instock" : "outofstock"} />}
+            {!isArticle && guarantee && <meta name="guarantee" content={guarantee} />}
         </Helmet>
     );
 };

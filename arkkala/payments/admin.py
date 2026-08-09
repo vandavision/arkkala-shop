@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Transaction
+from payments.models.transaction import Transaction
 
 
 @admin.register(Transaction)

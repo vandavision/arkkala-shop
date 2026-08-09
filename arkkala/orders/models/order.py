@@ -3,10 +3,10 @@ from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
 from platform_tools.mixins.models.base import UUIDBaseModel, TimeStampMixin
 from platform_tools.mixins.models.address import AddressMixin
-from shop.models import Product, ProductVariant
+from shop.models.product import Product, ProductVariant
 
-from .shipping import ShippingMethod
-from .coupon import Coupon
+from orders.models.shipping import ShippingMethod
+from orders.models.coupon import Coupon
 
 User = get_user_model()
 

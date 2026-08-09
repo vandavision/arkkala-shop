@@ -1,12 +1,10 @@
 from typing import Any
 from django.utils.timezone import now
 from datetime import timedelta
-from orders.models import Order, OrderRequest
+from orders.models.order import Order, OrderRequest
 
 
 class OrderRequestService:
-    """Handles business logic for processing return and cancellation requests."""
-    
     @staticmethod
     def create_request(user: Any, order_id: str, request_type: str, reason: str) -> OrderRequest:
         try:
@@ -25,7 +23,7 @@ class OrderRequestService:
             if order.status != 'delivered':
                 raise ValueError("فقط سفارشات تحویل داده شده قابل مرجوعی هستند.")
             
-            if (now() - order.updated_at) > timedelta(days=7):
+            if (now() - order.modified_at) > timedelta(days=7):
                 raise ValueError("مهلت ۷ روزه مرجوعی این سفارش به پایان رسیده است.")
         else:
             raise ValueError("نوع درخواست نامعتبر است.")
@@ -36,7 +34,6 @@ class OrderRequestService:
 
     @staticmethod
     def process_approved_request(obj: OrderRequest) -> None:
-        """Called automatically when an admin approves a request."""
         order_needs_update = False
         
         if obj.request_type == OrderRequest.RequestTypeChoices.CANCEL and obj.order.status != 'cancelled':

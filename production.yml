@@ -184,6 +184,16 @@ services:
           cpus: "0.5"
           memory: 256M
 
+  prerender:
+    build:
+      context: .
+      dockerfile: ./docker/prerender/Dockerfile
+    container_name: arkkala_prod_prerender
+    restart: unless-stopped
+    networks:
+      - arkkala_public
+    logging: *default-logging
+
   nginx:
     build:
       context: .
@@ -202,6 +212,8 @@ services:
     depends_on:
       django:
         condition: service_healthy
+      prerender:
+        condition: service_started
     networks:
       - arkkala_public
     logging: *default-logging

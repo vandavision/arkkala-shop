@@ -3,7 +3,7 @@ from celery import shared_task
 from django.db import transaction
 from django.db.models import F
 
-from .models import Order
+from orders.models.order import Order
 
 logger = logging.getLogger(__name__)
 

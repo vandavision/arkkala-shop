@@ -4,14 +4,13 @@ from decimal import Decimal
 import requests
 from django.conf import settings
 
-from orders.models import CartItem
-from .cart import CartService
+from orders.models.cart import CartItem
+from orders.services.cart import CartService
 
 logger = logging.getLogger(__name__)
 
 
 class ShippingCalculatorService:
-    """Local algorithm for fallback shipping calculation."""
     @staticmethod
     def calculate_post_cost(total_weight_grams: int, origin_province: str, dest_province: str) -> Decimal:
         base_post_cost: int = 35000
@@ -22,7 +21,6 @@ class ShippingCalculatorService:
 
 
 class PostexShippingService:
-    """External API integration for shipping."""
     BASE_URL: str = getattr(settings, 'POSTEX_BASE_URL', 'https://api.postex.ir')
     API_KEY: str = getattr(settings, 'POSTEX_API_KEY', '')
     FROM_CITY_CODE: int = getattr(settings, 'POSTEX_FROM_CITY_CODE', 1)

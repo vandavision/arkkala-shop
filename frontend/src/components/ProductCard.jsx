@@ -1,4 +1,5 @@
 import React, { useContext, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import { CartContext } from '../context/CartContext';
 import { AuthContext } from '../context/AuthContext';
@@ -75,10 +76,13 @@ const ProductCard = ({ product }) => {
 
     return (
         <>
-            <div className={`product-toast ${toast.show ? 'show' : ''} bg-${toast.type} shadow-lg d-flex align-items-center gap-3`} role="alert" aria-live="assertive" aria-atomic="true">
-                <i className={`bi ${toast.type === 'success' ? 'bi-check-circle-fill' : toast.type === 'warning' ? 'bi-exclamation-triangle-fill' : 'bi-x-circle-fill'} fs-3 text-white`} aria-hidden="true"></i>
-                <span className="font-14 fw-bold text-white lh-base">{toast.message}</span>
-            </div>
+            {typeof document !== 'undefined' && createPortal(
+                <div className={`product-toast ${toast.show ? 'show' : ''} bg-${toast.type} shadow-lg d-flex align-items-center gap-3`} role="alert" aria-live="assertive" aria-atomic="true">
+                    <i className={`bi ${toast.type === 'success' ? 'bi-check-circle-fill' : toast.type === 'warning' ? 'bi-exclamation-triangle-fill' : 'bi-x-circle-fill'} fs-3 text-white`} aria-hidden="true"></i>
+                    <span className="font-14 fw-bold text-white lh-base">{toast.message}</span>
+                </div>,
+                document.body
+            )}
 
             <div className="product-card bg-white rounded-4 shadow-sm border border-ui p-3 position-relative hover-shadow transition h-100 d-flex flex-column">
                 

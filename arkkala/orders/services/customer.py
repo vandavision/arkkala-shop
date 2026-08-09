@@ -1,56 +1,76 @@
 from typing import Optional, Dict, Any, Tuple
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AbstractUser
+from orders.domain.exceptions import OrderDomainException
 
 User = get_user_model()
 
 
 class CustomerService:
-    """Service to handle Guest vs Authenticated user logic and syncing."""
-
     @staticmethod
     def resolve_checkout_user(
         user: Optional[AbstractUser], 
         guest_data: Dict[str, Any]
-    ) -> Optional[AbstractUser]:
+    ) -> Tuple[Optional[AbstractUser], bool]:
         """
-        Resolves or creates a user based on checkout data.
-        Updates user attributes dynamically if they are missing.
+        Resolves checkout user securely.
+        Returns (resolved_user, should_issue_token).
         """
-        if not user:
-            guest_email = guest_data.get('guest_email')
-            guest_phone = guest_data.get('guest_phone')
-            guest_password = guest_data.get('guest_password')
-            
-            defaults = {
-                'first_name': guest_data.get('guest_first_name', ''),
-                'last_name': guest_data.get('guest_last_name', ''),
-                'is_active': True
-            }
+        if user and user.is_authenticated:
+            return user, False
 
-            if guest_email and guest_password:
-                defaults['username'] = guest_email
-                user, created = User.objects.get_or_create(email=guest_email, defaults=defaults)
-                if created:
-                    user.set_password(guest_password)
-                    user.save()
-            elif guest_phone:
-                defaults['username'] = guest_phone
-                user, _ = User.objects.get_or_create(phone_number=guest_phone, defaults=defaults)
+        guest_email = guest_data.get('email')
+        guest_phone = guest_data.get('phone')
+        guest_password = guest_data.get('password')
+        
+        if not guest_email and not guest_phone:
+            return None, False
 
-        if user:
-            CustomerService._update_missing_fields(user, guest_data)
+        existing_user = None
+        if guest_email:
+            existing_user = User.objects.filter(email=guest_email).first()
+        if not existing_user and guest_phone:
+            existing_user = User.objects.filter(phone_number=guest_phone).first()
 
-        return user
+        if existing_user:
+            if guest_password:
+                if existing_user.check_password(guest_password):
+                    CustomerService._update_missing_fields(existing_user, guest_data)
+                    return existing_user, True
+                else:
+                    raise OrderDomainException("این ایمیل یا شماره موبایل قبلاً در سیستم ثبت شده است. رمز عبور وارد شده اشتباه است.")
+            else:
+                raise OrderDomainException("این ایمیل یا شماره موبایل در سیستم وجود دارد. لطفاً ابتدا وارد حساب خود شوید یا رمز عبور خود را وارد کنید.")
+
+        defaults = {
+            'first_name': guest_data.get('first_name', ''),
+            'last_name': guest_data.get('last_name', ''),
+            'is_active': True,
+            'username': guest_email or guest_phone
+        }
+        
+        if guest_email:
+            defaults['email'] = guest_email
+        if guest_phone:
+            defaults['phone_number'] = guest_phone
+
+        new_user = User(**defaults)
+        if guest_password:
+            new_user.set_password(guest_password)
+        else:
+            new_user.set_unusable_password()
+        new_user.save()
+
+        return new_user, True
 
     @staticmethod
     def _update_missing_fields(user: AbstractUser, guest_data: Dict[str, Any]) -> None:
-        """Helper to fill missing user fields gracefully."""
+        """Updates user profile if they left fields blank during initial registration."""
         update_fields = []
         mapping = {
-            'first_name': 'guest_first_name',
-            'last_name': 'guest_last_name',
-            'phone_number': 'guest_phone'
+            'first_name': 'first_name',
+            'last_name': 'last_name',
+            'phone_number': 'phone'
         }
         
         for user_field, guest_field in mapping.items():

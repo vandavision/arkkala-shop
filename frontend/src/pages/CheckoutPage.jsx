@@ -158,7 +158,21 @@ const CheckoutPage = () => {
             return showToast("لطفاً یک روش ارسال انتخاب کنید.", "danger");
         }
 
-        let finalSubmissionData = { ...formData, country: 'ایران' };
+        let finalSubmissionData = { 
+            ...formData, 
+            country: 'ایران',
+            email: formData.guest_email,
+            phone: formData.guest_phone,
+            password: formData.guest_password,
+            first_name: formData.guest_first_name,
+            last_name: formData.guest_last_name
+        };
+
+        delete finalSubmissionData.guest_email;
+        delete finalSubmissionData.guest_phone;
+        delete finalSubmissionData.guest_password;
+        delete finalSubmissionData.guest_first_name;
+        delete finalSubmissionData.guest_last_name;
 
         if (isPickup) {
             finalSubmissionData = {
@@ -176,9 +190,9 @@ const CheckoutPage = () => {
                 if (addr) {
                     finalSubmissionData = {
                         ...finalSubmissionData,
-                        guest_first_name: addr.recipient_first_name,
-                        guest_last_name: addr.recipient_last_name,
-                        guest_phone: addr.recipient_phone,
+                        first_name: addr.recipient_first_name,
+                        last_name: addr.recipient_last_name,
+                        phone: addr.recipient_phone,
                         province: addr.province,
                         city: addr.city,
                         postal_address: addr.postal_address,

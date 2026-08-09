@@ -17,7 +17,8 @@ class DjangoProductRepository(ProductRepositoryPort):
 
     def toggle_favorite(self, product_slug: str, user_id: Any) -> bool:
         """Modifies Explicit M2M relationship avoiding full instantiation."""
-        product_id = Product.objects.filter(slug=product_slug).values_list('id', flat=True).first()
+        product_id = Product.objects.filter(slug=product_slug).values_list('uuid', flat=True).first()
+        
         if not product_id:
             raise ValueError("Product not found")
 

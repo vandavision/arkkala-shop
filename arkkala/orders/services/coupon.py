@@ -2,15 +2,12 @@ from decimal import Decimal
 from typing import Optional, Tuple
 from django.utils import timezone
 from django.db.models import F
-from orders.models import Coupon
+from orders.models.coupon import Coupon
 
 
 class CouponService:
-    """Business logic for validating and applying coupons."""
-    
     @staticmethod
     def validate_coupon(code: str, lock_for_update: bool = False) -> Coupon:
-        """Validates coupon state against limits and dates."""
         now = timezone.now()
         qs = Coupon.objects.filter(
             code__iexact=code,
@@ -31,7 +28,6 @@ class CouponService:
 
     @staticmethod
     def apply_coupon(coupon_code: str, total_items_amount: Decimal) -> Tuple[Optional[Coupon], Decimal]:
-        """Calculates discount amount and applies usage increment safely."""
         coupon_obj = CouponService.validate_coupon(coupon_code, lock_for_update=True)
         
         discount = (total_items_amount * coupon_obj.discount_percent) / Decimal(100)

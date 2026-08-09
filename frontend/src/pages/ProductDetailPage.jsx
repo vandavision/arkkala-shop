@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Swiper, SwiperSlide } from 'swiper/react';
-import { FreeMode, Navigation, Thumbs, Zoom, EffectFade, Autoplay } from 'swiper/modules';
+import { FreeMode, Navigation, Thumbs, Zoom, EffectFade } from 'swiper/modules';
 import Chart from 'chart.js/auto';
 import { getProductDetail, submitComment, submitQuestion, getProductsList, toggleFavorite } from '../api/shopApi';
 import { CartContext } from '../context/CartContext';
@@ -68,6 +68,7 @@ const ProductDetailPage = () => {
     const [submittingQuestion, setSubmittingQuestion] = useState(false);
 
     const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+
     const showToast = (message, type = 'success') => {
         setToast({ show: true, message, type });
         setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 4000);
@@ -102,13 +103,17 @@ const ProductDetailPage = () => {
                         const filteredRelated = (related.results || related).filter(p => p.uuid !== data.uuid);
                         if (isMounted) setSuggestedProducts(filteredRelated);
                     } catch (err) {
-                        console.error(err);
                     }
                 }
             } catch (err) {
                 if (isMounted) setError("محصول مورد نظر یافت نشد.");
             } finally {
-                if (isMounted) setLoading(false);
+                if (isMounted) {
+                    setLoading(false);
+                    setTimeout(() => {
+                        window.prerenderReady = true;
+                    }, 500);
+                }
             }
         };
 
@@ -386,10 +391,13 @@ const ProductDetailPage = () => {
                 seoData={product.seo || product} 
                 fallbackTitle={product.title} 
                 price={currentPrice} 
+                oldPrice={originalPrice}
                 inventory={currentInventory} 
                 customImage={allImages[0]?.url} 
                 customSchema={schemaMarkup}
                 slug={product.slug}
+                productId={product.uuid}
+                guarantee="ضمانت اصالت و سلامت فیزیکی"
             />}
 
             <div dangerouslySetInnerHTML={{ __html: `

@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils.translation import gettext_lazy as _
 from platform_tools.mixins.models.base import UUIDBaseModel, TimeStampMixin
-from shop.models import Product, ProductVariant
+from shop.models.product import Product, ProductVariant
 
 User = get_user_model()
 

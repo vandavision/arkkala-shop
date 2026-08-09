@@ -1,7 +1,7 @@
-from .cart import Cart, CartItem
-from .coupon import Coupon
-from .order import Order, OrderItem, OrderRequest
-from .shipping import ShippingMethod
+from orders.models.cart import Cart, CartItem
+from orders.models.coupon import Coupon
+from orders.models.order import Order, OrderItem, OrderRequest
+from orders.models.shipping import ShippingMethod
 
 __all__ = [
     'Cart', 'CartItem', 

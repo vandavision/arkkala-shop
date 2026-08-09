@@ -4,20 +4,20 @@ from django.db import transaction
 from django.db.models import F
 from django.conf import settings
 
-from orders.models import Cart, Order, OrderItem, ShippingMethod
-from shop.models import Product, ProductVariant
+from orders.models.cart import Cart
+from orders.models.order import Order, OrderItem
+from orders.models.shipping import ShippingMethod
+from shop.models.product import Product, ProductVariant
 from platform_tools.services.email import EmailService
 from orders.tasks import cancel_unpaid_order
 
-from .cart import CartService
-from .shipping import PostexShippingService
-from .coupon import CouponService
-from .customer import CustomerService
+from orders.services.cart import CartService
+from orders.services.shipping import PostexShippingService
+from orders.services.coupon import CouponService
+from orders.services.customer import CustomerService
 
 
 class CheckoutService:
-    """Facade Service for orchestrating the complete checkout process."""
-    
     @staticmethod
     def process_checkout(
         address_data: Dict[str, Any], 
@@ -27,10 +27,6 @@ class CheckoutService:
         user: Optional[Any] = None, 
         guest_id: Optional[str] = None
     ) -> Order:
-        """
-        Executes order checkout.
-        The external HTTP logic (Postex) executes BEFORE database locking.
-        """
         cart: Cart = CartService.get_or_create_cart(user, guest_id)
         cart_items = list(cart.items.select_related('product', 'variant').all())
 
@@ -85,7 +81,6 @@ class CheckoutService:
 
     @staticmethod
     def _create_items_and_update_inventory(order: Order, cart_items: List[Any]) -> None:
-        """Helper to cleanly create order items and deduct stock safely."""
         order_items = []
         for item in cart_items:
             unit_price = CartService.calculate_item_price(item)

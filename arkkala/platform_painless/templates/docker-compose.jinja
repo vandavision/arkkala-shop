@@ -1,60 +1,88 @@
-version: "{{docker_config.get('compose_version', '3')}}"
+version: '3.8'
 
 services:
-  backend:
-    container_name: backend
+  db:
+    image: postgres:15-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB={{ db_name }}
+      - POSTGRES_USER={{ db_user }}
+      - POSTGRES_PASSWORD={{ db_password }}
+    restart: always
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+
+  web:
+    build: 
+      context: .
+      dockerfile: ./docker/prod/django/Dockerfile
+    command: gunicorn {{ project_name }}.wsgi:application --bind 0.0.0.0:8000
+    volumes:
+      - static_volume:/app/staticfiles
+      - media_volume:/app/mediafiles
+    environment:
+      - DJANGO_SETTINGS_MODULE={{ project_name }}.settings.prod
+      - DATABASE_URL=postgres://{{ db_user }}:{{ db_password }}@db:5432/{{ db_name }}
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+    restart: always
+
+  celery:
     build:
       context: .
-      dockerfile: Dockerfile
-    restart: always
-    volumes:
-      - .:/project
-      {% if gunicorn %}
-      - /var/log/gunicorn/gunicorn-access.log:/var/log/gunicorn/gunicorn-access.log
-      - /var/log/gunicorn/gunicorn-error.log:/var/log/gunicorn/gunicorn-error.log
-      {% endif %}
-    networks:
-      - pgsql_network
+      dockerfile: ./docker/prod/celery/Dockerfile
+    command: ./docker/prod/celery/start_worker
+    environment:
+      - DJANGO_SETTINGS_MODULE={{ project_name }}.settings.prod
+      - DATABASE_URL=postgres://{{ db_user }}:{{ db_password }}@db:5432/{{ db_name }}
+      - REDIS_URL=redis://redis:6379/0
     depends_on:
-      - pgsql_db
-      {% if docker_config.get('redis') %}
+      - db
       - redis
-      {% endif %}
-      {% if docker_config.get('rabbitmq') %}
-      - rabbitmq
-      {% endif %}
-
-  pgsql_db:
-    image: postgres:latest
     restart: always
-    container_name: pgsql_db
+
+  celery-beat:
+    build:
+      context: .
+      dockerfile: ./docker/prod/celery/Dockerfile
+    command: ./docker/prod/celery/start_beat
+    environment:
+      - DJANGO_SETTINGS_MODULE={{ project_name }}.settings.prod
+      - DATABASE_URL=postgres://{{ db_user }}:{{ db_password }}@db:5432/{{ db_name }}
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+    restart: always
+
+  prerender:
+    build:
+      context: .
+      dockerfile: ./docker/prerender/Dockerfile
+    restart: always
+
+  nginx:
+    build:
+      context: .
+      dockerfile: ./docker/prod/nginx/Dockerfile
+    ports:
+      - "80:80"
+      - "443:443"
     volumes:
-      - pgsql_data:/var/lib/postgresql/data/
-    env_file:
-      - .env.prod
-    networks:
-      - pgsql_network
-
-  {% if docker_config.get('redis') %}
-  redis:
+      - static_volume:/app/staticfiles
+      - media_volume:/app/mediafiles
+      - ./frontend/dist:/usr/share/nginx/html
+    depends_on:
+      - web
+      - prerender
     restart: always
-    container_name: redis
-    image: redis:latest
-    networks:
-      - pgsql_network
-  {% endif %}
-
-  {% if docker_config.get('rabbitmq') %}
-  rabbitmq:
-    container_name: rabbitmq
-    image: rabbitmq:3-management-alpine
-    env_file:
-      - .env.prod
-  {% endif %}
 
 volumes:
-  pgsql_data:
-    external: true
-networks:
-  pgsql_network:
-    external: true
+  postgres_data:
+  static_volume:
+  media_volume:
