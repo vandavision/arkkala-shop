@@ -191,6 +191,7 @@ services:
     container_name: arkkala_prod_prerender
     restart: unless-stopped
     networks:
+      - arkkala_internal
       - arkkala_public
     logging: *default-logging
 

@@ -1,33 +1,41 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
 
-const SeoMeta = ({ seoData, fallbackTitle, price, oldPrice, inventory, isArticle = false, customImage, customSchema, slug, productId, guarantee }) => {
+const SeoMeta = ({ seoData, fallbackTitle, price, oldPrice, inventory, isArticle = false, customImage, customSchema, slug, productId, guarantee, brand }) => {
     if (!seoData) return null;
 
-    const currentUrl = typeof window !== 'undefined' ? window.location.href.split('?')[0] : '';
-    const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://arkkala.com';
-    const baseUrl = import.meta.env.VITE_API_BASE_URL 
-        ? import.meta.env.VITE_API_BASE_URL.replace(/\/api\/?$/, '').replace(/\/$/, '') 
-        : currentOrigin;
+    const baseUrl = import.meta.env.VITE_FRONTEND_URL || 'https://arkkala.com';
 
-    const metaTitle = seoData.og_title || seoData.title || fallbackTitle;
-    let metaDesc = seoData.og_description || seoData.meta_description || seoData.short_description || seoData.description || '';
+    const metaTitle = seoData.og_title || seoData.title || fallbackTitle || 'محصول بدون نام';
     const siteName = seoData.og_site_name || 'ارک کالا';
+    const fullTitle = metaTitle.includes(siteName) ? metaTitle : `${metaTitle} | ${siteName}`;
 
-    if (metaDesc && metaDesc.length > 0 && metaDesc.length < 120) {
+    let metaDesc = seoData.og_description || seoData.meta_description || seoData.short_description || seoData.description || '';
+    
+    if (!metaDesc || metaDesc.trim() === '') {
+        metaDesc = `خرید و قیمت ${metaTitle} در فروشگاه اینترنتی ${siteName}. بررسی مشخصات و خرید آنلاین با تضمین بهترین قیمت.`;
+    } else if (metaDesc.length < 120) {
         metaDesc = `${metaDesc} | نقد و بررسی تخصصی، انتخاب هوشمندانه و خرید آنلاین با تضمین بهترین قیمت و اصالت کالا در فروشگاه اینترنتی ${siteName}.`;
     }
-    if (metaDesc.length > 157) metaDesc = metaDesc.substring(0, 157) + '...';
+    
+    if (metaDesc.length > 157) {
+        metaDesc = metaDesc.substring(0, 154) + '...';
+    }
     
     const keywords = Array.isArray(seoData.seo_keywords) ? seoData.seo_keywords.join(', ') : (seoData.seo_keywords || '');
     const ogType = seoData.og_type || (isArticle ? 'article' : 'product');
     const ogLocale = seoData.og_locale || 'fa_IR';
     const robotsContent = seoData.robots || "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1";
-    const canonicalUrl = currentUrl || (seoData.canonical_url || `${baseUrl}/`);
+    
+    let canonicalUrl = seoData.canonical_url || `${baseUrl}${isArticle ? '/blog/' : '/product/'}${slug || ''}`;
+    canonicalUrl = canonicalUrl.replace(/http:\/\/(localhost|nginx|127\.0\.0\.1)(:\d+)?/g, baseUrl);
     
     let imageUrl = customImage || seoData.og_image_url || seoData.image || seoData.image_url || '/assets/image/logo.png';
-    if (imageUrl && imageUrl.startsWith('/')) imageUrl = `${baseUrl}${imageUrl}`;
-    
+    if (imageUrl && imageUrl.startsWith('/')) {
+        imageUrl = `${baseUrl}${imageUrl}`;
+    }
+    imageUrl = imageUrl.replace(/http:\/\/(localhost|nginx|127\.0\.0\.1)(:\d+)?/g, baseUrl);
+
     const twitterCard = seoData.twitter_card || 'summary_large_image';
     const twitterSite = seoData.twitter_site || '@arkkala';
     const twitterCreator = seoData.twitter_creator || '';
@@ -77,8 +85,9 @@ const SeoMeta = ({ seoData, fallbackTitle, price, oldPrice, inventory, isArticle
     return (
         <Helmet>
             <html lang="fa" dir="rtl" />
-            <title>{metaTitle} | {siteName}</title>
-            {metaDesc && <meta name="description" content={metaDesc} />}
+            
+            <title>{fullTitle}</title>
+            <meta name="description" content={metaDesc} />
             {keywords && <meta name="keywords" content={keywords} />}
             <meta name="robots" content={robotsContent} />
             <meta name="theme-color" content="#ef4056" />
@@ -89,19 +98,21 @@ const SeoMeta = ({ seoData, fallbackTitle, price, oldPrice, inventory, isArticle
 
             {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
 
-            <meta property="og:title" content={metaTitle} />
-            {metaDesc && <meta property="og:description" content={metaDesc} />}
+            <meta property="og:title" content={fullTitle} />
+            <meta property="og:description" content={metaDesc} />
             <meta property="og:type" content={ogType} />
             {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
             <meta property="og:site_name" content={siteName} />
             <meta property="og:locale" content={ogLocale} />
             {imageUrl && <meta property="og:image" content={imageUrl} />}
+            {imageUrl && <meta property="og:image:alt" content={fullTitle} />}
             <meta property="og:updated_time" content={modifiedAt} />
 
             <meta name="twitter:card" content={twitterCard} />
-            <meta name="twitter:title" content={metaTitle} />
-            {metaDesc && <meta name="twitter:description" content={metaDesc} />}
+            <meta name="twitter:title" content={fullTitle} />
+            <meta name="twitter:description" content={metaDesc} />
             {imageUrl && <meta name="twitter:image" content={imageUrl} />}
+            {imageUrl && <meta name="twitter:image:alt" content={fullTitle} />}
             {twitterSite && <meta name="twitter:site" content={twitterSite} />}
             {twitterCreator && <meta name="twitter:creator" content={twitterCreator} />}
 
@@ -112,7 +123,10 @@ const SeoMeta = ({ seoData, fallbackTitle, price, oldPrice, inventory, isArticle
             {!isArticle && price !== undefined && <meta property="product:price:amount" content={price.toString()} />}
             {!isArticle && price !== undefined && <meta property="product:price:currency" content="IRT" />}
             {!isArticle && inventory !== undefined && <meta property="product:availability" content={inventory > 0 ? "instock" : "oos"} />}
+            {!isArticle && brand && <meta property="product:brand" content={brand} />}
+            
             {isArticle && seoData.article_author && <meta property="article:author" content={seoData.article_author} />}
+            {isArticle && <meta property="article:published_time" content={seoData.created_at || modifiedAt} />}
             {isArticle && <meta property="article:modified_time" content={modifiedAt} />}
 
             {!isArticle && productId && <meta name="product_id" content={productId} />}

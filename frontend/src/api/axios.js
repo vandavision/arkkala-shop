@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/';
+const baseURL = import.meta.env.VITE_API_BASE_URL || '/api/';
 
 const axiosInstance = axios.create({
     baseURL: baseURL,
@@ -34,7 +34,7 @@ axiosInstance.interceptors.response.use(
         const originalRequest = error.config;
         
         if (!error.response) {
-            console.error("ارتباط با سرور قطع شده است. بررسی کنید که بک‌اند روی 0.0.0.0:8000 ران باشد.");
+            console.error("ارتباط با سرور قطع شده است. بررسی کنید که بک‌اند ران باشد.");
             return Promise.reject(error);
         }
 

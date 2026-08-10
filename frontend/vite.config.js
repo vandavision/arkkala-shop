@@ -7,9 +7,23 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 3000,
     allowedHosts: ['nginx', 'localhost', '127.0.0.1', true],
+    hmr: {
+      clientPort: 3000,
+    },
     watch: {
       usePolling: true,
     },
+    proxy: {
+      '/api': {
+        target: 'http://django:8000',
+        changeOrigin: false,
+        secure: false,
+      },
+      '/media': {
+        target: 'http://django:8000',
+        changeOrigin: false,
+      }
+    }
   },
   build: {
     outDir: 'dist',
