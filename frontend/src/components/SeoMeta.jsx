@@ -4,7 +4,7 @@ import { Helmet } from 'react-helmet-async';
 const SeoMeta = ({ seoData, fallbackTitle, price, oldPrice, inventory, isArticle = false, customImage, customSchema, slug, productId, guarantee, brand }) => {
     if (!seoData) return null;
 
-    const baseUrl = import.meta.env.VITE_FRONTEND_URL || 'https://arkkala.com';
+    const baseUrl = import.meta.env.VITE_FRONTEND_URL || 'http://127.0.0.1/';
 
     const metaTitle = seoData.og_title || seoData.title || fallbackTitle || 'محصول بدون نام';
     const siteName = seoData.og_site_name || 'ارک کالا';
