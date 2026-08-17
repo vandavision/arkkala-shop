@@ -8,9 +8,11 @@ from shop.application.commands.create_question import CreateQuestionCommand
 from shop.application.commands.increment_view_count import IncrementViewCountCommand
 from shop.application.commands.toggle_favorite import ToggleFavoriteCommand
 from shop.application.commands.create_product import CreateProductCommand
+from shop.application.commands.track_product_view import TrackProductViewCommand
 from shop.application.queries.get_max_price import GetMaxPriceQuery
 from shop.application.queries.get_optimized_products import GetOptimizedProductsQuery
 from shop.application.queries.get_user_comments import GetUserCommentsQuery
+from shop.application.queries.get_product_recommendations import GetProductRecommendationsQuery
 
 def get_product_repository() -> DjangoProductRepository:
     """Provides product repository implementation."""
@@ -27,7 +29,6 @@ def get_outbox_repository() -> DjangoOutboxRepository:
 def get_event_bus() -> OutboxDomainEventPublisher:
     """Provides event bus implementation."""
     return OutboxDomainEventPublisher(outbox_repo=get_outbox_repository())
-
 
 def get_create_comment_command() -> CreateCommentCommand:
     """Resolves CreateCommentCommand dependencies."""
@@ -66,6 +67,14 @@ def get_create_product_command() -> CreateProductCommand:
         event_bus=get_event_bus()
     )
 
+def get_track_product_view_command() -> TrackProductViewCommand:
+    """Resolves TrackProductViewCommand dependencies."""
+    return TrackProductViewCommand(
+        product_repo=get_product_repository(),
+        interaction_repo=get_interaction_repository(),
+        event_bus=get_event_bus()
+    )
+
 def get_max_price_query() -> GetMaxPriceQuery:
     """Resolves GetMaxPriceQuery dependencies."""
     return GetMaxPriceQuery(product_repo=get_product_repository())
@@ -77,3 +86,7 @@ def get_optimized_products_query() -> GetOptimizedProductsQuery:
 def get_user_comments_query() -> GetUserCommentsQuery:
     """Resolves GetUserCommentsQuery dependencies."""
     return GetUserCommentsQuery(interaction_repo=get_interaction_repository())
+
+def get_product_recommendations_query() -> GetProductRecommendationsQuery:
+    """Resolves GetProductRecommendationsQuery dependencies."""
+    return GetProductRecommendationsQuery(product_repo=get_product_repository())

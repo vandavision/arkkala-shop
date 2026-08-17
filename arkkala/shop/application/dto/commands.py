@@ -29,3 +29,10 @@ class CreateProductCommandDTO:
     is_wholesale: bool = False
     wholesale_min_quantity: int = 10
     wholesale_base_price: Optional[int] = None
+
+@dataclass(frozen=True)
+class TrackProductViewDTO:
+    """Data Transfer Object for recording user and guest product view."""
+    product_slug: str
+    user_id: Optional[int] = None
+    guest_id: Optional[str] = None

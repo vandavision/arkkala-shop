@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.db.models import QuerySet
 from django.http import HttpRequest
-from shop.models.interaction import Comment, Question
+from shop.models.interaction import Comment, Question, UserProductHistory
 
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):
@@ -58,3 +58,11 @@ class QuestionAdmin(admin.ModelAdmin):
     def approve_questions(self, request: HttpRequest, queryset: QuerySet) -> None:
         updated: int = queryset.update(is_approved=True)
         self.message_user(request, f"{updated} پرسش با موفقیت تایید شد.")
+
+@admin.register(UserProductHistory)
+class UserProductHistoryAdmin(admin.ModelAdmin):
+    list_display: tuple = ('user', 'product', 'view_count', 'modified_at')
+    list_filter: tuple = ('modified_at',)
+    search_fields: tuple = ('user__username', 'product__title')
+    autocomplete_fields: tuple = ('user', 'product')
+    readonly_fields: tuple = ('uuid', 'created_at', 'modified_at')

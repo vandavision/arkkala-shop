@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { FreeMode, Navigation, Thumbs, Zoom, EffectFade } from 'swiper/modules';
 import Chart from 'chart.js/auto';
-import { getProductDetail, submitComment, submitQuestion, getProductsList, toggleFavorite } from '../api/shopApi';
+import { getProductDetail, submitComment, submitQuestion, getProductsList, toggleFavorite, getRecommendations } from '../api/shopApi';
 import { CartContext } from '../context/CartContext';
 import { AuthContext } from '../context/AuthContext';
 import { CompareContext } from '../context/CompareContext';
@@ -41,6 +41,7 @@ const ProductDetailPage = () => {
 
     const [product, setProduct] = useState(null);
     const [suggestedProducts, setSuggestedProducts] = useState([]);
+    const [personalizedProducts, setPersonalizedProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     
@@ -105,6 +106,16 @@ const ProductDetailPage = () => {
                     } catch (err) {
                     }
                 }
+
+                try {
+                    const recs = await getRecommendations();
+                    if (isMounted) {
+                        const filteredRecs = recs.filter(p => p.uuid !== data.uuid);
+                        setPersonalizedProducts(filteredRecs);
+                    }
+                } catch (err) {
+                }
+
             } catch (err) {
                 if (isMounted) setError("محصول مورد نظر یافت نشد.");
             } finally {
@@ -452,7 +463,7 @@ const ProductDetailPage = () => {
                                                 <i className="bi bi-share-fill" aria-hidden="true"></i>
                                             </button>
                                             <button type="button" onClick={handleToggleFavorite} className={`btn p-0 btn-gallery-action hint--right hint--rounded hint--bounce ${isFavorite ? 'active-favorite text-danger' : ''}`} aria-label={isFavorite ? "حذف از علاقه‌مندی‌ها" : "افزودن به علاقه‌مندی‌ها"}>
-                                                <i className={isFavorite ? "bi bi-heart-fill pulse-animation" : "bi bi-heart"} aria-hidden="true"></i>
+                                                <i className={isFavorite ? "bi bi-heart-fill pop-animation" : "bi bi-heart"} aria-hidden="true"></i>
                                             </button>
                                             <button type="button" className="btn p-0 btn-gallery-action text-primary hint--right hint--rounded hint--bounce" data-bs-toggle="modal" data-bs-target="#chartModal" aria-label="نمودار قیمت">
                                                 <i className="bi bi-bar-chart-line-fill" aria-hidden="true"></i>
@@ -1014,8 +1025,47 @@ const ProductDetailPage = () => {
                     </div>
                 </section>
 
+                {personalizedProducts && personalizedProducts.length > 0 && (
+                    <section className="product-slider mt-5 pb-3" aria-label="پیشنهادهای اختصاصی برای شما">
+                        <div className="container-fluid">
+                            <div className="d-flex align-items-center justify-content-between mb-4">
+                                <div className="d-flex align-items-center gap-2">
+                                    <span className="bg-warning rounded-pill" style={{ width: '6px', height: '24px' }}></span>
+                                    <h2 className="fw-900 font-18 text-dark m-0 d-flex align-items-center gap-2">
+                                        <i className="bi bi-stars text-warning fs-5"></i> پیشنهادهای اختصاصی برای شما
+                                    </h2>
+                                </div>
+                            </div>
+                            
+                            <Swiper
+                                dir="rtl"
+                                spaceBetween={15}
+                                freeMode={true}
+                                grabCursor={true}
+                                breakpoints={{
+                                    0: { slidesPerView: 1.2 },
+                                    400: { slidesPerView: 1.8 },
+                                    576: { slidesPerView: 2.2 },
+                                    768: { slidesPerView: 3.2 },
+                                    992: { slidesPerView: 4.2 },
+                                    1200: { slidesPerView: 5.2 },
+                                }}
+                                navigation={true}
+                                modules={[Navigation, FreeMode]}
+                                className="py-2 px-2"
+                            >
+                                {personalizedProducts.map(prod => (
+                                    <SwiperSlide key={prod.uuid}>
+                                        <ProductCard product={prod} />
+                                    </SwiperSlide>
+                                ))}
+                            </Swiper>
+                        </div>
+                    </section>
+                )}
+
                 {suggestedProducts && suggestedProducts.length > 0 && (
-                    <section className="product-slider mt-5 mb-5 pb-5" aria-label="محصولات مرتبط">
+                    <section className="product-slider mt-4 mb-5 pb-5" aria-label="محصولات مرتبط">
                         <div className="container-fluid">
                             <div className="d-flex align-items-center justify-content-between mb-4">
                                 <div className="d-flex align-items-center gap-2">

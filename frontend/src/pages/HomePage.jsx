@@ -8,6 +8,7 @@ import 'swiper/css/navigation';
 import 'swiper/css/free-mode';
 
 import { getHomePageData, getStaticPageSeo } from '../api/homeApi';
+import { getRecommendations } from '../api/shopApi';
 import ProductCard from '../components/ProductCard';
 import CountdownTimer from '../components/CountdownTimer';
 import SeoMeta from '../components/SeoMeta';
@@ -314,6 +315,36 @@ const SpecialOffers = ({ products }) => {
     );
 };
 
+const RecommendationsSection = ({ products }) => {
+    if (!products?.length) return null;
+    return (
+        <section className="product-slider mt-4">
+            <div className="container-fluid">
+                <SectionTitle title="پیشنهادهای اختصاصی" highlight="برای شما" />
+                <div className="row gy-3 mt-3">
+                    <div className="col-12">
+                        <Swiper 
+                            dir="rtl"
+                            modules={[Navigation]} 
+                            slidesPerView={1.5} 
+                            spaceBetween={15} 
+                            breakpoints={{ 576: { slidesPerView: 2.5 }, 992: { slidesPerView: 4 }, 1200: { slidesPerView: 5 } }} 
+                            navigation 
+                            className="pro-slider-with-cover h-100 pb-2 px-1"
+                        >
+                            {products.map(product => (
+                                <SwiperSlide key={product.uuid || product.id} className="h-auto">
+                                    <ProductCard product={product} />
+                                </SwiperSlide>
+                            ))}
+                        </Swiper>
+                    </div>
+                </div>
+            </div>
+        </section>
+    );
+};
+
 const BannersSection = ({ banners }) => {
     if (!banners?.length) return null;
     return (
@@ -472,6 +503,7 @@ const BlogSection = ({ posts }) => {
 const HomePage = () => {
     const [data, setData] = useState(null);
     const [seoData, setSeoData] = useState(null);
+    const [recommendations, setRecommendations] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -483,8 +515,14 @@ const HomePage = () => {
                 ]);
                 setData(homeData);
                 setSeoData(metaData);
+
+                try {
+                    const recsData = await getRecommendations();
+                    setRecommendations(recsData);
+                } catch (recError) {
+                }
+
             } catch (error) {
-                console.error("Error fetching home data:", error);
             } finally {
                 setLoading(false);
             }
@@ -512,6 +550,7 @@ const HomePage = () => {
             <MainSlider sliders={data.sliders} />
             <CategoriesSection categories={data.categories} />
             <SpecialOffers products={data.special_offers} />
+            <RecommendationsSection products={recommendations} />
             <BannersSection banners={topBanners} />
             <BestSellers products={data.best_sellers} sideBanner={bestSellersBanner} />
             <BrandsSection brands={data.brands} />

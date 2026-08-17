@@ -27,3 +27,9 @@ class CommentCreatedEvent:
 class QuestionCreatedEvent:
     """Event triggered when a question is successfully created."""
     question_uuid: str
+
+@dataclass(frozen=True)
+class UserViewedProductEvent:
+    """Event triggered when an authenticated user views a specific product."""
+    user_id: int
+    product_slug: str

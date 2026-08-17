@@ -1,62 +1,69 @@
-import axios from './axios';
+import axiosInstance from './axios';
+
+const getGuestId = () => {
+    let guestId = localStorage.getItem('guest_id');
+    if (!guestId) {
+        guestId = 'guest_' + Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+        localStorage.setItem('guest_id', guestId);
+    }
+    return guestId;
+};
+
+const getHeaders = () => ({
+    headers: { 'X-Guest-ID': getGuestId() }
+});
 
 export const getProductsList = async (queryString = '') => {
     try {
         const url = queryString ? `/shop/products/?${queryString}` : '/shop/products/';
-        const response = await axios.get(url);
+        const response = await axiosInstance.get(url);
         return response.data;
     } catch (error) {
-        console.error("Error fetching products:", error);
         throw error;
     }
 };
 
 export const getProductDetail = async (identifier) => {
     try {
-        const response = await axios.get(`/shop/products/${identifier}/`);
+        const response = await axiosInstance.get(`/shop/products/${identifier}/`, getHeaders());
         return response.data;
     } catch (error) {
-        console.error("Error fetching product detail:", error);
         throw error;
     }
 };
 
 export const getMaxPrice = async () => {
     try {
-        const response = await axios.get('/shop/max-price/');
+        const response = await axiosInstance.get('/shop/max-price/');
         return response.data.max_price;
     } catch (error) {
-        console.error("Error fetching max price:", error);
-        return 50000000; 
+        return 50000000;
     }
 };
 
 export const submitComment = async (identifier, commentData) => {
     try {
-        const response = await axios.post(`/shop/products/${identifier}/add_comment/`, commentData);
+        const response = await axiosInstance.post(`/shop/products/${identifier}/add_comment/`, commentData);
         return response.data;
     } catch (error) {
-        console.error("Error submitting comment:", error);
         throw error;
     }
 };
 
 export const submitQuestion = async (productSlug, questionData) => {
     try {
-        const response = await axios.post(`/shop/products/${productSlug}/add_question/`, questionData);
+        const response = await axiosInstance.post(`/shop/products/${productSlug}/add_question/`, questionData);
         return response.data;
     } catch (error) {
-        console.error("Error submitting question:", error);
         throw error;
     }
 };
 
 export const toggleFavorite = async (identifier) => {
     try {
-        const response = await axios.post(`/shop/products/${identifier}/toggle_favorite/`);
+        const response = await axiosInstance.post(`/shop/products/${identifier}/toggle_favorite/`);
         return response.data;
     } catch (error) {
-        console.error("Error toggling favorite:", error);
         throw error;
     }
 };
@@ -64,10 +71,9 @@ export const toggleFavorite = async (identifier) => {
 export const getFavoritesList = async (queryString = '') => {
     try {
         const url = queryString ? `/shop/products/favorites/?${queryString}` : '/shop/products/favorites/';
-        const response = await axios.get(url);
+        const response = await axiosInstance.get(url);
         return response.data;
     } catch (error) {
-        console.error("Error fetching favorites:", error);
         throw error;
     }
 };
@@ -75,10 +81,18 @@ export const getFavoritesList = async (queryString = '') => {
 export const getUserComments = async (queryString = '') => {
     try {
         const url = queryString ? `/shop/comments/?${queryString}` : '/shop/comments/';
-        const response = await axios.get(url);
+        const response = await axiosInstance.get(url);
         return response.data;
     } catch (error) {
-        console.error("Error fetching user comments:", error);
         throw error;
+    }
+};
+
+export const getRecommendations = async () => {
+    try {
+        const response = await axiosInstance.get('/shop/products/recommendations/', getHeaders());
+        return response.data.results || response.data;
+    } catch (error) {
+        return [];
     }
 };

@@ -28,6 +28,7 @@ const LoginPage = lazy(() => import('./pages/LoginPage'));
 const PaymentResultPage = lazy(() => import('./pages/PaymentResultPage'));
 const OrderInvoicePage = lazy(() => import('./pages/OrderInvoicePage'));
 const ReturnPolicyPage = lazy(() => import('./pages/ReturnPolicyPage'));
+const RulesPage = lazy(() => import('./pages/RulesPage'));
 
 const DashboardLayout = lazy(() => import('./pages/DashboardLayout'));
 const DashboardSummary = lazy(() => import('./pages/DashboardSummary'));
@@ -82,6 +83,7 @@ function App() {
             <Route path="/about" element={<AboutUsPage />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/return" element={<ReturnPolicyPage />} />
+            <Route path="/rules" element={<RulesPage />} />
             
             <Route path="/product/:slug" element={<ProductDetailPage />} />
             <Route path="/cart" element={<CartPage />} />

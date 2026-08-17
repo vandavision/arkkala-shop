@@ -2,9 +2,9 @@ from .category import CategoryAdmin
 from .brand import BrandAdmin
 from .attribute import AttributeAdmin, AttributeValueAdmin
 from .product import ProductAdmin, PriceHistoryAdmin
-from .interaction import CommentAdmin, QuestionAdmin
+from .interaction import CommentAdmin, QuestionAdmin, UserProductHistoryAdmin
 
 __all__ = [
     'CategoryAdmin', 'BrandAdmin', 'AttributeAdmin', 'AttributeValueAdmin',
-    'ProductAdmin', 'PriceHistoryAdmin', 'CommentAdmin', 'QuestionAdmin'
+    'ProductAdmin', 'PriceHistoryAdmin', 'CommentAdmin', 'QuestionAdmin', 'UserProductHistoryAdmin'
 ]
