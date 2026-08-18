@@ -32,7 +32,7 @@ class AuthConfigView(APIView):
     Echoes fundamental setup rules for user interactions statically.
     """
     permission_classes = [AllowAny]
-    
+
     @extend_schema(summary="Get Active Authentication Mode")
     def get(self, request: Request) -> Response:
         mode: str = getattr(settings, 'AUTH_MODE', 'OTP')
@@ -48,16 +48,16 @@ class OTPSendView(APIView):
     def post(self, request: Request) -> Response:
         if getattr(settings, 'AUTH_MODE', 'OTP') != 'OTP':
             return Response({"error": "احراز هویت پیامکی در سیستم غیرفعال است."}, status=status.HTTP_403_FORBIDDEN)
-            
+
         serializer = OTPSendSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
+
         dto = OTPSendDTO(
             identifier=serializer.validated_data['phone_number'],
             ip_address=get_client_ip(request),
             is_email_reset=False
         )
-        
+
         try:
             AuthCommandService.send_otp(dto)
             return Response({"message": "کد تایید با موفقیت ارسال شد."}, status=status.HTTP_200_OK)
@@ -74,16 +74,17 @@ class OTPVerifyView(APIView):
     def post(self, request: Request) -> Response:
         if getattr(settings, 'AUTH_MODE', 'OTP') != 'OTP':
             return Response({"error": "احراز هویت پیامکی در سیستم غیرفعال است."}, status=status.HTTP_403_FORBIDDEN)
-            
+
         serializer = OTPVerifySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
+
         dto = OTPVerifyDTO(
             identifier=serializer.validated_data['phone_number'],
             code=serializer.validated_data['code'],
-            guest_id=request.headers.get('X-Guest-ID')
+            guest_id=request.headers.get('X-Guest-ID'),
+            client_ip=get_client_ip(request)
         )
-        
+
         try:
             result: dict = AuthCommandService.verify_otp_and_login(dto)
             return Response(result, status=status.HTTP_200_OK)
@@ -100,16 +101,17 @@ class EmailRegisterView(APIView):
     def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         if getattr(settings, 'AUTH_MODE', 'OTP') != 'EMAIL':
             return Response({"error": "ثبت‌نام ایمیلی غیرفعال است."}, status=status.HTTP_403_FORBIDDEN)
-            
+
         serializer = EmailRegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
+
         dto = EmailRegisterDTO(
             email=serializer.validated_data['email'],
             password=serializer.validated_data['password'],
-            guest_id=request.headers.get('X-Guest-ID')
+            guest_id=request.headers.get('X-Guest-ID'),
+            client_ip=get_client_ip(request)
         )
-        
+
         try:
             AuthCommandService.register_email(dto)
             return Response({"message": "ثبت نام با موفقیت انجام شد."}, status=status.HTTP_201_CREATED)
@@ -121,19 +123,20 @@ class EmailLoginView(APIView):
     Restricts structural payload requests strictly mapping.
     """
     permission_classes = [AllowAny]
-    
+
     @extend_schema(request=EmailLoginSerializer, summary="Login using Email")
     def post(self, request: Request) -> Response:
         if getattr(settings, 'AUTH_MODE', 'OTP') != 'EMAIL':
             return Response({"error": "ورود ایمیلی غیرفعال است."}, status=status.HTTP_403_FORBIDDEN)
-            
+
         serializer = EmailLoginSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
+
         dto = EmailLoginDTO(
             email=serializer.validated_data['email'],
             password=serializer.validated_data['password'],
-            guest_id=request.headers.get('X-Guest-ID')
+            guest_id=request.headers.get('X-Guest-ID'),
+            client_ip=get_client_ip(request)
         )
 
         try:
@@ -147,21 +150,21 @@ class PasswordResetRequestView(APIView):
     Bridges application boundaries effectively.
     """
     permission_classes = [AllowAny]
-    
+
     @extend_schema(request=PasswordResetRequestSerializer, summary="Request Email Password Reset")
     def post(self, request: Request) -> Response:
         if getattr(settings, 'AUTH_MODE', 'OTP') != 'EMAIL':
             return Response({"error": "این امکان فقط در حالت ایمیل فعال است."}, status=status.HTTP_403_FORBIDDEN)
-        
+
         serializer = PasswordResetRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
+
         dto = OTPSendDTO(
             identifier=serializer.validated_data['email'],
             ip_address=get_client_ip(request),
             is_email_reset=True
         )
-        
+
         try:
             AuthCommandService.send_otp(dto)
             return Response({"message": "کد بازیابی رمز عبور به ایمیل شما ارسال شد."}, status=status.HTTP_200_OK)
@@ -173,21 +176,21 @@ class PasswordResetConfirmView(APIView):
     Concludes modification requests structurally perfectly.
     """
     permission_classes = [AllowAny]
-    
+
     @extend_schema(request=PasswordResetConfirmSerializer, summary="Confirm Email Password Reset")
     def post(self, request: Request) -> Response:
         if getattr(settings, 'AUTH_MODE', 'OTP') != 'EMAIL':
             return Response({"error": "این امکان فقط در حالت ایمیل فعال است."}, status=status.HTTP_403_FORBIDDEN)
-            
+
         serializer = PasswordResetConfirmSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
+
         dto = PasswordResetConfirmDTO(
             email=serializer.validated_data['email'],
             code=serializer.validated_data['code'],
             new_password=serializer.validated_data['new_password']
         )
-        
+
         try:
             AuthCommandService.verify_reset_code_and_set_password(dto)
             return Response({"message": "رمز عبور با موفقیت تغییر کرد. اکنون وارد شوید."}, status=status.HTTP_200_OK)

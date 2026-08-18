@@ -15,7 +15,7 @@ from orders.services.cart import CartService
 from orders.services.shipping import PostexShippingService
 from orders.services.coupon import CouponService
 from orders.services.customer import CustomerService
-
+from shop.services.interaction import InteractionService
 
 class CheckoutService:
     @staticmethod
@@ -46,9 +46,9 @@ class CheckoutService:
 
         with transaction.atomic():
             cart = Cart.objects.select_for_update().get(pk=cart.pk)
-            
+
             resolved_user = CustomerService.resolve_checkout_user(user, guest_data)
-            
+
             coupon_obj, discount_amount = CouponService.apply_coupon(coupon_code, total_items_amount) if coupon_code else (None, Decimal(0))
 
             subtotal = total_items_amount - discount_amount
@@ -99,5 +99,8 @@ class CheckoutService:
                 locked_product = Product.objects.select_for_update().get(pk=item.product.pk)
                 locked_product.base_inventory = F('base_inventory') - item.quantity
                 locked_product.save(update_fields=['base_inventory'])
-                
+
+            if getattr(order, 'user', None):
+                InteractionService.record_product_purchase(order.user, item.product, 5)
+
         OrderItem.objects.bulk_create(order_items)

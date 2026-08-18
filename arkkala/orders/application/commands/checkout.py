@@ -17,9 +17,6 @@ from orders.services.cart import CartService
 from shop.services.interaction import InteractionService
 
 class CheckoutCommand:
-    """
-    Command Use case for securely orchestrating complete order checkout flows.
-    """
     def __init__(
         self, 
         cart_repo: CartRepository, 
@@ -42,11 +39,14 @@ class CheckoutCommand:
 
     def execute(self, dto: CheckoutCommandDTO) -> Tuple[object, Optional[object], bool]:
         resolved_user, should_issue_token = self.customer_repo.resolve_checkout_user(dto.user_id, dto.guest_data.__dict__)
-        
+
         with transaction.atomic():
-            if resolved_user and dto.guest_id:
-                InteractionService.merge_guest_history_to_user(resolved_user, dto.guest_id)
-                CartService.merge_guest_cart_to_user_cart(resolved_user, dto.guest_id)
+            if resolved_user:
+                guest_ids = [g for g in [dto.guest_id, dto.client_ip] if g]
+                if guest_ids:
+                    InteractionService.merge_guest_history_to_user(resolved_user, guest_ids)
+                if dto.guest_id:
+                    CartService.merge_guest_cart_to_user_cart(resolved_user, dto.guest_id)
 
             cart = self.cart_repo.get_or_create_cart(resolved_user.id if resolved_user else None, dto.guest_id)
             cart_items = self.cart_repo.get_cart_items_with_relations(cart)
@@ -70,7 +70,7 @@ class CheckoutCommand:
                 shipping_cost = provider_cost + shipping.base_cost
 
             tax_rate = Decimal(getattr(settings, 'VAT_RATE', 0.10))
-            
+
             coupon_obj, discount_amount = self._apply_coupon(dto.coupon_code, total_items_amount)
 
             subtotal = total_items_amount - discount_amount
@@ -92,7 +92,7 @@ class CheckoutCommand:
             }
 
             order = self.order_repo.create_order(order_data)
-            
+
             self._create_items_and_deduct_inventory(order, cart_items)
             self.cart_repo.clear_cart(cart)
 
@@ -107,11 +107,11 @@ class CheckoutCommand:
     def _apply_coupon(self, coupon_code: Optional[str], total_amount: Decimal) -> Tuple[Optional[object], Decimal]:
         if not coupon_code:
             return None, Decimal(0)
-            
+
         coupon = self.coupon_repo.get_valid_coupon(coupon_code, lock=True)
         if not coupon:
             raise InvalidCouponException("کد تخفیف نامعتبر است یا ظرفیت آن پر شده است.")
-            
+
         discount = (total_amount * coupon.discount_percent) / Decimal(100)
         if coupon.max_discount_amount and discount > coupon.max_discount_amount:
             discount = coupon.max_discount_amount
@@ -132,5 +132,8 @@ class CheckoutCommand:
                 'total_price': unit_price * item.quantity
             })
             self.inventory_repo.lock_and_deduct_inventory(item.product.pk, item.variant.pk if item.variant else None, item.quantity)
-            
+
+            if getattr(order, 'user', None):
+                InteractionService.record_product_purchase(order.user, item.product, 5)
+
         self.order_repo.create_order_items(order_items_data)

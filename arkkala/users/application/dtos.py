@@ -18,6 +18,7 @@ class OTPVerifyDTO:
     identifier: str
     code: str
     guest_id: Optional[str] = None
+    client_ip: Optional[str] = None
 
 @dataclass(frozen=True)
 class EmailRegisterDTO:
@@ -27,6 +28,7 @@ class EmailRegisterDTO:
     email: str
     password: str
     guest_id: Optional[str] = None
+    client_ip: Optional[str] = None
 
 @dataclass(frozen=True)
 class EmailLoginDTO:
@@ -36,6 +38,7 @@ class EmailLoginDTO:
     email: str
     password: str
     guest_id: Optional[str] = None
+    client_ip: Optional[str] = None
 
 @dataclass(frozen=True)
 class PasswordResetConfirmDTO:

@@ -30,6 +30,7 @@ class CheckoutCommandDTO:
     """DTO for processing checkout."""
     user_id: Optional[int]
     guest_id: Optional[str]
+    client_ip: Optional[str]
     shipping_method_id: str
     coupon_code: Optional[str]
     address: CheckoutAddressDTO

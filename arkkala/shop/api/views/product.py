@@ -55,11 +55,11 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     @extend_schema(summary="Retrieve a product and track view history")
     def retrieve(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         slug = self.kwargs.get(self.lookup_field)
-        
+
         user_id = request.user.id if request.user and request.user.is_authenticated else None
         guest_id = request.headers.get('X-Guest-ID')
         client_ip = request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0] or request.META.get('REMOTE_ADDR')
-        
+
         viewer_id = str(user_id) if user_id else (guest_id or client_ip)
         cache_key = f"product_view_lock_{slug}_{viewer_id}"
 
@@ -67,11 +67,11 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
             command = deps.get_increment_view_count_command()
             command.execute(slug)
 
-            if user_id or guest_id:
-                track_command = deps.get_track_product_view_command()
-                track_dto = TrackProductViewDTO(user_id=user_id, guest_id=guest_id, product_slug=slug)
-                track_command.execute(track_dto)
-            
+            effective_guest_id = guest_id or client_ip
+            track_command = deps.get_track_product_view_command()
+            track_dto = TrackProductViewDTO(user_id=user_id, guest_id=effective_guest_id, product_slug=slug)
+            track_command.execute(track_dto)
+
             cache.set(cache_key, True, timeout=5)
 
         return super().retrieve(request, *args, **kwargs)
@@ -90,9 +90,9 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     def recommendations(self, request: Request) -> Response:
         guest_id = request.headers.get('X-Guest-ID')
         query = deps.get_product_recommendations_query()
-        
+
         queryset = query.execute(request.user, guest_id)
-        
+
         return Response(self.get_serializer(queryset, many=True).data)
 
     @extend_schema(summary="Toggle product favorite status")
@@ -109,14 +109,14 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     def add_comment(self, request: Request, slug: Optional[str] = None) -> Response:
         serializer = CreateCommentInputSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        
+
         dto = CreateCommentCommandDTO(
             product_slug=slug,
             body=serializer.validated_data['body'],
             rating=serializer.validated_data['rating'],
             user_id=request.user.id if request.user.is_authenticated else None
         )
-        
+
         command = deps.get_create_comment_command()
         command.execute(dto)
         return Response({"message": "دیدگاه شما ثبت شد و پس از بررسی نمایش داده می‌شود."}, status=status.HTTP_201_CREATED)
@@ -134,7 +134,7 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
             user_id=request.user.id if request.user.is_authenticated else None,
             guest_name=serializer.validated_data.get('name', 'کاربر مهمان')
         )
-        
+
         command = deps.get_create_question_command()
         command.execute(dto)
         return Response({"message": "پرسش شما با موفقیت ثبت شد."}, status=status.HTTP_201_CREATED)

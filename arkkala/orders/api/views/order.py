@@ -16,6 +16,12 @@ import orders.dependencies as deps
 from orders.api.views.base import CustomerIdentifiedMixin
 from orders.services.coupon import CouponService
 
+def get_client_ip(request: Request) -> str:
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        return x_forwarded_for.split(',')[0]
+    return request.META.get('REMOTE_ADDR') or '127.0.0.1'
+
 class OrderViewSet(CustomerIdentifiedMixin, mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     permission_classes = [AllowAny]
     serializer_class = OrderSerializer
@@ -31,6 +37,7 @@ class OrderViewSet(CustomerIdentifiedMixin, mixins.ListModelMixin, mixins.Retrie
         serializer.is_valid(raise_exception=True)
 
         user, guest_id = self.get_identity(request)
+        client_ip = get_client_ip(request)
         v_data = serializer.validated_data
 
         address_dto = CheckoutAddressDTO(
@@ -55,6 +62,7 @@ class OrderViewSet(CustomerIdentifiedMixin, mixins.ListModelMixin, mixins.Retrie
         command_dto = CheckoutCommandDTO(
             user_id=user.id if user else None,
             guest_id=guest_id,
+            client_ip=client_ip,
             shipping_method_id=str(v_data['shipping_method_id']),
             coupon_code=v_data.get('coupon_code'),
             address=address_dto,
@@ -90,7 +98,7 @@ class OrderViewSet(CustomerIdentifiedMixin, mixins.ListModelMixin, mixins.Retrie
         code = request.data.get('code')
         if not code:
             return Response({"error": "کد تخفیف ارسال نشده است."}, status=status.HTTP_400_BAD_REQUEST)
-            
+
         try:
             coupon = CouponService.validate_coupon(code)
             return Response({
