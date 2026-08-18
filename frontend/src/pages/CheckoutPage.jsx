@@ -119,7 +119,6 @@ const CheckoutPage = () => {
             }
         };
         fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user]);
 
     const handleChange = (e) => {
@@ -148,7 +147,7 @@ const CheckoutPage = () => {
         
         if (!user) {
             if (isEmailMode && (!formData.guest_email || !formData.guest_password || !formData.guest_first_name || !formData.guest_last_name)) {
-                return showToast("لطفاً نام، نام خانوادگی، ایمیل و رمز عبور خود را برای ساخت حساب وارد کنید.", "warning");
+                return showToast("لطفاً نام، نام خانوادگی، ایمیل و رمز عبور خود را وارد کنید.", "warning");
             } else if (!isEmailMode && (!formData.guest_phone || !formData.guest_first_name || !formData.guest_last_name)) {
                 return showToast("لطفاً نام، نام خانوادگی و شماره موبایل خود را وارد کنید.", "warning");
             }
@@ -160,19 +159,8 @@ const CheckoutPage = () => {
 
         let finalSubmissionData = { 
             ...formData, 
-            country: 'ایران',
-            email: formData.guest_email,
-            phone: formData.guest_phone,
-            password: formData.guest_password,
-            first_name: formData.guest_first_name,
-            last_name: formData.guest_last_name
+            country: 'ایران'
         };
-
-        delete finalSubmissionData.guest_email;
-        delete finalSubmissionData.guest_phone;
-        delete finalSubmissionData.guest_password;
-        delete finalSubmissionData.guest_first_name;
-        delete finalSubmissionData.guest_last_name;
 
         if (isPickup) {
             finalSubmissionData = {
@@ -190,9 +178,6 @@ const CheckoutPage = () => {
                 if (addr) {
                     finalSubmissionData = {
                         ...finalSubmissionData,
-                        first_name: addr.recipient_first_name,
-                        last_name: addr.recipient_last_name,
-                        phone: addr.recipient_phone,
                         province: addr.province,
                         city: addr.city,
                         postal_address: addr.postal_address,
@@ -212,6 +197,15 @@ const CheckoutPage = () => {
         setIsSubmitting(true);
         try {
             const order = await checkout(finalSubmissionData);
+            
+            if (order.token) {
+                localStorage.setItem('access_token', order.token.access);
+                localStorage.setItem('refresh_token', order.token.refresh);
+                import('../api/axios').then(module => {
+                    module.default.defaults.headers['Authorization'] = 'Bearer ' + order.token.access;
+                });
+            }
+
             const payment = await requestPayment(order.id, 'zarinpal');
             localStorage.removeItem('arkkala_checkout_form');
             window.location.href = payment.payment_url;
@@ -222,7 +216,7 @@ const CheckoutPage = () => {
                 if (resData.error) errorMsg = resData.error;
                 else if (typeof resData === 'object') {
                     const firstKey = Object.keys(resData)[0];
-                    errorMsg = `خطا در فیلد (${firstKey}): ${resData[firstKey][0]}`;
+                    errorMsg = `${resData[firstKey][0]}`;
                 }
             }
             showToast(errorMsg, "danger");

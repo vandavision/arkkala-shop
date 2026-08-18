@@ -4,18 +4,13 @@ from orders.models.cart import Cart, CartItem
 from orders.application.ports.repositories import CartRepository
 from orders.services.cart import CartService
 
-
 class DjangoCartRepository(CartRepository):
-    """Django ORM implementation of CartRepository."""
-
+    """
+    Django ORM implementation of CartRepository mapping directly to application layer interfaces.
+    """
     def get_or_create_cart(self, user_id: Optional[int], guest_id: Optional[str]) -> Cart:
         if user_id:
             cart, _ = Cart.objects.get_or_create(user_id=user_id)
-            if guest_id:
-                guest_cart = Cart.objects.filter(guest_id=guest_id, user__isnull=True).first()
-                if guest_cart:
-                    guest_cart.items.all().update(cart=cart)
-                    guest_cart.delete()
             return cart
             
         if guest_id:

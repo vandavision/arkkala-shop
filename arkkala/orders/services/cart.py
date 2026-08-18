@@ -2,23 +2,42 @@ import re
 from decimal import Decimal
 from typing import List, Optional, Tuple, Iterable
 from django.contrib.auth.models import AbstractUser
+from django.db import transaction
 
 from orders.models.cart import Cart, CartItem
 from shop.models.product import Product, ProductVariant
 
-
 class CartService:
-    """Business logic for Cart management and price calculations."""
-    
+    """
+    Business logic for Cart management, merging, and price calculations.
+    """
+    @staticmethod
+    @transaction.atomic
+    def merge_guest_cart_to_user_cart(user: AbstractUser, guest_id: str) -> None:
+        if not user or not guest_id:
+            return
+            
+        guest_cart = Cart.objects.filter(guest_id=guest_id, user__isnull=True).first()
+        if not guest_cart:
+            return
+            
+        user_cart, _ = Cart.objects.get_or_create(user=user)
+        
+        for guest_item in guest_cart.items.all():
+            user_item = user_cart.items.filter(product=guest_item.product, variant=guest_item.variant).first()
+            if user_item:
+                user_item.quantity += guest_item.quantity
+                user_item.save(update_fields=['quantity'])
+            else:
+                guest_item.cart = user_cart
+                guest_item.save(update_fields=['cart'])
+                
+        guest_cart.delete()
+
     @staticmethod
     def get_or_create_cart(user: Optional[AbstractUser] = None, guest_id: Optional[str] = None) -> Cart:
         if user and user.is_authenticated:
             cart, _ = Cart.objects.get_or_create(user=user)
-            if guest_id:
-                guest_cart = Cart.objects.filter(guest_id=guest_id, user__isnull=True).first()
-                if guest_cart:
-                    guest_cart.items.all().update(cart=cart)
-                    guest_cart.delete()
             return cart
             
         if guest_id:

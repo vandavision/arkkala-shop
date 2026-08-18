@@ -10,13 +10,13 @@ const getHeaders = () => {
 
 export const requestPayment = async (orderId, gateway = 'zarinpal') => {
     try {
-        const response = await axiosInstance.post('/payments/request_payment/', {
+        const response = await axiosInstance.post('payments/request_payment/', {
             order_id: orderId,
             gateway: gateway
         }, getHeaders());
         return response.data;
     } catch (error) {
-        console.error("Error requesting payment:", error);
+        console.error(error);
         throw error;
     }
 };

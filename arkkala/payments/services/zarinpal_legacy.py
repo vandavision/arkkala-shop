@@ -29,20 +29,24 @@ class ZarinpalGateway(BaseGateway):
             "description": description,
             "callback_url": callback_url,
         }
-        
+
         try:
             res = requests.post(self.request_url, json=data, timeout=10)
             res.raise_for_status()
             response_data = res.json()
-            
+
             if response_data.get('data') and response_data['data'].get('code') == 100:
                 authority = response_data['data']['authority']
                 payment_url = self.start_pay_url + authority
                 return payment_url, authority
             else:
-                raise Exception(f"Zarinpal Error: {response_data.get('errors')}")
+                error_details = response_data.get('errors') or 'اطلاعات مرچنت یا مبلغ نامعتبر است'
+                raise Exception(f"خطای زرین‌پال: {error_details}")
+                
+        except requests.exceptions.RequestException:
+            raise Exception("ارتباط با سرورهای زرین‌پال برقرار نشد. لطفاً دقایقی دیگر تلاش کنید.")
         except Exception as e:
-            raise Exception(f"Gateway request failed: {str(e)}")
+            raise Exception(f"خطا در ایجاد تراکنش: {str(e)}")
 
     def verify_payment(self, authority: str, amount: int, **kwargs) -> Tuple[bool, str]:
         data = {
@@ -50,15 +54,15 @@ class ZarinpalGateway(BaseGateway):
             "amount": amount * 10,
             "authority": authority,
         }
-        
+
         try:
             res = requests.post(self.verify_url, json=data, timeout=10)
             res.raise_for_status()
             response_data = res.json()
-            
+
             if response_data.get('data') and response_data['data'].get('code') in [100, 101]:
                 return True, str(response_data['data']['ref_id'])
             else:
-                return False, str(response_data.get('errors', 'Unknown Verification Error'))
+                return False, str(response_data.get('errors', 'خطای ناشناخته در تایید تراکنش'))
         except Exception as e:
-            return False, str(e)
+            return False, f"خطا در ارتباط با زرین‌پال: {str(e)}"

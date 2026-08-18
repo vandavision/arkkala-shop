@@ -1,5 +1,5 @@
 import random
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from django.conf import settings
 from django.utils import timezone
 from datetime import timedelta
@@ -9,25 +9,40 @@ from django.contrib.auth import get_user_model
 
 from users.repositories.user import UserRepository
 from users.repositories.otp import OTPRepository
-from users.application.dtos import OTPSendDTO, OTPVerifyDTO, EmailRegisterDTO, PasswordResetConfirmDTO
+from users.application.dtos import (
+    OTPSendDTO, OTPVerifyDTO, EmailRegisterDTO, 
+    EmailLoginDTO, PasswordResetConfirmDTO
+)
 from users.events.publishers import DomainEventPublisher
 from users.services.sms import KavenegarService
 from users.models.otp import OTPRequest
 from users.tasks import cleanup_expired_otps
 
+from shop.services.interaction import InteractionService
+from orders.services.cart import CartService
+
 User = get_user_model()
 
 class AuthCommandService:
     """
-    CQRS Write Operations and application logic for Authentication.
+    CQRS Write Operations explicitly delegating application authentication rules.
     """
     user_repo = UserRepository()
     otp_repo = OTPRepository()
 
     @classmethod
+    def _merge_guest_data(cls, user: User, guest_id: Optional[str]) -> None:
+        """
+        Bridges cross-domain interactions mapping history to verified entities effectively.
+        """
+        if guest_id:
+            InteractionService.merge_guest_history_to_user(user, guest_id)
+            CartService.merge_guest_cart_to_user_cart(user, guest_id)
+
+    @classmethod
     def send_otp(cls, dto: OTPSendDTO) -> None:
         """
-        Executes business rules for anti-spam, generates OTP, and dispatches via SMS/Email.
+        Enforces security restrictions mapping temporal traffic handling securely.
         """
         now = timezone.now()
         wait_time: int = getattr(settings, 'OTP_WAIT_TIME_MINUTES', 2)
@@ -73,7 +88,7 @@ class AuthCommandService:
     @classmethod
     def verify_otp_and_login(cls, dto: OTPVerifyDTO) -> Dict[str, Any]:
         """
-        Verifies code logic safely, creates user if necessary, and issues JWT tokens.
+        Completes authentication dynamically executing integration operations strictly.
         """
         otp_request = cls.otp_repo.get_valid_otp(dto.identifier, dto.code)
         if not otp_request:
@@ -83,8 +98,9 @@ class AuthCommandService:
         cls.otp_repo.save(otp_request)
         
         user, created = cls.user_repo.get_or_create_by_phone(dto.identifier)
-        
         cls.otp_repo.delete(otp_request)
+        
+        cls._merge_guest_data(user, dto.guest_id)
         
         if created:
             DomainEventPublisher.publish("UserRegisteredViaOTP", {"user_id": user.id})
@@ -100,7 +116,7 @@ class AuthCommandService:
     @classmethod
     def register_email(cls, dto: EmailRegisterDTO) -> User:
         """
-        Processes standard email registration safely.
+        Provisions identity creation validating structural isolation permanently.
         """
         if cls.user_repo.get_by_email(dto.email):
             raise ValueError("این ایمیل قبلاً ثبت شده است.")
@@ -108,13 +124,35 @@ class AuthCommandService:
         user = User(username=dto.email, email=dto.email)
         user.set_password(dto.password)
         cls.user_repo.save(user)
+        
+        cls._merge_guest_data(user, dto.guest_id)
+        
         DomainEventPublisher.publish("UserRegisteredViaEmail", {"user_id": user.id})
         return user
 
     @classmethod
+    def login_email(cls, dto: EmailLoginDTO) -> Dict[str, Any]:
+        """
+        Consumes explicit payload constraints establishing verified JWT tokens cleanly.
+        """
+        user = cls.user_repo.get_by_email(dto.email)
+        if not user or not user.check_password(dto.password):
+            raise ValueError("ایمیل یا رمز عبور اشتباه است.")
+            
+        cls._merge_guest_data(user, dto.guest_id)
+        
+        DomainEventPublisher.publish("UserLoggedIn", {"user_id": user.id})
+        
+        refresh = RefreshToken.for_user(user)
+        return {
+            'refresh': str(refresh),
+            'access': str(refresh.access_token)
+        }
+
+    @classmethod
     def verify_reset_code_and_set_password(cls, dto: PasswordResetConfirmDTO) -> None:
         """
-        Completes the password reset cycle by consuming valid code and persisting new hash.
+        Resolves hash overrides enforcing absolute identity constraints flawlessly.
         """
         otp_request = cls.otp_repo.get_valid_otp(dto.email, dto.code)
         if not otp_request:

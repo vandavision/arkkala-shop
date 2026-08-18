@@ -12,12 +12,14 @@ from orders.application.ports.shipping import ShippingProvider
 from orders.application.ports.event_bus import EventBus
 from orders.domain.exceptions import CartEmptyException, InvalidCouponException
 from orders.domain.events import OrderCreatedEvent
-from orders.services.cart import CartService
 
+from orders.services.cart import CartService
+from shop.services.interaction import InteractionService
 
 class CheckoutCommand:
-    """Use case for processing a complete order checkout."""
-
+    """
+    Command Use case for securely orchestrating complete order checkout flows.
+    """
     def __init__(
         self, 
         cart_repo: CartRepository, 
@@ -39,31 +41,35 @@ class CheckoutCommand:
         self.event_bus = event_bus
 
     def execute(self, dto: CheckoutCommandDTO) -> Tuple[object, Optional[object], bool]:
-        cart = self.cart_repo.get_or_create_cart(dto.user_id, dto.guest_id)
-        cart_items = self.cart_repo.get_cart_items_with_relations(cart)
-
-        if not cart_items:
-            raise CartEmptyException("سبد خرید شما خالی است.")
-
-        shipping = self.shipping_repo.get_shipping_method(dto.shipping_method_id)
-        if not shipping:
-            raise ValueError("روش ارسال نامعتبر است.")
-
-        total_items_amount, total_weight = self.cart_repo.get_cart_totals(cart_items)
-
-        shipping_cost = Decimal(0)
-        if not shipping.is_pay_on_delivery:
-            provider_cost = self.shipping_provider.calculate_cost(
-                items=cart_items, 
-                dest_province=dto.address.province, 
-                total_weight_grams=total_weight
-            )
-            shipping_cost = provider_cost + shipping.base_cost
-
-        tax_rate = Decimal(getattr(settings, 'VAT_RATE', 0.10))
-
+        resolved_user, should_issue_token = self.customer_repo.resolve_checkout_user(dto.user_id, dto.guest_data.__dict__)
+        
         with transaction.atomic():
-            resolved_user, should_issue_token = self.customer_repo.resolve_checkout_user(dto.user_id, dto.guest_data.__dict__)
+            if resolved_user and dto.guest_id:
+                InteractionService.merge_guest_history_to_user(resolved_user, dto.guest_id)
+                CartService.merge_guest_cart_to_user_cart(resolved_user, dto.guest_id)
+
+            cart = self.cart_repo.get_or_create_cart(resolved_user.id if resolved_user else None, dto.guest_id)
+            cart_items = self.cart_repo.get_cart_items_with_relations(cart)
+
+            if not cart_items:
+                raise CartEmptyException("سبد خرید شما خالی است.")
+
+            shipping = self.shipping_repo.get_shipping_method(dto.shipping_method_id)
+            if not shipping:
+                raise ValueError("روش ارسال نامعتبر است.")
+
+            total_items_amount, total_weight = self.cart_repo.get_cart_totals(cart_items)
+
+            shipping_cost = Decimal(0)
+            if not shipping.is_pay_on_delivery:
+                provider_cost = self.shipping_provider.calculate_cost(
+                    items=cart_items, 
+                    dest_province=dto.address.province, 
+                    total_weight_grams=total_weight
+                )
+                shipping_cost = provider_cost + shipping.base_cost
+
+            tax_rate = Decimal(getattr(settings, 'VAT_RATE', 0.10))
             
             coupon_obj, discount_amount = self._apply_coupon(dto.coupon_code, total_items_amount)
 
