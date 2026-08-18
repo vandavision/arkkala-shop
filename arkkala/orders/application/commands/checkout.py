@@ -17,6 +17,9 @@ from orders.services.cart import CartService
 from shop.services.interaction import InteractionService
 
 class CheckoutCommand:
+    """
+    Command Use case for securely orchestrating complete order checkout flows.
+    """
     def __init__(
         self, 
         cart_repo: CartRepository, 
@@ -132,8 +135,5 @@ class CheckoutCommand:
                 'total_price': unit_price * item.quantity
             })
             self.inventory_repo.lock_and_deduct_inventory(item.product.pk, item.variant.pk if item.variant else None, item.quantity)
-
-            if getattr(order, 'user', None):
-                InteractionService.record_product_purchase(order.user, item.product, 5)
 
         self.order_repo.create_order_items(order_items_data)

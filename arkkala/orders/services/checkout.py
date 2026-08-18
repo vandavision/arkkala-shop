@@ -100,7 +100,4 @@ class CheckoutService:
                 locked_product.base_inventory = F('base_inventory') - item.quantity
                 locked_product.save(update_fields=['base_inventory'])
 
-            if getattr(order, 'user', None):
-                InteractionService.record_product_purchase(order.user, item.product, 5)
-
         OrderItem.objects.bulk_create(order_items)

@@ -32,7 +32,7 @@ const getInitialFormData = () => {
 
 const CheckoutPage = () => {
     const navigate = useNavigate();
-    const { user, authMode } = useContext(AuthContext);
+    const { user, authMode, loading: authLoading } = useContext(AuthContext);
     const { settings } = useContext(SiteContext);
     const isEmailMode = authMode === 'EMAIL';
 
@@ -224,7 +224,13 @@ const CheckoutPage = () => {
         }
     };
 
-    if (loading) return <main className="text-center py-5 my-5 min-vh-100 d-flex align-items-center justify-content-center" aria-label="در حال بارگذاری"><div className="spinner-border text-danger" style={{width: '4rem', height:'4rem', borderWidth:'0.3rem'}}></div></main>;
+    if (loading || authLoading || !authMode) {
+        return (
+            <main className="text-center py-5 my-5 min-vh-100 d-flex align-items-center justify-content-center" aria-label="در حال بارگذاری">
+                <div className="spinner-border text-danger" style={{width: '4rem', height:'4rem', borderWidth:'0.3rem'}}></div>
+            </main>
+        );
+    }
 
     if (cartItems.length === 0) {
         return (
