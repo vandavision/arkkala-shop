@@ -1,32 +1,27 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { sendOtp, registerWithEmail, requestPasswordReset, confirmPasswordReset } from '../api/authApi';
+import { sendOtp, registerWithEmail, requestPasswordReset, confirmPasswordReset, loginWithEmail, verifyOtp } from '../api/authApi';
 import { AuthContext } from '../context/AuthContext';
 import { SiteContext } from '../context/SiteContext';
 
 const LoginPage = () => {
     const navigate = useNavigate();
-    const { authMode, loginEmail, loginOtp } = useContext(AuthContext);
+    const { authMode, fetchUser } = useContext(AuthContext);
     const { settings } = useContext(SiteContext);
 
-    // Modes
     const isEmailMode = authMode === 'EMAIL';
 
-    // Steps: 'identifier' | 'password' | 'otp' | 'register' | 'forgot_request' | 'forgot_verify'
     const [step, setStep] = useState('identifier');
     
-    // Form States
-    const [identifier, setIdentifier] = useState(''); // phone or email
+    const [identifier, setIdentifier] = useState('');
     const [password, setPassword] = useState('');
     const [passwordConfirm, setPasswordConfirm] = useState('');
     const [otpCode, setOtpCode] = useState('');
     const [loading, setLoading] = useState(false);
     
-    // Show Password Toggles
     const [showPassword, setShowPassword] = useState(false);
     const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
 
-    // Toast
     const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
     const showToast = (message, type = 'danger') => {
         setToast({ show: true, message, type });
@@ -36,10 +31,6 @@ const LoginPage = () => {
     const isPhone = (val) => /^09\d{9}$/.test(val);
     const isEmail = (val) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
 
-    // =============================================
-    // HANDLERS
-    // =============================================
-    
     const handleIdentifierSubmit = async (e) => {
         e.preventDefault();
         const trimmed = identifier.trim();
@@ -67,7 +58,8 @@ const LoginPage = () => {
         e.preventDefault();
         setLoading(true);
         try {
-            await loginEmail(identifier.trim(), password);
+            await loginWithEmail(identifier.trim(), password);
+            await fetchUser();
             navigate('/');
         } catch (error) {
             showToast(error.response?.data?.error || 'ایمیل یا رمز عبور اشتباه است.');
@@ -81,7 +73,8 @@ const LoginPage = () => {
         if (otpCode.length < 5) return showToast('کد تایید را کامل وارد کنید.');
         setLoading(true);
         try {
-            await loginOtp(identifier.trim(), otpCode);
+            await verifyOtp(identifier.trim(), otpCode);
+            await fetchUser();
             navigate('/');
         } catch (error) {
             showToast(error.response?.data?.error || 'کد تایید اشتباه یا منقضی شده است.');
@@ -148,10 +141,6 @@ const LoginPage = () => {
             setLoading(false);
         }
     };
-
-    // =============================================
-    // RENDERERS
-    // =============================================
 
     return (
         <main className="auth-page bg-light min-vh-100 d-flex align-items-center justify-content-center py-5">

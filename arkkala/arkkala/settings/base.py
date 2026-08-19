@@ -1,6 +1,3 @@
-"""
-Base Django settings for arkkala project.
-"""
 import os
 from pathlib import Path
 from corsheaders.defaults import default_headers
@@ -91,6 +88,7 @@ REST_FRAMEWORK: dict = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'EXCEPTION_HANDLER': 'users.api.exceptions.custom_exception_handler',
 }
 
 SPECTACULAR_SETTINGS: dict = {
