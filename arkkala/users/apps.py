@@ -3,7 +3,7 @@ from django.utils.translation import gettext_lazy as _
 
 class UsersConfig(AppConfig):
     """
-    Standardizes app execution internally correctly setup via baseline logic.
+    Standardizes app execution internally corresponding to baseline startup logic.
     """
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'users'

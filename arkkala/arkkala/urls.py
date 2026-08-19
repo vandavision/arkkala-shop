@@ -23,8 +23,8 @@ urlpatterns: list[Any] = [
     path('api/docs/swagger/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/docs/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
     
-    path('api/users/', include('users.urls')),
     path('api/shop/', include('shop.urls')),
+    path('api/users/', include('users.urls')),
     path('api/orders/', include('orders.urls')),
     path('api/payments/', include('payments.urls')),
     path('api/blog/', include('blog.urls')),

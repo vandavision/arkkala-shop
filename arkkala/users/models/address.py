@@ -6,7 +6,7 @@ from platform_tools.mixins.models.address import AddressMixin
 
 class UserAddress(UUIDBaseModel, TimeStampMixin, AddressMixin):
     """
-    Enterprise Address entity mapped to a User.
+    Structural persistence layer housing logistics routing per actor.
     """
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='addresses', verbose_name=_('کاربر'))
     title = models.CharField(max_length=100, verbose_name=_('عنوان آدرس'), help_text=_('مثال: خانه، محل کار'))
@@ -25,14 +25,14 @@ class UserAddress(UUIDBaseModel, TimeStampMixin, AddressMixin):
 
     def clean(self) -> None:
         """
-        Validates the Address object strictly enforcing field requirements.
+        Maintains address sanity applying core fallback mechanisms dynamically.
         """
         super().clean()
         if not self.country:
-            self.country = "ایران" # Default value or fetch from settings
+            self.country = "ایران"
 
     def __str__(self) -> str:
         """
-        Returns string representation of the Address.
+        Renders textual format for administrative operations safely.
         """
         return f"{self.title} - {self.user}"
