@@ -1,3 +1,6 @@
+"""
+Base Django settings for arkkala project.
+"""
 import os
 from pathlib import Path
 from corsheaders.defaults import default_headers
@@ -69,12 +72,7 @@ TEMPLATES: list[dict] = [
 WSGI_APPLICATION: str = 'arkkala.wsgi.application'
 ASGI_APPLICATION: str = 'arkkala.asgi.application'
 
-AUTH_PASSWORD_VALIDATORS: list[dict] = [
-    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
-    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
-]
+AUTH_PASSWORD_VALIDATORS: list[dict] = []
 
 LANGUAGE_CODE: str = 'fa-ir'
 TIME_ZONE: str = 'Asia/Tehran'

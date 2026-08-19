@@ -95,7 +95,8 @@ const LoginPage = () => {
         } catch (error) {
             const errData = error.response?.data;
             if (errData && errData.email) showToast(errData.email[0]);
-            else showToast('خطا در ثبت نام.');
+            else if (errData && errData.password) showToast(errData.password[0]);
+            else showToast(error.response?.data?.error || 'خطا در ثبت نام.');
         } finally {
             setLoading(false);
         }

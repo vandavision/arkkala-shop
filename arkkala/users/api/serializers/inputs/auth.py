@@ -1,13 +1,12 @@
 from typing import Dict, Any
 from rest_framework import serializers
-from django.contrib.auth.password_validation import validate_password
 
 class EmailRegisterInputSerializer(serializers.Serializer):
     """
     Performs precise validation parsing input parameters correctly avoiding business logic dynamically.
     """
     email = serializers.EmailField(required=True)
-    password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
+    password = serializers.CharField(write_only=True, required=True)
     password_confirm = serializers.CharField(write_only=True, required=True)
 
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
@@ -34,7 +33,7 @@ class PasswordResetConfirmInputSerializer(serializers.Serializer):
     """
     email = serializers.EmailField(required=True)
     code = serializers.CharField(max_length=6, required=True)
-    new_password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
+    new_password = serializers.CharField(write_only=True, required=True)
     new_password_confirm = serializers.CharField(write_only=True, required=True)
 
     def validate(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
