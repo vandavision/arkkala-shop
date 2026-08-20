@@ -32,7 +32,10 @@ const ComparePage = () => {
             try {
                 const promises = compareIds.map(id => 
                     getProductDetail(id).catch(error => {
-                        return { isError: true, id };
+                        if (error.response?.status === 404) {
+                            return { isError: true, id };
+                        }
+                        return null; 
                     })
                 );
                 
@@ -56,7 +59,7 @@ const ComparePage = () => {
                     }
                 }
             } catch (error) {
-                
+                console.error("Error fetching compared products", error);
             } finally {
                 if (isMounted) setLoading(false);
             }
@@ -66,6 +69,7 @@ const ComparePage = () => {
         window.scrollTo(0, 0);
         
         return () => { isMounted = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [compareIds.join(',')]);
 
     const allAttributes = Array.from(new Set(

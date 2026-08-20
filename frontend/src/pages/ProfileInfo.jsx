@@ -130,13 +130,17 @@ const ProfileInfo = () => {
                                     </td>
                                     <td className="p-4 w-50 hover-bg-light transition">
                                         <h6 className="text-muted fw-bold font-13 mb-2"><i className="bi bi-phone me-1"></i> شماره موبایل:</h6>
-                                        <p className="font-15 fw-bold text-dark mb-0 ms-4"><span dir="ltr">{user?.phone_number || 'ثبت نشده'}</span></p>
+                                        <p className="font-15 fw-bold text-dark mb-0 ms-4" style={{ direction: 'ltr', textAlign: 'right' }}>
+                                            {user?.phone_number || 'ثبت نشده'}
+                                        </p>
                                     </td>
                                 </tr>
                                 <tr>
                                     <td className="p-4 border-end border-light w-50 hover-bg-light transition">
                                         <h6 className="fw-bold font-13 text-muted mb-2"><i className="bi bi-envelope me-1"></i> پست الکترونیک:</h6>
-                                        <p className="font-15 fw-bold text-dark mb-0 ms-4 text-truncate"><span dir="ltr">{user?.email || 'ثبت نشده'}</span></p>
+                                        <p className="font-15 fw-bold text-dark mb-0 ms-4 text-truncate" style={{ direction: 'ltr', textAlign: 'right' }}>
+                                            {user?.email || 'ثبت نشده'}
+                                        </p>
                                     </td>
                                     <td className="p-4 w-50 hover-bg-light transition">
                                         <h6 className="fw-bold font-13 text-muted mb-2"><i className="bi bi-calendar2-week me-1"></i> تاریخ عضویت:</h6>

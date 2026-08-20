@@ -20,7 +20,7 @@ const Header = () => {
     const location = useLocation();
     const [searchParams] = useSearchParams();
     
-    const { user, logout } = useContext(AuthContext);
+    const { user, logout, loading } = useContext(AuthContext);
     const { cartItems } = useContext(CartContext);
     const { compareIds } = useContext(CompareContext);
     const { settings } = useContext(SiteContext);
@@ -263,7 +263,11 @@ const Header = () => {
                     </div>
                     
                     <div className="p-3 custom-scrollbar" style={{ height: 'calc(100vh - 140px)', overflowY: 'auto' }}>
-                        {user ? (
+                        {loading ? (
+                            <div className="d-flex align-items-center bg-light p-3 rounded-4 mb-4 border border-ui justify-content-center">
+                                <div className="spinner-border text-danger" style={{width: '2rem', height: '2rem'}}></div>
+                            </div>
+                        ) : user ? (
                             <div className="d-flex align-items-center bg-light p-3 rounded-4 mb-4 border border-ui">
                                 <div className="bg-white rounded-circle d-flex justify-content-center align-items-center shadow-sm" style={{width: '45px', height: '45px'}}>
                                     <i className="bi bi-person text-danger fs-4"></i>
@@ -357,7 +361,6 @@ const Header = () => {
                         <div className="row align-items-center m-0 w-100">
                             <div className="col-lg-2 p-0">
                                 <Link to="/" className="d-inline-block hover-lift transition">
-                                    {/* SEO Optimization: LCP Image loaded eager with fetchpriority high */}
                                     <img src={settings?.logo_url || "/assets/image/logo.png"} alt={settings?.site_name} className="img-fluid" style={{ maxHeight: '55px', objectFit: 'contain' }} fetchpriority="high" loading="eager" decoding="async" />
                                 </Link>
                             </div>
@@ -369,7 +372,11 @@ const Header = () => {
                             <div className="col-lg-4 p-0 d-flex justify-content-end align-items-center">
                                 <ul className="d-flex align-items-center justify-content-end list-unstyled m-0 p-0 gap-3">
                                     <li className="position-relative" style={{ zIndex: 20 }}>
-                                        {user ? (
+                                        {loading ? (
+                                            <div className="btn border border-ui rounded-pill px-4 py-2 bg-white d-flex align-items-center gap-2 shadow-sm font-14 fw-bold text-muted">
+                                                <span className="spinner-border spinner-border-sm text-danger"></span> در حال بررسی...
+                                            </div>
+                                        ) : user ? (
                                             <div className="dropdown profile-dropdown position-relative">
                                                 <Link to="/dashboard" className="btn border border-ui rounded-pill px-4 py-2 bg-white d-flex align-items-center gap-2 hover-shadow transition shadow-sm font-14 fw-bold text-dark text-decoration-none">
                                                     <i className="bi bi-person-circle fs-5 text-danger"></i>
@@ -379,7 +386,7 @@ const Header = () => {
                                                 <ul className="dropdown-menu dropdown-menu-end shadow-xl border border-light rounded-4 p-2 profile-dropdown-menu" style={{ minWidth: '240px' }}>
                                                     <div className="p-3 mb-2 border-bottom border-light text-center bg-light rounded-3">
                                                         <span className="d-block font-14 fw-900 text-dark mb-1 text-truncate">{user.first_name || 'کاربر عزیز'} {user.last_name || ''}</span>
-                                                        <span className="font-12 text-muted text-truncate d-block" dir="ltr">{user.phone_number || user.email || '---'}</span>
+                                                        <span className="font-12 text-muted text-truncate d-block" dir="ltr" style={{ textAlign: 'right' }}>{user.phone_number || user.email || '---'}</span>
                                                     </div>
                                                     <li><Link className="dropdown-item py-2 px-3 font-14 rounded-3 hover-bg-light text-dark fw-bold mb-1 transition d-flex align-items-center" to="/dashboard"><i className="bi bi-grid-1x2 me-2 fs-5 text-muted"></i> پیشخوان من</Link></li>
                                                     <li><Link className="dropdown-item py-2 px-3 font-14 rounded-3 hover-bg-light text-dark fw-bold mb-1 transition d-flex align-items-center" to="/dashboard/profile"><i className="bi bi-person-vcard me-2 fs-5 text-muted"></i> اطلاعات حساب</Link></li>
