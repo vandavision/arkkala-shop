@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import { CartContext } from '../context/CartContext';
@@ -20,16 +20,26 @@ const ProductCard = ({ product }) => {
     
     const [isFav, setIsFav] = useState(product.is_favorite || false);
     const [isAdding, setIsAdding] = useState(false);
+    const [isAddingFav, setIsAddingFav] = useState(false);
     
-    const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+    const [toast, setToast] = useState({ show: false, message: ' ', type: 'success', timerId: null });
+
+    useEffect(() => {
+        setIsFav(product.is_favorite || false);
+    }, [product.is_favorite]);
 
     const showToast = (message, type = 'success') => {
-        setToast({ show: true, message, type });
-        setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 3000);
+        if (toast.timerId) clearTimeout(toast.timerId);
+        
+        const timerId = setTimeout(() => {
+            setToast(prev => ({ ...prev, show: false }));
+        }, 3000);
+        
+        setToast({ show: true, message, type, timerId });
     };
 
     const mainImageObj = product.gallery?.find(img => img.is_main) || product.gallery?.[0];
-    const mainImage = mainImageObj?.url || '/assets/image/product/product-no-bg.png';
+    const mainImage = mainImageObj?.url || product.image_url || '/assets/image/product/product-no-bg.png';
     const mainImageAlt = mainImageObj?.image_alt || product.title;
     
     const discountPercent = product.special_discount_percent || 0;
@@ -39,16 +49,31 @@ const ProductCard = ({ product }) => {
     const handleFavorite = async (e) => {
         e.preventDefault();
         e.stopPropagation();
+        
         if (!user) {
-            navigate('/login');
+            showToast("برای افزودن به علاقه‌مندی‌ها ابتدا وارد شوید.", "warning");
+            setTimeout(() => navigate('/login'), 2000);
             return;
         }
+        
+        if (isAddingFav) return;
+
+        setIsAddingFav(true);
         try {
             const res = await toggleFavorite(product.slug || product.uuid);
-            setIsFav(res.is_favorite);
-            showToast(res.message || "وضعیت علاقه‌مندی بروزرسانی شد.", "success");
+            const isFavoriteStatus = res?.is_favorite !== undefined ? res.is_favorite : res?.data?.is_favorite;
+            
+            setIsFav(isFavoriteStatus);
+            showToast(res.message || res?.data?.message || "وضعیت علاقه‌مندی بروزرسانی شد.", "success");
         } catch (error) {
-            showToast("خطا در برقراری ارتباط با سرور.", "danger");
+            if (error.response?.status === 401) {
+                showToast("نشست شما منقضی شده است. لطفا دوباره وارد شوید.", "danger");
+                setTimeout(() => navigate('/login'), 2000);
+            } else {
+                showToast(error.response?.data?.error || error.response?.data?.detail || "خطا در برقراری ارتباط با سرور.", "danger");
+            }
+        } finally {
+            setIsAddingFav(false);
         }
     };
 
@@ -61,13 +86,18 @@ const ProductCard = ({ product }) => {
             return;
         }
         
+        if (isAdding) return;
+
         setIsAdding(true);
         try {
             await addToCart(product.uuid, null, 1);
             showToast("محصول با موفقیت به سبد خرید اضافه شد.", "success");
         } catch (error) {
-            if(error.response?.status !== 401) {
-                showToast(error.response?.data?.error || "خطا در افزودن به سبد خرید.", "danger");
+            if(error.response?.status === 401) {
+                showToast("برای افزودن به سبد خرید ابتدا وارد شوید.", "warning");
+                setTimeout(() => navigate('/login'), 2000);
+            } else {
+                showToast(error.response?.data?.error || error.response?.data?.detail || "خطا در افزودن به سبد خرید.", "danger");
             }
         } finally {
             setIsAdding(false);
@@ -96,8 +126,18 @@ const ProductCard = ({ product }) => {
                 </div>
 
                 <div className="position-absolute top-0 end-0 p-3 z-2 d-flex flex-column gap-2">
-                    <button onClick={handleFavorite} className={`btn btn-sm rounded-circle shadow-sm d-flex align-items-center justify-content-center transition ${isFav ? 'bg-danger text-white border-danger' : 'bg-white text-muted border-ui hover-text-danger'}`} style={{width: '35px', height: '35px'}} aria-label="افزودن به علاقه‌مندی‌ها">
-                        <i className={isFav ? "bi bi-heart-fill font-14" : "bi bi-heart font-14"}></i>
+                    <button 
+                        onClick={handleFavorite} 
+                        disabled={isAddingFav}
+                        className={`btn btn-sm rounded-circle shadow-sm d-flex align-items-center justify-content-center transition ${isFav ? 'bg-danger text-white border-danger' : 'bg-white text-muted border-ui hover-text-danger'}`} 
+                        style={{width: '35px', height: '35px'}} 
+                        aria-label="افزودن به علاقه‌مندی‌ها"
+                    >
+                        {isAddingFav ? (
+                            <div className="spinner-border spinner-border-sm" role="status"></div>
+                        ) : (
+                            <i className={isFav ? "bi bi-heart-fill font-14" : "bi bi-heart font-14"}></i>
+                        )}
                     </button>
                 </div>
 
