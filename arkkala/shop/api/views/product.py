@@ -54,7 +54,8 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
 
     @extend_schema(summary="Retrieve a product and track view history")
     def retrieve(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        slug = self.kwargs.get(self.lookup_field)
+        instance = self.get_object()
+        slug = instance.slug
 
         user_id = request.user.id if request.user and request.user.is_authenticated else None
         guest_id = request.headers.get('X-Guest-ID')
@@ -74,7 +75,8 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
 
             cache.set(cache_key, True, timeout=5)
 
-        return super().retrieve(request, *args, **kwargs)
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
 
     @extend_schema(summary="Get user's favorite products")
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
@@ -99,19 +101,21 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=['post'], permission_classes=[IsAuthenticated])
     @exception_handler_wrapper
     def toggle_favorite(self, request: Request, slug: Optional[str] = None) -> Response:
+        instance = self.get_object()
         command = deps.get_toggle_favorite_command()
-        result = command.execute(slug, request.user.id)
+        result = command.execute(instance.slug, request.user.id)
         return Response(result, status=status.HTTP_200_OK)
 
     @extend_schema(summary="Add a comment to a product")
     @action(detail=True, methods=['post'])
     @exception_handler_wrapper
     def add_comment(self, request: Request, slug: Optional[str] = None) -> Response:
+        instance = self.get_object()
         serializer = CreateCommentInputSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         dto = CreateCommentCommandDTO(
-            product_slug=slug,
+            product_slug=instance.slug,
             body=serializer.validated_data['body'],
             rating=serializer.validated_data['rating'],
             user_id=request.user.id if request.user.is_authenticated else None
@@ -125,11 +129,12 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     @action(detail=True, methods=['post'], permission_classes=[AllowAny])
     @exception_handler_wrapper
     def add_question(self, request: Request, slug: Optional[str] = None) -> Response:
+        instance = self.get_object()
         serializer = CreateQuestionInputSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         dto = CreateQuestionCommandDTO(
-            product_slug=slug,
+            product_slug=instance.slug,
             body=serializer.validated_data['text'],
             user_id=request.user.id if request.user.is_authenticated else None,
             guest_name=serializer.validated_data.get('name', 'کاربر مهمان')

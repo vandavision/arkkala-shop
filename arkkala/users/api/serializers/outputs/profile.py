@@ -5,12 +5,18 @@ from users.models.address import UserAddress
 User = get_user_model()
 
 class UserProfileOutputSerializer(serializers.ModelSerializer):
+    """
+    Exposes unified user identity formats accurately.
+    """
     class Meta:
         model = User
-        fields = ('id', 'email', 'phone_number', 'first_name', 'last_name', 'avatar', 'created_at')
-        read_only_fields = ('created_at', 'email', 'phone_number', 'id')
+        fields = ('id', 'email', 'phone_number', 'first_name', 'last_name', 'avatar', 'created_at', 'date_joined')
+        read_only_fields = ('created_at', 'email', 'phone_number', 'id', 'date_joined')
 
 class UserAddressOutputSerializer(serializers.ModelSerializer):
+    """
+    Translates robust geographical references efficiently.
+    """
     class Meta:
         model = UserAddress
         fields = [

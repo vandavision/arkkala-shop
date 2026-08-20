@@ -11,8 +11,8 @@ const resolveImageUrl = (url) => {
 };
 
 const ProfileInfo = () => {
-    const { user, fetchProfile } = useAuth();
-    
+    const { user, fetchUser } = useAuth();
+
     const [formData, setFormData] = useState({
         first_name: '',
         last_name: '',
@@ -63,34 +63,36 @@ const ProfileInfo = () => {
         setIsSubmitting(true);
         try {
             const submitData = new FormData();
-            submitData.append('first_name', formData.first_name);
-            submitData.append('last_name', formData.last_name);
-            
-            if (formData.email) submitData.append('email', formData.email);
-            if (formData.phone_number) submitData.append('phone_number', formData.phone_number);
-            
+            submitData.append('first_name', formData.first_name || '');
+            submitData.append('last_name', formData.last_name || '');
+            submitData.append('email', formData.email || '');
+            submitData.append('phone_number', formData.phone_number || '');
+
             if (avatarFile) {
                 submitData.append('avatar', avatarFile);
             }
 
             await updateUserProfile(submitData);
-            await fetchProfile();
-            
+            await fetchUser();
+
             showToast('بروزرسانی اطلاعات با موفقیت انجام شد.', 'success');
-            
+
             const modalCloseBtn = document.querySelector('#editModalCloseBtn');
             if(modalCloseBtn) modalCloseBtn.click();
-            
+
         } catch (error) {
-            console.error("Profile update error", error.response?.data);
-            
             let errorMsg = 'خطا در بروزرسانی اطلاعات.';
-            if (error.response?.data) {
+            if (error.response && error.response.data) {
                 const data = error.response.data;
-                if (data.email) errorMsg = data.email[0];
-                else if (data.phone_number) errorMsg = data.phone_number[0];
-                else if (data.avatar) errorMsg = data.avatar[0];
-                else if (typeof data === 'string') errorMsg = data;
+                if (typeof data === 'object' && !Array.isArray(data)) {
+                    const keys = Object.keys(data);
+                    if (keys.length > 0) {
+                        const firstError = data[keys[0]];
+                        errorMsg = Array.isArray(firstError) ? firstError[0] : firstError;
+                    }
+                } else if (typeof data === 'string' && data.length < 100) {
+                    errorMsg = data;
+                }
             }
             showToast(errorMsg, 'danger');
         } finally {
@@ -128,13 +130,13 @@ const ProfileInfo = () => {
                                     </td>
                                     <td className="p-4 w-50 hover-bg-light transition">
                                         <h6 className="text-muted fw-bold font-13 mb-2"><i className="bi bi-phone me-1"></i> شماره موبایل:</h6>
-                                        <p className="font-15 fw-bold text-dark mb-0 ms-4" dir="ltr">{user?.phone_number || 'ثبت نشده'}</p>
+                                        <p className="font-15 fw-bold text-dark mb-0 ms-4"><span dir="ltr">{user?.phone_number || 'ثبت نشده'}</span></p>
                                     </td>
                                 </tr>
                                 <tr>
                                     <td className="p-4 border-end border-light w-50 hover-bg-light transition">
                                         <h6 className="fw-bold font-13 text-muted mb-2"><i className="bi bi-envelope me-1"></i> پست الکترونیک:</h6>
-                                        <p className="font-15 fw-bold text-dark mb-0 ms-4 text-truncate">{user?.email || 'ثبت نشده'}</p>
+                                        <p className="font-15 fw-bold text-dark mb-0 ms-4 text-truncate"><span dir="ltr">{user?.email || 'ثبت نشده'}</span></p>
                                     </td>
                                     <td className="p-4 w-50 hover-bg-light transition">
                                         <h6 className="fw-bold font-13 text-muted mb-2"><i className="bi bi-calendar2-week me-1"></i> تاریخ عضویت:</h6>
@@ -159,7 +161,7 @@ const ProfileInfo = () => {
                             <button type="button" className="btn-close shadow-none" data-bs-dismiss="modal" aria-label="Close" id="editModalCloseBtn"></button>
                         </div>
                         <div className="modal-body p-4 p-md-5">
-                            
+
                             <div className="d-flex align-items-center justify-content-center mb-4 pb-4 border-bottom border-light">
                                 <div className="position-relative">
                                     <img 
@@ -207,19 +209,19 @@ const ProfileInfo = () => {
                     </div>
                 </div>
             </div>
-            
+
             <style jsx="true">{`
                 .cursor-pointer { cursor: pointer; }
                 .focus-danger:focus { background-color: #fff !important; box-shadow: 0 0 0 4px rgba(239, 64, 86, 0.1) !important; border: 1px solid #ef4056 !important; outline: none; }
                 .hover-bg-light:hover { background-color: #f8f9fa !important; }
                 .hover-lift { transition: transform 0.2s ease, box-shadow 0.2s; }
                 .hover-lift:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(239, 64, 86, 0.15) !important; }
-                .custom-toast { position: fixed; bottom: 30px; left: -400px; min-width: 300px; padding: 16px 24px; border-radius: 16px; z-index: 999999; transition: left 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
-                .custom-toast.show { left: 30px; }
+                .custom-toast { position: fixed; bottom: 30px; left: -400px; min-width: 300px; padding: 16px 24px; border-radius: 16px; z-index: 999999; opacity: 0; visibility: hidden; transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
+                .custom-toast.show { left: 30px; opacity: 1; visibility: visible; }
 
                 @media (max-width: 768px) {
-                    .custom-toast { left: 50% !important; transform: translateX(-50%); bottom: -100px; width: 90%; min-width: unset; transition: bottom 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
-                    .custom-toast.show { bottom: 20px !important; left: 50% !important; }
+                    .custom-toast { left: 50% !important; transform: translateX(-50%); bottom: -100px; width: 90%; min-width: unset; opacity: 0; visibility: hidden; transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
+                    .custom-toast.show { bottom: 20px !important; left: 50% !important; opacity: 1; visibility: visible; }
                 }
             `}</style>
         </div>

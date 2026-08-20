@@ -32,7 +32,6 @@ const ComparePage = () => {
             try {
                 const promises = compareIds.map(id => 
                     getProductDetail(id).catch(error => {
-                        console.warn(`Product ${id} not found or inactive.`);
                         return { isError: true, id };
                     })
                 );
@@ -57,7 +56,7 @@ const ComparePage = () => {
                     }
                 }
             } catch (error) {
-                console.error("Error fetching compared products", error);
+                
             } finally {
                 if (isMounted) setLoading(false);
             }
@@ -67,7 +66,6 @@ const ComparePage = () => {
         window.scrollTo(0, 0);
         
         return () => { isMounted = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [compareIds.join(',')]);
 
     const allAttributes = Array.from(new Set(
@@ -288,8 +286,8 @@ const ComparePage = () => {
                 .custom-scrollbar::-webkit-scrollbar-thumb { background: #ddd; border-radius: 10px; }
                 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #ef4056; }
                 
-                .custom-toast { position: fixed; bottom: 30px; left: -400px; min-width: 300px; padding: 16px 24px; border-radius: 16px; z-index: 999999; transition: left 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
-                .custom-toast.show { left: 30px; }
+                .custom-toast { position: fixed; bottom: 30px; left: -400px; min-width: 300px; padding: 16px 24px; border-radius: 16px; z-index: 999999; opacity: 0; visibility: hidden; transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
+                .custom-toast.show { left: 30px; opacity: 1; visibility: visible; }
 
                 @media (max-width: 768px) {
                     .compare-col { min-width: 190px !important; max-width: 220px !important; padding: 10px !important; }
@@ -298,8 +296,8 @@ const ComparePage = () => {
                     .compare-add-product { min-height: 180px !important; padding: 15px !important; }
                     .cap-icon { width: 45px !important; height: 45px !important; margin-bottom: 10px !important;}
                     .cap-icon i { font-size: 20px !important; }
-                    .custom-toast { left: 50% !important; transform: translateX(-50%); bottom: -100px; width: 90%; min-width: unset; transition: bottom 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
-                    .custom-toast.show { bottom: 20px !important; left: 50% !important; }
+                    .custom-toast { left: 50% !important; transform: translateX(-50%); bottom: -100px; width: 90%; min-width: unset; opacity: 0; visibility: hidden; transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
+                    .custom-toast.show { bottom: 20px !important; left: 50% !important; opacity: 1; visibility: visible; }
                 }
             `}</style>
         </section>
