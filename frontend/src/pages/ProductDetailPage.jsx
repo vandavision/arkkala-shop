@@ -69,10 +69,18 @@ const ProductDetailPage = () => {
     const [submittingQuestion, setSubmittingQuestion] = useState(false);
 
     const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
+    const [toastTimer, setToastTimer] = useState(null);
 
     const showToast = (message, type = 'success') => {
+        if (toastTimer) clearTimeout(toastTimer);
+        
         setToast({ show: true, message, type });
-        setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 4000);
+        
+        const timer = setTimeout(() => {
+            setToast(prev => ({ ...prev, show: false }));
+        }, 3000);
+        
+        setToastTimer(timer);
     };
 
     useEffect(() => {
@@ -290,7 +298,7 @@ const ProductDetailPage = () => {
         try {
             const result = await toggleFavorite(productIdentifier);
             setIsFavorite(result.is_favorite);
-            showToast(result.message, "success");
+            showToast(result.message || "وضعیت علاقه‌مندی بروزرسانی شد.", "success");
         } catch (err) {
             showToast("خطا در برقراری ارتباط با سرور.", "danger");
         }
@@ -698,8 +706,8 @@ const ProductDetailPage = () => {
                 <section className="product-desc mt-5 mb-5" aria-label="مشخصات و جزئیات کالا">
                     <h2 className="visually-hidden">جزئیات و تب‌های اطلاعات کالا</h2>
                     <div className="container-fluid">
-                        <div className="bg-white rounded-4 shadow-sm border border-ui p-2 mb-4 d-flex justify-content-center overflow-auto custom-scrollbar">
-                            <ul className="nav nav-pills flex-nowrap m-0 p-0 gap-2" role="tablist" aria-label="منوی اطلاعات تکمیلی">
+                        <div className="bg-white rounded-4 shadow-sm border border-ui p-2 mb-4 overflow-auto custom-scrollbar w-100">
+                            <ul className="nav nav-pills flex-nowrap justify-content-start justify-content-md-center m-0 p-0 gap-2" role="tablist" aria-label="منوی اطلاعات تکمیلی">
                                 <li className="nav-item flex-shrink-0" role="presentation">
                                     <button id="tab-desc" aria-controls="panel-desc" className={`nav-link rounded-pill px-4 py-2 font-14 transition fw-bold d-flex align-items-center gap-2 ${activeTab === 'desc' ? 'active bg-danger text-white shadow-sm' : 'text-muted hover-bg-light border border-transparent'}`} onClick={() => setActiveTab('desc')} role="tab" aria-selected={activeTab === 'desc'}>
                                         <i className="bi bi-file-text" aria-hidden="true"></i> معرفی محصول
