@@ -167,22 +167,22 @@ services:
     networks:
       - arkkala_dev
 
-  nginx:
-    build:
-      context: .
-      dockerfile: ./docker/dev/nginx/Dockerfile
-    container_name: arkkala_dev_nginx
-    ports:
-      - "80:80"
-    volumes:
-      - ./docker/dev/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./arkkala/mediafiles:/app/mediafiles:ro
-    depends_on:
-      - django
-      - react
-      - prerender
-    networks:
-      - arkkala_dev
+#  nginx:
+#    build:
+#      context: .
+#      dockerfile: ./docker/dev/nginx/Dockerfile
+#    container_name: arkkala_dev_nginx
+#    ports:
+#      - "80:80"
+#    volumes:
+#      - ./docker/dev/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+#      - ./arkkala/mediafiles:/app/mediafiles:ro
+#    depends_on:
+#      - django
+#      - react
+#      - prerender
+#    networks:
+#      - arkkala_dev
 
 networks:
   arkkala_dev:
