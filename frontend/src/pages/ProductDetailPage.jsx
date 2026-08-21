@@ -493,7 +493,7 @@ const ProductDetailPage = () => {
                                             style={{ '--swiper-navigation-color': '#ef4056', '--swiper-pagination-color': '#ef4056' }}
                                             spaceBetween={10}
                                             navigation={true}
-                                            thumbs={{ swiper: thumbsSwiper && !thumbsSwiper.destroyed ? thumbsSwiper : null }}
+                                            thumbs={{ swiper: thumbsSwiper && !thumbsSwiper.destroyed && thumbsSwiper.el ? thumbsSwiper : null }}
                                             modules={[FreeMode, Navigation, Thumbs, Zoom, EffectFade]}
                                             effect="fade"
                                             zoom={true}
@@ -526,7 +526,7 @@ const ProductDetailPage = () => {
                                             slidesPerView={4}
                                             freeMode={true}
                                             watchSlidesProgress={true}
-                                            modules={[FreeMode, Navigation, Thumbs]}
+                                            modules={[FreeMode, Navigation]}
                                             className="product-gallery-thumb"
                                             aria-label="تصاویر بندانگشتی کالا"
                                         >
@@ -556,8 +556,8 @@ const ProductDetailPage = () => {
                                                 </Link>
                                             </div>
                                         )}
-                                        <h1 itemProp="name" className="fs-5 mb-3 lh-base fw-900 text-dark">{product.title}</h1>
-                                        {product.english_title && <p className="font-13 text-muted font-en mb-4">{product.english_title}</p>}
+                                        <h1 itemProp="name" className="fs-5 mb-3 lh-base fw-900 text-dark text-break">{product.title}</h1>
+                                        {product.english_title && <p className="font-13 text-muted font-en mb-4 text-break" dir="ltr" style={{textAlign: 'right'}}>{product.english_title}</p>}
                                         
                                         {product.modified_at && (
                                             <div className="mb-3">
@@ -733,9 +733,9 @@ const ProductDetailPage = () => {
                             </ul>
                         </div>
                         
-                        <div className="row mt-4 justify-content-center">
-                            <div className="col-xl-10">
-                                <div className="content-box rounded-4 p-4 p-md-5 border-ui shadow-sm bg-white min-vh-50">
+                        <div className="row mt-4 justify-content-center mx-0 w-100">
+                            <div className="col-xl-10 col-12 p-0">
+                                <div className="content-box rounded-4 p-3 p-md-5 border-ui shadow-sm bg-white min-vh-50 w-100 overflow-hidden">
                                     
                                     <div className="product-descs">
                                         {activeTab === 'desc' && (
@@ -747,19 +747,19 @@ const ProductDetailPage = () => {
                                                     <h3 className="fw-900 text-dark m-0 fs-5">بررسی تخصصی و معرفی</h3>
                                                 </div>
                                                 
-                                                <div className="font-14 font-md-15 text-dark lh-lg text-justify custom-html-content">
+                                                <div className="font-14 font-md-15 text-dark lh-lg custom-html-content text-break" dir="auto">
                                                     <div dangerouslySetInnerHTML={{ __html: product.description.replace(/\n/g, '<br/>') }}></div>
                                                 </div>
                                                 
                                                 {product.citations && Array.isArray(product.citations) && product.citations.length > 0 && (
-                                                    <aside className="mt-5 pt-4 bg-light rounded-4 p-4 border border-light">
+                                                    <aside className="mt-5 pt-4 bg-light rounded-4 p-3 p-md-4 border border-light w-100 overflow-hidden">
                                                         <h4 className="fw-bold text-dark mb-4 font-15 d-flex align-items-center gap-2 border-end border-danger border-4 pe-2">
                                                             <i className="bi bi-link-45deg text-muted fs-4" aria-hidden="true"></i> منابع و کاتالوگ محصول
                                                         </h4>
-                                                        <div className="d-flex flex-wrap gap-2" dir="ltr">
+                                                        <div className="d-flex flex-wrap gap-2 citations-container" dir="ltr">
                                                             {product.citations.map((cite, idx) => (
-                                                                <a key={idx} href={cite} target="_blank" rel="nofollow noreferrer" aria-label={`باز کردن لینک منبع ${idx + 1}`} className="btn bg-white border border-ui rounded-pill font-12 text-muted hover-text-danger hover-border-danger transition shadow-sm d-inline-flex align-items-center gap-2">
-                                                                    <i className="bi bi-box-arrow-up-right" aria-hidden="true"></i> منبع [{idx + 1}]
+                                                                <a key={idx} href={cite} target="_blank" rel="nofollow noreferrer" aria-label={`باز کردن لینک منبع ${idx + 1}`} className="btn bg-white border border-ui rounded-pill font-12 text-muted hover-text-danger hover-border-danger transition shadow-sm d-inline-flex align-items-center gap-2 text-truncate" style={{maxWidth: '100%'}}>
+                                                                    <i className="bi bi-box-arrow-up-right flex-shrink-0" aria-hidden="true"></i> منبع [{idx + 1}]
                                                                 </a>
                                                             ))}
                                                         </div>
@@ -777,25 +777,25 @@ const ProductDetailPage = () => {
                                                     <h3 className="fw-900 text-dark m-0 fs-5">مشخصات فنی کالا</h3>
                                                 </div>
                                                 
-                                                <div className="table-responsive mt-4">
-                                                    <table className="table table-striped table-hover border-ui rounded-4 overflow-hidden shadow-sm m-0" aria-label="جدول مشخصات فنی محصول">
+                                                <div className="table-responsive mt-4 w-100">
+                                                    <table className="table table-striped table-hover border-ui rounded-4 overflow-hidden shadow-sm m-0 w-100" style={{tableLayout: 'fixed'}} aria-label="جدول مشخصات فنی محصول">
                                                         <tbody>
                                                             <tr>
-                                                                <th scope="row" className="bg-light text-muted fw-bold font-13 align-middle py-3 px-4" style={{width: '30%'}}>برند سازنده</th>
-                                                                <td className="text-dark font-14 fw-bold align-middle py-3 px-4">{product.brand ? product.brand.title : 'متفرقه'}</td>
+                                                                <th scope="row" className="bg-light text-muted fw-bold font-13 align-middle py-3 px-2 px-md-4 text-break" style={{width: '35%'}}>برند سازنده</th>
+                                                                <td className="text-dark font-14 fw-bold align-middle py-3 px-2 px-md-4 text-break">{product.brand ? product.brand.title : 'متفرقه'}</td>
                                                             </tr>
                                                             <tr>
-                                                                <th scope="row" className="bg-light text-muted fw-bold font-13 align-middle py-3 px-4">گروه کالایی</th>
-                                                                <td className="text-dark font-14 fw-bold align-middle py-3 px-4">{product.category ? product.category.title : '-'}</td>
+                                                                <th scope="row" className="bg-light text-muted fw-bold font-13 align-middle py-3 px-2 px-md-4 text-break">گروه کالایی</th>
+                                                                <td className="text-dark font-14 fw-bold align-middle py-3 px-2 px-md-4 text-break">{product.category ? product.category.title : '-'}</td>
                                                             </tr>
                                                             <tr>
-                                                                <th scope="row" className="bg-light text-muted fw-bold font-13 align-middle py-3 px-4">وزن و ابعاد پایه</th>
-                                                                <td className="text-dark font-14 fw-bold align-middle py-3 px-4">{product.weight} گرم</td>
+                                                                <th scope="row" className="bg-light text-muted fw-bold font-13 align-middle py-3 px-2 px-md-4 text-break">وزن و ابعاد پایه</th>
+                                                                <td className="text-dark font-14 fw-bold align-middle py-3 px-2 px-md-4 text-break">{product.weight} گرم</td>
                                                             </tr>
                                                             {product.variants && product.variants.length > 0 && Object.keys(availableAttributes).map((attrName, idx) => (
                                                                 <tr key={idx} className="transition">
-                                                                    <th scope="row" className="bg-light text-muted fw-bold font-13 align-middle py-3 px-4">{attrName}</th>
-                                                                    <td className="text-dark font-14 fw-bold align-middle py-3 px-4">
+                                                                    <th scope="row" className="bg-light text-muted fw-bold font-13 align-middle py-3 px-2 px-md-4 text-break">{attrName}</th>
+                                                                    <td className="text-dark font-14 fw-bold align-middle py-3 px-2 px-md-4 text-break">
                                                                         {selectedOptions[attrName] || 'لطفاً انتخاب کنید'}
                                                                     </td>
                                                                 </tr>
@@ -922,7 +922,7 @@ const ProductDetailPage = () => {
                                                                                     )}
                                                                                 </div>
                                                                             )}
-                                                                            <p className="font-14 text-muted lh-lg text-justify m-0" itemProp="reviewBody">{bodyText}</p>
+                                                                            <p className="font-14 text-muted lh-lg m-0 text-break" dir="auto" itemProp="reviewBody">{bodyText}</p>
                                                                         </div>
                                                                     </div>
                                                                 </article>
@@ -931,7 +931,7 @@ const ProductDetailPage = () => {
                                                     </div>
                                                 ) : (
                                                     <div className="text-center py-5 bg-light border border-light rounded-4">
-                                                        <img src="/assets/image/cart/empty-cart.svg" alt="نماد هیچ نظری ثبت نشده" style={{width:'80px', opacity:'0.5'}} className="mb-3"/>
+                                                        <img src="/assets/image/cart/empty-cart.svg" alt="نماد هیچ نظری ثبت نشده" style={{width:'80px', opacity:'0.5'}} className="mb-3" loading="lazy" decoding="async"/>
                                                         <h5 className="font-15 fw-bold text-dark mb-2">نظری برای نمایش وجود ندارد</h5>
                                                     </div>
                                                 )}
@@ -1000,7 +1000,7 @@ const ProductDetailPage = () => {
                                                                             <span className="font-11 text-muted"><time dateTime={q.created_at}>{new Date(q.created_at).toLocaleDateString('fa-IR')}</time></span>
                                                                         </div>
                                                                         <div className="fw-bold text-danger mb-2 font-13"><i className="bi bi-question-circle-fill me-1" aria-hidden="true"></i> پرسش:</div>
-                                                                        <p className="font-14 text-dark lh-lg text-justify m-0 bg-light p-2 p-md-3 rounded-3" itemProp="name">{q.text}</p>
+                                                                        <p className="font-14 text-dark lh-lg text-justify m-0 bg-light p-2 p-md-3 rounded-3 text-break" dir="auto" itemProp="name">{q.text}</p>
                                                                     </div>
                                                                 </div>
                                                                 {q.answer_text && (
@@ -1010,7 +1010,7 @@ const ProductDetailPage = () => {
                                                                         </div>
                                                                         <div className="col-10 col-lg-10 bq2 ps-2 ps-md-4 d-flex flex-column justify-content-center">
                                                                             <span className="span1 font-12 fw-bold text-success d-block mb-2">پشتیبانی آرک کالا</span>
-                                                                            <p className="font-14 text-dark lh-lg text-justify m-0 bg-success bg-opacity-10 border border-success border-opacity-25 p-2 p-md-3 rounded-3" itemProp="text">{q.answer_text}</p>
+                                                                            <p className="font-14 text-dark lh-lg text-justify m-0 bg-success bg-opacity-10 border border-success border-opacity-25 p-2 p-md-3 rounded-3 text-break" dir="auto" itemProp="text">{q.answer_text}</p>
                                                                         </div>
                                                                     </div>
                                                                 )}
@@ -1125,7 +1125,7 @@ const ProductDetailPage = () => {
                         </header>
                         <div className="modal-body p-0 d-flex align-items-center justify-content-center bg-black" style={{minHeight:'400px'}}>
                             {mainVideo ? (
-                                <video src={mainVideo.url} controls className="w-100 h-100" style={{maxHeight:'85vh'}} aria-label="پخش ویدیو معرفی محصول"></video>
+                                <video src={mainVideo.url} controls preload="none" className="w-100 h-100" style={{maxHeight:'85vh'}} aria-label="پخش ویدیو معرفی محصول"></video>
                             ) : (
                                 <div className="p-5 text-center text-white font-15 d-flex flex-column align-items-center"><i className="bi bi-camera-video-off fs-1 mb-3 text-muted" aria-hidden="true"></i> ویدیویی آپلود نشده است.</div>
                             )}
@@ -1304,6 +1304,22 @@ const ProductDetailPage = () => {
                 .hide-panel { max-height: 0; opacity: 0; transition: all 0.3s ease; }
                 .show-panel { max-height: 1000px; opacity: 1; transition: all 0.4s ease; }
                 .rotate-180 { transform: rotate(180deg); }
+
+                .custom-html-content {
+                    word-wrap: break-word !important;
+                    overflow-wrap: break-word !important;
+                    word-break: break-word !important;
+                    max-width: 100% !important;
+                    overflow-x: hidden !important;
+                }
+                .custom-html-content img, .custom-html-content video, .custom-html-content iframe {
+                    max-width: 100% !important;
+                    height: auto !important;
+                }
+                .citations-container a {
+                    word-break: break-all;
+                    white-space: normal;
+                }
             `}</style>
         </React.Fragment>
     );
