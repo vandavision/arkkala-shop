@@ -1,31 +1,22 @@
-# arkkala/arkkala/home/services.py
-
-"""
-Service layer for the home application business logic.
-"""
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from django.utils import timezone
 from django.db.models import Prefetch, QuerySet
-
-from .models import Story, Slider, Banner, StoreReview, SiteSetting, AboutPage, FAQ, ContactMessage
+from home.application.ports.readers import HomePageReader
+from home.models import Story, Slider, Banner, StoreReview, SiteSetting, FAQ, AboutPage
 from shop.models import Product, Brand, Category as ShopCategory, Comment as ShopComment, Question as ShopQuestion
 from blog.models import Post, Comment as BlogComment
 
-
-class HomeService:
+class DjangoHomePageReader(HomePageReader):
     """
-    Encapsulates business logic related to the home application data retrieval and creation.
+    Django ORM implementation for reading home page projections.
     """
-
-    @staticmethod
-    def get_home_page_data() -> Dict[str, Any]:
+    def get_aggregated_data(self) -> Dict[str, Any]:
         now = timezone.now()
 
         stories: QuerySet[Story] = Story.objects.filter(is_active=True)
         sliders: QuerySet[Slider] = Slider.objects.filter(is_active=True)
         banners: QuerySet[Banner] = Banner.objects.filter(is_active=True)
         store_reviews: QuerySet[StoreReview] = StoreReview.objects.filter(is_active=True)[:10]
-
         categories: QuerySet[ShopCategory] = ShopCategory.objects.filter(is_active=True, parent__isnull=True)[:10]
         brands: QuerySet[Brand] = Brand.objects.filter(is_active=True)[:10]
 
@@ -66,18 +57,11 @@ class HomeService:
             'latest_posts': latest_posts,
         }
 
-    @staticmethod
-    def get_site_settings() -> SiteSetting:
+    def get_site_settings(self) -> SiteSetting:
         return SiteSetting.load()
 
-    @staticmethod
-    def get_faqs() -> QuerySet[FAQ]:
+    def get_active_faqs(self) -> QuerySet[FAQ]:
         return FAQ.objects.filter(is_active=True)
 
-    @staticmethod
-    def get_about_us() -> Optional[AboutPage]:
+    def get_about_page_content(self) -> AboutPage | None:
         return AboutPage.objects.filter(is_active=True).first()
-
-    @staticmethod
-    def create_contact_message(validated_data: Dict[str, Any]) -> ContactMessage:
-        return ContactMessage.objects.create(**validated_data)

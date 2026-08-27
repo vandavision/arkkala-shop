@@ -12,6 +12,7 @@ import { getRecommendations } from '../api/shopApi';
 import ProductCard from '../components/ProductCard';
 import CountdownTimer from '../components/CountdownTimer';
 import SeoMeta from '../components/SeoMeta';
+import SectionHeader from '../components/SectionHeader';
 
 const resolveImageUrl = (url) => {
     if (!url) return null;
@@ -31,22 +32,6 @@ const resolveImageUrl = (url) => {
     
     return `${baseUrl}${path}`;
 };
-
-const SectionTitle = ({ title, highlight, linkPath, linkText = "مشاهده همه" }) => (
-    <div className="d-flex flex-wrap align-items-center justify-content-between border-bottom border-light pb-3 mb-4">
-        <div className="d-flex align-items-center gap-2">
-            <div className="bg-danger rounded-pill" style={{width: '6px', height: '24px'}}></div>
-            <h2 className="fw-900 h5 m-0 text-dark d-flex align-items-center gap-2">
-                <span>{title}</span> <span className="text-danger">{highlight}</span>
-            </h2>
-        </div>
-        {linkPath && (
-            <Link to={linkPath} className="btn btn-outline-danger rounded-pill px-3 py-1 font-13 fw-bold shadow-sm custom-hover-lift d-flex align-items-center gap-1 transition">
-                {linkText} <i className="bi bi-chevron-left font-12"></i>
-            </Link>
-        )}
-    </div>
-);
 
 const StoryModal = ({ videoSrc, onClose }) => {
     useEffect(() => {
@@ -175,7 +160,7 @@ const MainSlider = ({ sliders }) => {
                                         className="w-100 d-block" 
                                         style={{ aspectRatio: '21/9', objectFit: 'cover', minHeight: '180px' }} 
                                         alt={slider.title || 'اسلایدر'} 
-                                        fetchpriority={index === 0 ? "high" : "auto"}
+                                        fetchPriority={index === 0 ? "high" : "auto"}
                                         loading={index === 0 ? "eager" : "lazy"}
                                         decoding="async"
                                     />
@@ -320,7 +305,7 @@ const RecommendationsSection = ({ products }) => {
     return (
         <section className="product-slider mt-4">
             <div className="container-fluid">
-                <SectionTitle title="پیشنهادهای اختصاصی" highlight="برای شما" />
+                <SectionHeader title="پیشنهادهای اختصاصی" highlight="برای شما" link="/special-offers" linkText="موارد بیشتر" />
                 <div className="row gy-3 mt-3">
                     <div className="col-12">
                         <Swiper 
@@ -347,13 +332,17 @@ const RecommendationsSection = ({ products }) => {
 
 const BannersSection = ({ banners }) => {
     if (!banners?.length) return null;
+    
+    const displayCount = Math.min(banners.length, 4);
+    const colClass = displayCount >= 4 ? 'col-lg-3 col-md-6' : (displayCount === 3 ? 'col-lg-4 col-md-12' : 'col-md-6');
+
     return (
         <section className="banner mt-4 pb-md-3 pb-0">
             <div className="container-fluid">
                 <h2 className="section-title visually-hidden">بنر های تبلیغاتی</h2>
                 <div className="row gy-3">
-                    {banners.slice(0, 2).map((banner) => (
-                        <div className="col-md-6" key={banner.uuid || banner.id}>
+                    {banners.slice(0, 4).map((banner) => (
+                        <div className={`${colClass} col-12`} key={banner.uuid || banner.id}>
                             <a href={banner.link || '#'} className="d-block w-100 h-100">
                                 <div className="banner-image-parent shadow-sm rounded-4 overflow-hidden d-block custom-hover-lift w-100 h-100">
                                     <img 
@@ -379,7 +368,7 @@ const BestSellers = ({ products, sideBanner }) => {
     return (
         <section className="product-slider mt-4">
             <div className="container-fluid">
-                <SectionTitle title="پرفروش ترین" highlight="محصولات" linkPath="/best-sellers" />
+                <SectionHeader title="پرفروش ترین" highlight="محصولات" link="/best-sellers" />
                 <div className="row gy-3 mt-3">
                     <div className="col-md-3 d-none d-md-block">
                         <a href={sideBanner?.link || "/best-sellers"} className="d-block w-100 h-100">
@@ -423,7 +412,7 @@ const BrandsSection = ({ brands }) => {
     return (
         <section className="product-slider brand-box mt-5">
             <div className="container-fluid">
-                <SectionTitle title="محبوب ترین" highlight="برندها" linkPath="/brands" />
+                <SectionHeader title="محبوب ترین" highlight="برندها" link="/brands" />
                 <Swiper dir="rtl" modules={[Autoplay, Navigation]} slidesPerView={2.5} spaceBetween={15} breakpoints={{ 576: { slidesPerView: 4 }, 768: { slidesPerView: 6 }, 1024: { slidesPerView: 8 } }} autoplay={{ delay: 3000 }} navigation className="pro-slider py-3 px-1">
                     {brands.map(brand => (
                         <SwiperSlide key={brand.uuid || brand.id}>
@@ -452,7 +441,7 @@ const BlogSection = ({ posts }) => {
     return (
         <section className="blog-slider mt-5 mb-5">
             <div className="container-fluid">
-                <SectionTitle title="آخرین مطالب" highlight="وبلاگ" linkPath="/blog" />
+                <SectionHeader title="آخرین مطالب" highlight="وبلاگ" link="/blog" />
                 
                 <Swiper 
                     dir="rtl"
@@ -523,6 +512,7 @@ const HomePage = () => {
                 }
 
             } catch (error) {
+                console.error("Home Error", error);
             } finally {
                 setLoading(false);
             }
@@ -539,8 +529,9 @@ const HomePage = () => {
 
     if (!data) return <div className="text-center mt-5 min-vh-100 pt-5"><h2 className="text-danger fw-bold">خطا در دریافت اطلاعات از سرور</h2></div>;
 
-    const topBanners = data.banners?.filter(b => b.position !== 'best_sellers_side');
-    const bestSellersBanner = data.banners?.find(b => b.position === 'best_sellers_side');
+    const topBanners = data.banners?.filter(b => b.position !== 'bottom_row' && b.position !== 'best_sellers_side');
+    
+    const bestSellersBanner = data.banners?.find(b => b.position === 'best_sellers_side' || b.position === 'bottom_row') || data.banners?.[data.banners?.length - 1];
 
     return (
         <main>
