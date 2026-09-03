@@ -8,11 +8,11 @@ from shop.repositories.base import BaseRepository
 
 
 class RecommendationScoringConfig:
-    MAX_VIEW_COUNT: int = 20
-    VIEW_BASE_WEIGHT: int = 5
-    ORDER_BASE_WEIGHT: int = 20
-    TOP_CATEGORIES_LIMIT: int = 4
-    TOP_BRANDS_LIMIT: int = 4
+    MAX_VIEW_COUNT: int = 15
+    VIEW_BASE_WEIGHT: int = 3
+    ORDER_BASE_WEIGHT: int = 15
+    TOP_CATEGORIES_LIMIT: int = 5
+    TOP_BRANDS_LIMIT: int = 5
     RECOMMENDATION_LIMIT: int = 10
 
 
@@ -66,7 +66,7 @@ class DjangoProductRepository(ProductRepositoryPort, BaseRepository[Product]):
         if not top_categories and not top_brands:
             return self._get_fallback_recommendations(base_qs.exclude(uuid__in=historical_ids))
 
-        recommendations = self._build_scored_recommendation_query(
+        scored_qs = self._build_scored_recommendation_query(
             base_qs=base_qs,
             top_cats=top_categories,
             top_brands=top_brands,
@@ -75,10 +75,47 @@ class DjangoProductRepository(ProductRepositoryPort, BaseRepository[Product]):
             excluded_ids=historical_ids
         )
 
-        if not recommendations.exists():
+        mixed_qs = self._mix_results_by_category(base_qs, scored_qs, RecommendationScoringConfig.RECOMMENDATION_LIMIT)
+        
+        if not mixed_qs.exists():
             return self._get_fallback_recommendations(base_qs.exclude(uuid__in=historical_ids))
 
-        return recommendations
+        return mixed_qs
+
+    def _mix_results_by_category(self, base_qs: QuerySet, scored_qs: QuerySet, limit: int) -> QuerySet:
+        pool = list(scored_qs[:40])
+        if not pool:
+            return base_qs.none()
+
+        grouped = {}
+        for p in pool:
+            cat = getattr(p, 'category_id', 'unknown')
+            if cat not in grouped:
+                grouped[cat] = []
+            grouped[cat].append(p)
+            
+        sorted_cat_ids = sorted(grouped.keys(), key=lambda c: grouped[c][0].total_match_score, reverse=True)
+
+        mixed_uuids = []
+        while len(mixed_uuids) < limit and grouped:
+            for cat in list(sorted_cat_ids):
+                if len(mixed_uuids) >= limit:
+                    break
+                
+                if cat in grouped and grouped[cat]:
+                    item = grouped[cat].pop(0)
+                    mixed_uuids.append(item.uuid)
+                    
+                    if not grouped[cat]:
+                        del grouped[cat]
+                        sorted_cat_ids.remove(cat)
+
+        if not mixed_uuids:
+            return base_qs.none()
+
+        preserved_order = Case(*[When(uuid=pk, then=Value(pos)) for pos, pk in enumerate(mixed_uuids)], output_field=IntegerField())
+        return base_qs.filter(uuid__in=mixed_uuids).order_by(preserved_order)
+
 
     def _fetch_recent_interactions(self, user: Any, guest_id: Optional[str]) -> Tuple[List[Any], List[Any]]:
         OrderItem = apps.get_model('orders', 'OrderItem')
@@ -100,7 +137,7 @@ class DjangoProductRepository(ProductRepositoryPort, BaseRepository[Product]):
         cfg = RecommendationScoringConfig
 
         for idx, history in enumerate(history_list):
-            recency_multiplier = max(1, 3 - (idx // 7))
+            recency_multiplier = max(1, 4 - (idx // 5))
             calc_weight = min(history.view_count, cfg.MAX_VIEW_COUNT) * cfg.VIEW_BASE_WEIGHT * recency_multiplier
             
             historical_ids.add(history.product.uuid)
@@ -152,4 +189,4 @@ class DjangoProductRepository(ProductRepositoryPort, BaseRepository[Product]):
 
         return qs.annotate(
             total_match_score=F('user_cat_score') + F('user_brand_score') + F('offer_boost')
-        ).order_by('-total_match_score', '-sold_count')[:RecommendationScoringConfig.RECOMMENDATION_LIMIT]
+        ).order_by('-total_match_score', '-sold_count')
