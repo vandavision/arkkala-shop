@@ -81,6 +81,13 @@ USE_TZ: bool = True
 
 DEFAULT_AUTO_FIELD: str = 'django.db.models.BigAutoField'
 
+CACHES: dict = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': os.environ.get('REDIS_URL', 'redis://redis:6379/1'),
+    }
+}
+
 REST_FRAMEWORK: dict = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',

@@ -12,3 +12,7 @@ class HomeCache(ABC):
     @abstractmethod
     def set_home_page_data(self, data: Dict[str, Any]) -> None:
         pass
+
+    @abstractmethod
+    def clear_home_page_data(self) -> None:
+        pass

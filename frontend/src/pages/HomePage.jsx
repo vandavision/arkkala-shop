@@ -160,7 +160,7 @@ const MainSlider = ({ sliders }) => {
                                         className="w-100 d-block" 
                                         style={{ aspectRatio: '21/9', objectFit: 'cover', minHeight: '180px' }} 
                                         alt={slider.title || 'اسلایدر'} 
-                                        fetchPriority={index === 0 ? "high" : "auto"}
+                                        fetchpriority={index === 0 ? "high" : "auto"}
                                         loading={index === 0 ? "eager" : "lazy"}
                                         decoding="async"
                                     />
@@ -409,33 +409,36 @@ const BestSellers = ({ products, sideBanner }) => {
 
 const BrandsSection = ({ brands }) => {
     if (!brands?.length) return null;
+    
     return (
         <section className="product-slider brand-box mt-5">
             <div className="container-fluid">
                 <SectionHeader title="محبوب ترین" highlight="برندها" link="/brands" />
                 <Swiper dir="rtl" modules={[Autoplay, Navigation]} slidesPerView={2.5} spaceBetween={15} breakpoints={{ 576: { slidesPerView: 4 }, 768: { slidesPerView: 6 }, 1024: { slidesPerView: 8 } }} autoplay={{ delay: 3000 }} navigation className="pro-slider py-3 px-1">
-                    {brands.map(brand => (
-                        <SwiperSlide key={brand.uuid || brand.id}>
-                            <Link to={`/shop?brands=${brand.slug}`} className="d-block text-center border-ui bg-white rounded-3 p-3 shadow-sm custom-hover-lift">
-                                <img 
-                                    src={brand.logo ? resolveImageUrl(brand.logo) : '/assets/image/brand/brand1-1.png'} 
-                                    className="img-fluid" 
-                                    style={{height: '60px', objectFit: 'contain', filter: 'grayscale(100%)', opacity: '0.7', transition: 'all 0.3s'}} 
-                                    onMouseOver={e => {e.currentTarget.style.filter='none'; e.currentTarget.style.opacity='1'}} 
-                                    onMouseOut={e => {e.currentTarget.style.filter='grayscale(100%)'; e.currentTarget.style.opacity='0.7'}} 
-                                    alt={brand.title} 
-                                    loading="lazy"
-                                    decoding="async"
-                                />
-                            </Link>
-                        </SwiperSlide>
-                    ))}
+                    {brands.map(brand => {
+                        const imgUrl = brand.logo || brand.image || brand.image_url || brand.icon;
+                        const brandTitle = brand.title || brand.name || '';
+                        
+                        return (
+                            <SwiperSlide key={brand.uuid || brand.id}>
+                                <Link to={`/shop?brands=${brand.slug}`} className="d-block text-center border-ui bg-white rounded-3 p-3 shadow-sm custom-hover-lift">
+                                    <img 
+                                        src={imgUrl ? resolveImageUrl(imgUrl) : '/assets/image/brand/brand1-1.png'} 
+                                        className="img-fluid" 
+                                        style={{height: '60px', objectFit: 'contain', transition: 'all 0.3s'}} 
+                                        alt={brandTitle} 
+                                        loading="lazy"
+                                        decoding="async"
+                                    />
+                                </Link>
+                            </SwiperSlide>
+                        );
+                    })}
                 </Swiper>
             </div>
         </section>
     );
 };
-
 const BlogSection = ({ posts }) => {
     if (!posts?.length) return null;
     return (

@@ -1,15 +1,12 @@
 from typing import Dict, Any
 from django.utils import timezone
-from django.db.models import Prefetch, QuerySet
+from django.db.models import Prefetch, QuerySet, Q
 from home.application.ports.readers import HomePageReader
 from home.models import Story, Slider, Banner, StoreReview, SiteSetting, FAQ, AboutPage
 from shop.models import Product, Brand, Category as ShopCategory, Comment as ShopComment, Question as ShopQuestion
 from blog.models import Post, Comment as BlogComment
 
 class DjangoHomePageReader(HomePageReader):
-    """
-    Django ORM implementation for reading home page projections.
-    """
     def get_aggregated_data(self) -> Dict[str, Any]:
         now = timezone.now()
 
@@ -18,7 +15,10 @@ class DjangoHomePageReader(HomePageReader):
         banners: QuerySet[Banner] = Banner.objects.filter(is_active=True)
         store_reviews: QuerySet[StoreReview] = StoreReview.objects.filter(is_active=True)[:10]
         categories: QuerySet[ShopCategory] = ShopCategory.objects.filter(is_active=True, parent__isnull=True)[:10]
-        brands: QuerySet[Brand] = Brand.objects.filter(is_active=True)[:10]
+        
+        brands: QuerySet[Brand] = Brand.objects.filter(
+            is_active=True
+        ).exclude(Q(logo__isnull=True) | Q(logo__exact=''))[:10]
 
         product_prefetch: list = [
             'variants__attribute_values',

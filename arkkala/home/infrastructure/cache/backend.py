@@ -12,3 +12,6 @@ class HomeCacheBackend(HomeCache):
 
     def set_home_page_data(self, data: Dict[str, Any]) -> None:
         cache.set(CacheKeys.home_page_aggregated_data(), data, timeout=600)
+
+    def clear_home_page_data(self) -> None:
+        cache.delete(CacheKeys.home_page_aggregated_data())

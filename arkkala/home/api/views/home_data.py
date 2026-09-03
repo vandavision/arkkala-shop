@@ -4,6 +4,8 @@ from rest_framework.response import Response
 from rest_framework.request import Request
 from rest_framework import status
 from rest_framework.permissions import AllowAny
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import never_cache
 
 from home.dependencies import home_page_reader, home_cache_backend
 from home.application.queries.get_home_page_data import GetHomePageDataQuery
@@ -15,6 +17,7 @@ class HomePageDataView(APIView):
     """
     permission_classes: list = [AllowAny]
 
+    @method_decorator(never_cache)
     def get(self, request: Request) -> Response:
         cached_data: Dict[str, Any] | None = home_cache_backend.get_home_page_data()
         
