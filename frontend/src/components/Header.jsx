@@ -447,10 +447,10 @@ const Header = () => {
                                 </Link>
                                 
                                 <div className="position-absolute mega-menu-panel shadow-lg border border-light rounded-4 bg-white" style={{ top: '120%', right: 0, width: '280px', opacity: 0, visibility: 'hidden', transition: 'all 0.2s ease-in-out' }}>
-                                    <ul className="list-unstyled mb-0 m-0 py-2">
+                                    <ul className="list-unstyled mb-0 m-0 py-2 position-relative">
                                         {categories.length > 0 ? (
                                             categories.map(cat => (
-                                                <li key={`desk-cat-${cat.uuid}`} className="position-relative menu-item-group">
+                                                <li key={`desk-cat-${cat.uuid}`} className="position-static menu-item-group">
                                                     <Link 
                                                         to={`/category/${cat.slug}`} 
                                                         className="d-flex justify-content-between align-items-center py-3 px-4 font-14 fw-bold text-dark transition menu-link text-decoration-none"
@@ -467,7 +467,7 @@ const Header = () => {
                                                     </Link>
                                                     
                                                     {cat.children?.length > 0 && (
-                                                        <div className="position-absolute sub-menu-panel shadow-sm border-start border-light border-opacity-50 rounded-start-4 bg-white p-3 custom-scrollbar" style={{ top: '0', right: '100%', minWidth: '240px', minHeight: '300px', maxHeight: '450px', overflowY: 'auto', opacity: 0, visibility: 'hidden', transition: 'all 0.2s ease-in-out' }}>
+                                                        <div className="position-absolute sub-menu-panel shadow-sm border-start border-light border-opacity-50 rounded-start-4 bg-white p-3 custom-scrollbar" style={{ top: '0', right: '100%', minWidth: '240px', height: '100%', overflowY: 'auto', opacity: 0, visibility: 'hidden', transition: 'all 0.2s ease-in-out' }}>
                                                             <h6 className="font-13 fw-900 text-muted mb-3 pb-2 border-bottom border-light">دسته‌بندی‌های {cat.title}</h6>
                                                             <ul className="list-unstyled mb-0 d-flex flex-column gap-2">
                                                                 {cat.children.map(subCat => (

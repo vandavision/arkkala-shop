@@ -84,11 +84,11 @@ const StorySection = ({ stories }) => {
     return (
         <>
             <section className="story-section pb-2">
-                <div className="container-fluid pt-4">
+                <div className="container-fluid pt-2">
                     <h2 className="section-title visually-hidden">استوری‌ها</h2>
-                    <Swiper dir="rtl" modules={[FreeMode]} freeMode={true} slidesPerView="auto" className="px-2">
+                    <Swiper dir="rtl" modules={[FreeMode]} freeMode={true} slidesPerView="auto" className="px-2 py-4">
                         {stories.map((story) => (
-                            <SwiperSlide key={story.uuid || story.id} style={{ width: '100px' }} className="mx-2 custom-hover-lift transition-all">
+                            <SwiperSlide key={story.uuid || story.id} style={{ width: '90px' }} className="mx-2 transition-all story-slide position-relative">
                                 <div 
                                     className="d-flex flex-column align-items-center"
                                     style={{ cursor: story.video || story.link ? 'pointer' : 'default' }}
@@ -103,7 +103,7 @@ const StorySection = ({ stories }) => {
                                     }}
                                 >
                                     <div 
-                                        className="position-relative d-flex justify-content-center align-items-center rounded-circle shadow-sm" 
+                                        className="position-relative d-flex justify-content-center align-items-center rounded-circle story-ring transition-all" 
                                         style={{ width: '85px', height: '85px', padding: '3px', background: 'linear-gradient(45deg, #ef4056, #ffc107)' }}
                                     >
                                         <div className="bg-white overflow-hidden rounded-circle d-flex p-1 w-100 h-100">
@@ -138,7 +138,7 @@ const StorySection = ({ stories }) => {
 const MainSlider = ({ sliders }) => {
     if (!sliders || sliders.length === 0) return null;
     return (
-        <section className="main-slider mt-3">
+        <section className="main-slider mt-2">
             <div className="container-fluid position-relative">
                 <h2 className="section-title visually-hidden">اسلایدر</h2>
                 <div className="slider">
@@ -439,6 +439,7 @@ const BrandsSection = ({ brands }) => {
         </section>
     );
 };
+
 const BlogSection = ({ posts }) => {
     if (!posts?.length) return null;
     return (
@@ -575,6 +576,11 @@ const HomePage = () => {
                     -webkit-box-orient: vertical;  
                     overflow: hidden;
                 }
+
+                .story-slide { background: transparent !important; box-shadow: none !important; z-index: 1; overflow: visible !important; }
+                .story-slide:hover { z-index: 10; }
+                .story-slide:hover .story-ring { transform: scale(1.1); box-shadow: 0 8px 15px rgba(239, 64, 86, 0.2); }
+                .story-ring { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
             `}</style>
         </main>
     );
