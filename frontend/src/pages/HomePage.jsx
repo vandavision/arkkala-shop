@@ -181,9 +181,9 @@ const CategoriesSection = ({ categories }) => {
             <div className="container-fluid">
                 <div className="row align-items-center gy-4">
                     <div className="col-lg-2">
-                        <div className="d-lg-flex justify-content-lg-start">
+                        <div className="d-lg-flex justify-content-lg-center">
                             <div className="d-flex align-items-center justify-content-lg-center justify-content-between flex-lg-column w-100">
-                                <div className="d-flex flex-row flex-lg-column align-items-center align-items-lg-start gap-2 gap-lg-1">
+                                <div className="d-flex flex-row flex-lg-column align-items-center align-items-lg-center text-lg-center gap-2 gap-lg-2">
                                     <h2 className="h3 fw-900 mb-0 text-dark">دسته بندی</h2>
                                     <h3 className="h3 fw-900 mb-0 text-danger">محصولات</h3>
                                 </div>
@@ -201,17 +201,15 @@ const CategoriesSection = ({ categories }) => {
                                 <SwiperSlide key={cat.uuid || cat.id} style={{ width: 'auto' }}>
                                     <Link to={`/category/${cat.slug}`} className="text-decoration-none">
                                         <div className="cat-item d-flex flex-column align-items-center mx-2 mx-md-3 group-cat-item">
-                                            <div className="cat-item-image bg-white rounded-4 d-flex align-items-center justify-content-center mb-3 position-relative z-1 shadow-sm border border-ui" style={{ width: '110px', height: '110px', padding: '8px' }}>
-                                                <div className="bg-light rounded-circle w-100 h-100 d-flex align-items-center justify-content-center overflow-hidden inner-cat-circle" style={{ transition: 'all 0.3s ease' }}>
-                                                    <img 
-                                                        src={imgUrl ? resolveImageUrl(imgUrl) : '/assets/image/category/kalaye-degital.png'} 
-                                                        style={{ width: '65%', height: '65%', objectFit: 'contain', transition: 'transform 0.4s ease' }} 
-                                                        alt={cat.title} 
-                                                        className="cat-img"
-                                                        loading="lazy"
-                                                        decoding="async"
-                                                    />
-                                                </div>
+                                            <div className="inner-cat-circle d-flex align-items-center justify-content-center mb-3 position-relative transition-all" style={{ width: '120px', height: '120px', backgroundColor: 'transparent' }}>
+                                                <img 
+                                                    src={imgUrl ? resolveImageUrl(imgUrl) : '/assets/image/category/kalaye-degital.png'} 
+                                                    style={{ width: '85%', height: '85%', objectFit: 'contain' }} 
+                                                    alt={cat.title} 
+                                                    className="cat-img"
+                                                    loading="lazy"
+                                                    decoding="async"
+                                                />
                                             </div>
                                             <div className="cat-item-desc text-center px-2">
                                                 <h6 className="font-14 fw-bold text-dark transition-colors group-cat-text m-0">{cat.title}</h6>
@@ -564,10 +562,8 @@ const HomePage = () => {
                 
                 .group-cat-item { cursor: pointer; }
                 .group-cat-item:hover .inner-cat-circle { 
-                    border-color: #ef4056 !important; 
-                    box-shadow: 0 0 0 4px rgba(239, 64, 86, 0.15) !important; 
+                    transform: scale(1.15);
                 }
-                .group-cat-item:hover .cat-img { transform: scale(1.15) !important; }
                 .group-cat-item:hover .group-cat-text { color: #ef4056 !important; }
                 
                 .custom-text-overflow-2 { 
