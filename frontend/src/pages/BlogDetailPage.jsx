@@ -353,7 +353,7 @@ const BlogDetailPage = () => {
                                     />
                                     <span className="position-absolute bottom-0 end-0 bg-success border border-white border-2 rounded-circle" style={{width: '20px', height: '20px'}}></span>
                                 </div>
-                                <h5 className="fw-bold text-dark mb-1 font-16">{post.author?.first_name ? `${post.author.first_name} ${post.author.last_name}` : `تیم تحریریه ${siteName}`}</h5>
+                                <h5 className="fw-bold text-dark mb-1 font-16">{post.author?.first_name ? `${post.author.first_name} ${post.author.last_name}` : `تیم تجربه نویسی ${siteName}`}</h5>
                                 <p className="font-12 text-muted mb-4 bg-light rounded-pill px-3 py-1 d-inline-block">نویسنده و محقق</p>
                                 
                                 <div className="d-flex align-items-center justify-content-center gap-3 pt-3 border-top border-light">
