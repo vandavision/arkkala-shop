@@ -240,7 +240,7 @@ const BlogDetailPage = () => {
                                                         </button>
                                                     </h2>
                                                     <div className={`accordion-collapse overflow-hidden transition-all ${isOpen ? 'show-panel' : 'hide-panel'}`}>
-                                                        <div className="accordion-body px-4 pb-4 pt-2 text-muted font-14 lh-lg border-top border-light text-justify bg-white">
+                                                        <div className="accordion-body px-4 pb-4 pt-2 text-muted font-14 lh-lg border-top border-light text-justify bg-white" style={{ whiteSpace: 'pre-wrap' }}>
                                                             {faq.answer}
                                                         </div>
                                                     </div>
@@ -289,7 +289,7 @@ const BlogDetailPage = () => {
                                                     </div>
                                                 </div>
                                             </div>
-                                            <p className="font-14 text-dark lh-lg text-justify m-0 ps-md-5 ms-md-4">{comment.body}</p>
+                                            <p className="font-14 text-dark lh-lg text-justify m-0 ps-md-5 ms-md-4" style={{ whiteSpace: 'pre-wrap' }}>{comment.body}</p>
                                         </div>
                                     ))}
                                 </div>
@@ -415,6 +415,9 @@ const BlogDetailPage = () => {
                 .title-line-bottom { position: relative; }
                 .title-line-bottom::after { content: ''; position: absolute; bottom: 0; right: 0; width: 60px; height: 3px; background-color: #ef4056; border-radius: 5px; }
 
+                .blog-content-body {
+                    white-space: pre-wrap;
+                }
                 .blog-content-body img { max-width: 100%; height: auto; border-radius: 12px; margin: 20px 0; box-shadow: 0 5px 15px rgba(0,0,0,0.05); display: block; margin-left: auto; margin-right: auto;}
                 .blog-content-body h2, .blog-content-body h3, .blog-content-body h4 { font-weight: 900; color: #212529; margin-top: 30px; margin-bottom: 15px; }
                 .blog-content-body p { margin-bottom: 20px; font-size: 15px; line-height: 2.2; }
