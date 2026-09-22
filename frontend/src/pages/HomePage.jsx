@@ -180,38 +180,41 @@ const CategoriesSection = ({ categories }) => {
         <section className="card-categories site-slider mt-4 mb-5">
             <div className="container-fluid">
                 <div className="row align-items-center gy-4">
-                    <div className="col-lg-2">
-                        <div className="d-lg-flex justify-content-lg-center">
-                            <div className="d-flex align-items-center justify-content-lg-center justify-content-between flex-lg-column w-100">
-                                <div className="d-flex flex-row flex-lg-column align-items-center align-items-lg-center text-lg-center gap-2 gap-lg-2">
-                                    <h2 className="h3 fw-900 mb-0 text-dark">دسته بندی</h2>
-                                    <h3 className="h3 fw-900 mb-0 text-danger">محصولات</h3>
+                    <div className="col-lg-2 col-12">
+                        <div className="d-flex flex-column align-items-center justify-content-center h-100 text-center py-4 px-3">
+                            <div className="position-relative z-2 mb-3">
+                                <div className="d-inline-flex align-items-center justify-content-center bg-danger bg-opacity-10 text-danger rounded-circle p-3 shadow-sm" style={{width: '72px', height:'72px'}}>
+                                    <i className="bi bi-grid-fill fs-1"></i>
                                 </div>
-                                <Link to="/categories" className="btn btn-sm mt-lg-4 px-4 btn-outline-danger rounded-pill fw-bold shadow-sm custom-hover-lift transition-all d-flex align-items-center gap-1">
-                                    مشاهده <i className="bi bi-chevron-left font-12"></i>
-                                </Link>
                             </div>
+                            
+                            <h2 className="h5 fw-900 mb-2 text-dark position-relative z-2">دسته‌بندی</h2>
+                            <h3 className="h4 fw-900 mb-4 text-danger position-relative z-2">محصولات</h3>
+                            
+                            <Link to="/categories" className="btn btn-outline-danger rounded-pill px-4 py-2 font-14 fw-bold shadow-sm custom-hover-lift transition-all d-flex align-items-center gap-2">
+                                مشاهده همه <i className="bi bi-chevron-left font-12 mt-1"></i>
+                            </Link>
                         </div>
                     </div>
-                    <div className="col-lg-10">
-                        <Swiper dir="rtl" modules={[FreeMode, Navigation]} freeMode={true} slidesPerView="auto" navigation className="pro-slider py-4 px-2">
+                    <div className="col-lg-10 col-12 d-flex align-items-center">
+                        <Swiper dir="rtl" modules={[FreeMode, Navigation]} freeMode={true} slidesPerView="auto" navigation className="pro-slider py-4 px-2 w-100">
                             {categories.map(cat => {
                                 const imgUrl = cat.image || cat.image_url || cat.icon || cat.logo;
                                 return (
                                 <SwiperSlide key={cat.uuid || cat.id} style={{ width: 'auto' }}>
-                                    <Link to={`/category/${cat.slug}`} className="text-decoration-none">
-                                        <div className="cat-item d-flex flex-column align-items-center mx-2 mx-md-3 group-cat-item">
-                                            <div className="inner-cat-circle d-flex align-items-center justify-content-center mb-3 position-relative transition-all" style={{ width: '120px', height: '120px', backgroundColor: 'transparent' }}>
+                                    <Link to={`/category/${cat.slug}`} className="text-decoration-none px-2 d-block py-3">
+                                        <div className="d-flex flex-column align-items-center mx-2 group-cat-item transition-all" style={{ width: '130px', background: 'none', border: 'none', boxShadow: 'none' }}>
+                                            <div className="inner-cat-circle rounded-circle d-flex align-items-center justify-content-center mb-3 position-relative transition-all" style={{ width: '120px', height: '120px', background: 'none', border: 'none' }}>
                                                 <img 
                                                     src={imgUrl ? resolveImageUrl(imgUrl) : '/assets/image/category/kalaye-degital.png'} 
-                                                    style={{ width: '85%', height: '85%', objectFit: 'contain' }} 
+                                                    style={{ width: '85%', height: '85%', objectFit: 'contain', transition: 'all 0.4s ease' }} 
                                                     alt={cat.title} 
-                                                    className="cat-img"
+                                                    className="cat-img position-relative z-1"
                                                     loading="lazy"
                                                     decoding="async"
                                                 />
                                             </div>
-                                            <div className="cat-item-desc text-center px-2">
+                                            <div className="text-center w-100 px-1">
                                                 <h6 className="font-14 fw-bold text-dark transition-colors group-cat-text m-0">{cat.title}</h6>
                                             </div>
                                         </div>
@@ -560,12 +563,71 @@ const HomePage = () => {
                 @keyframes customPulse { 0% { opacity: 1; } 50% { opacity: .5; } 100% { opacity: 1; } }
                 .custom-animate-pulse { animation: customPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
                 
-                .group-cat-item { cursor: pointer; }
-                .group-cat-item:hover .inner-cat-circle { 
-                    transform: scale(1.15);
+                .group-cat-item { 
+                    cursor: pointer; 
+                    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
                 }
-                .group-cat-item:hover .group-cat-text { color: #ef4056 !important; }
+                .group-cat-item:hover {
+                    transform: scale(1.08); 
+                }
                 
+                .inner-cat-circle { 
+                    transition: all 0.4s ease;
+                }
+                
+                .inner-cat-circle::before {
+                    content: '';
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    width: 70%;
+                    height: 70%;
+                    background-color: #ef4056;
+                    filter: blur(20px);
+                    border-radius: 50%;
+                    transform: translate(-50%, -50%) scale(0.5);
+                    opacity: 0;
+                    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                    z-index: 0;
+                }
+                
+                .group-cat-item:hover .inner-cat-circle::before {
+                    transform: translate(-50%, -50%) scale(1.3);
+                    opacity: 0.7;
+                }
+
+                .group-cat-item:hover .cat-img { 
+                    transform: scale(1.1) translateY(-2px); 
+                    filter: drop-shadow(0 5px 10px rgba(0,0,0,0.15));
+                }
+                
+                .group-cat-item:hover .group-cat-text { 
+                    color: #ef4056 !important; 
+                }
+                
+                .swiper-button-next, .swiper-button-prev {
+                    background-color: rgba(255, 255, 255, 0.95) !important;
+                    width: 44px !important;
+                    height: 44px !important;
+                    border-radius: 50% !important; 
+                    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08) !important;
+                    color: #4a4a4a !important;
+                    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+                    backdrop-filter: blur(4px) !important;
+                    border: 1px solid #f1f1f1 !important;
+                }
+                .swiper-button-next:hover, .swiper-button-prev:hover {
+                    background-color: #ef4056 !important;
+                    color: #fff !important;
+                    border-color: #ef4056 !important;
+                    box-shadow: 0 6px 20px rgba(239, 64, 86, 0.3) !important;
+                    transform: scale(1.1) !important;
+                }
+                .swiper-button-next::after, .swiper-button-prev::after {
+                    font-size: 16px !important;
+                    font-weight: 900 !important;
+                }
+
                 .custom-text-overflow-2 { 
                     display: -webkit-box;
                     -webkit-line-clamp: 2;
