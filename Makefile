@@ -2,8 +2,8 @@
         prod-up prod-down prod-logs prod-shell prod-migrate prod-build \
         deploy dev-backup dev-restore backup restore ps clean
 
-COMPOSE_DEV := docker-compose -f development.yml --env-file .env.dev
-COMPOSE_PROD := docker-compose -f production.yml --env-file .env.prod
+COMPOSE_DEV := docker compose -f development.yml --env-file .env.dev
+COMPOSE_PROD := docker compose -f production.yml --env-file .env.prod
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
