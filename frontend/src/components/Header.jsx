@@ -38,6 +38,7 @@ const Header = () => {
     const [categories, setCategories] = useState([]);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [expandedCategory, setExpandedCategory] = useState(null);
+    const [isLogoReady, setIsLogoReady] = useState(false);
 
     useEffect(() => {
         let isMounted = true;
@@ -103,6 +104,17 @@ const Header = () => {
         else document.body.style.overflow = 'unset';
     }, [isMobileMenuOpen]);
 
+    useEffect(() => {
+        if (settings?.logo_url) {
+            setIsLogoReady(true);
+        } else {
+            const timer = setTimeout(() => {
+                setIsLogoReady(true);
+            }, 1000);
+            return () => clearTimeout(timer);
+        }
+    }, [settings?.logo_url]);
+
     const handleSearchSubmit = (e) => {
         if (e) e.preventDefault();
         setShowSearchDropdown(false);
@@ -123,6 +135,12 @@ const Header = () => {
         searchResults.categories?.length > 0 || 
         searchResults.brands?.length > 0
     );
+
+    const getLogoSrc = () => {
+        if (settings?.logo_url) return settings.logo_url;
+        if (!isLogoReady) return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1 1'%3E%3C/svg%3E";
+        return "/assets/image/logo.png";
+    };
 
     const renderSearchBar = () => (
         <form onSubmit={handleSearchSubmit} className="position-relative w-100 mx-auto search-container z-3">
@@ -233,17 +251,17 @@ const Header = () => {
                 <div className="d-lg-none bg-white w-100" style={{ position: 'relative', zIndex: 10 }}>
                     <div className="container-fluid px-3 pt-3 pb-3">
                         <div className="row align-items-center pb-3 m-0 w-100">
-                            <div className="col-auto p-0">
+                            <div className="col-3 p-0 text-start">
                                 <button aria-label="Menu" className="btn border-0 p-0 text-dark hover-lift shadow-none" onClick={() => setIsMobileMenuOpen(true)}>
                                     <i className="bi bi-list" style={{ fontSize: '32px' }}></i>
                                 </button>
                             </div>
-                            <div className="col text-center p-0">
+                            <div className="col-6 text-center p-0">
                                 <Link to="/" className="d-inline-block text-center w-100">
-                                    <img src={settings?.logo_url || "/assets/image/logo.png"} alt={settings?.site_name} className="img-fluid" style={{ maxHeight: '38px', objectFit: 'contain' }} fetchpriority="high" loading="eager" decoding="async" />
+                                    <img src={getLogoSrc()} alt={settings?.site_name} className="img-fluid" style={{ maxHeight: '38px', objectFit: 'contain' }} fetchpriority="high" loading="eager" decoding="async" />
                                 </Link>
                             </div>
-                            <div className="col-auto text-end p-0">
+                            <div className="col-3 text-end p-0">
                                 <ul className="d-flex align-items-center justify-content-end list-unstyled m-0 p-0 gap-3"></ul>
                             </div>
                         </div>
@@ -256,7 +274,7 @@ const Header = () => {
                 <div className={`mobile-overlay ${isMobileMenuOpen ? 'show' : ''}`} onClick={() => setIsMobileMenuOpen(false)}></div>
                 <div className={`mobile-sidebar bg-white ${isMobileMenuOpen ? 'open' : ''}`}>
                     <div className="d-flex justify-content-between align-items-center p-3 border-bottom border-light">
-                        <img src={settings?.logo_url || "/assets/image/logo.png"} alt={settings?.site_name} style={{ maxHeight: '35px' }} loading="lazy" decoding="async" />
+                        <img src={getLogoSrc()} alt={settings?.site_name} style={{ maxHeight: '35px' }} loading="lazy" decoding="async" />
                         <button className="btn border-0 text-muted p-1 hover-lift" onClick={() => setIsMobileMenuOpen(false)}>
                             <i className="bi bi-x-lg fs-4"></i>
                         </button>
@@ -361,7 +379,7 @@ const Header = () => {
                         <div className="row align-items-center m-0 w-100">
                             <div className="col-lg-2 p-0">
                                 <Link to="/" className="d-inline-block hover-lift transition">
-                                    <img src={settings?.logo_url || "/assets/image/logo.png"} alt={settings?.site_name} className="img-fluid" style={{ maxHeight: '55px', objectFit: 'contain' }} fetchpriority="high" loading="eager" decoding="async" />
+                                    <img src={getLogoSrc()} alt={settings?.site_name} className="img-fluid" style={{ maxHeight: '55px', objectFit: 'contain' }} fetchpriority="high" loading="eager" decoding="async" />
                                 </Link>
                             </div>
 
