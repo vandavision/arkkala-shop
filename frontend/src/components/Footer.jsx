@@ -1,5 +1,5 @@
 import React, { useContext } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { CartContext } from '../context/CartContext';
 import { CompareContext } from '../context/CompareContext';
 import { SiteContext } from '../context/SiteContext'; 
@@ -8,6 +8,12 @@ const Footer = () => {
     const { cartItems } = useContext(CartContext);
     const { compareIds } = useContext(CompareContext);
     const { settings } = useContext(SiteContext); 
+    const location = useLocation();
+
+    const isHomeActive = location.pathname === '/';
+    const isFavActive = location.pathname.includes('/favorites');
+    const isCompareActive = location.pathname.includes('/compare');
+    const isProfileActive = location.pathname.includes('/dashboard') && !isFavActive;
 
     const scrollToTop = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -136,61 +142,56 @@ const Footer = () => {
                 </div>
             </footer>
 
-            {/* Mobile Bottom Navigation Menu */}
-            <div className="mobile-footer d-xl-none d-table justify-content-center shadow-lg bg-white position-fixed bottom-0 p-2 w-100" style={{ zIndex: 1040, tableLayout: 'fixed', borderTop: '1px solid #eee' }}>
-                <ul className="d-table-row list-unstyled m-0 p-0 w-100">
-                    <li className="d-table-cell align-middle cursor-pointer" onClick={scrollToTop}>
-                        <div className="mf-link nav-link text-center text-muted hover-text-danger transition">
-                            <span className="d-block mf-link-icon"><i className="bi bi-chevron-up fs-4"></i></span>
-                            <span className="mt-1 font-11 fw-bold mf-link-title">بالا</span>
+            {/* Curved Cutout Center FAB Navigation */}
+            <div className="curved-bottom-nav d-xl-none">
+                <div className="nav-container shadow-lg">
+                    
+                    <Link to="/" className={`nav-item-curved ${isHomeActive ? 'active' : ''}`}>
+                        <div className="icon-wrapper">
+                            <i className={`bi ${isHomeActive ? 'bi-house-fill' : 'bi-house'}`}></i>
                         </div>
-                    </li>
-                    <li className="d-table-cell align-middle">
-                        <Link to="/dashboard/favorites" className="mf-link nav-link text-center text-muted hover-text-danger transition text-decoration-none">
-                            <div className="mf-link-icon position-relative d-table mx-auto">
-                                <i className="bi bi-heart fs-4"></i>
-                            </div>
-                            <span className="mt-1 font-11 fw-bold mf-link-title">علاقه‌مندی</span>
-                        </Link>
-                    </li>
-                    <li className="d-table-cell align-middle">
-                        <Link to="/" className="mf-link nav-link text-center text-muted hover-text-danger transition text-decoration-none">
-                            <span className="d-block mf-link-icon"><i className="bi bi-house fs-4"></i></span>
-                            <span className="mt-1 font-11 fw-bold mf-link-title">خانه</span>
-                        </Link>
-                    </li>
-                    <li className="d-table-cell align-middle">
-                        <Link to="/compare" className="mf-link nav-link text-center text-muted hover-text-danger transition text-decoration-none">
-                            <div className="position-relative mf-link-icon d-table mx-auto overflow-visible-custom">
-                                <span className="d-block mf-link-icon"><i className="bi bi-shuffle fs-4"></i></span>
-                                {compareIds?.length > 0 && (
-                                    <span className="position-absolute bg-danger text-white rounded-circle shadow-sm fw-bold d-flex align-items-center justify-content-center px-1" style={{ top: '-4px', right: '-8px', minWidth: '16px', height: '16px', fontSize: '10px', border: '2px solid #fff', borderRadius: '50rem', lineHeight: 1 }}>
-                                        {compareIds.length}
-                                    </span>
-                                )}
-                            </div>
-                            <span className="mt-1 font-11 fw-bold mf-link-title">مقایسه</span>
-                        </Link>
-                    </li>
-                    <li className="d-table-cell align-middle">
-                        <div className="mf-link nav-link text-center text-muted hover-text-danger transition cursor-pointer" data-bs-toggle="offcanvas" data-bs-target="#offcanvasCart" aria-controls="offcanvasCart">
-                            <div className="position-relative mf-link-icon d-table mx-auto overflow-visible-custom">
-                                <span className="d-block mf-link-icon"><i className="bi bi-bag fs-4"></i></span>
-                                {cartItems?.length > 0 && (
-                                    <span className="position-absolute bg-danger text-white shadow-sm fw-bold d-flex align-items-center justify-content-center px-1" style={{ top: '-4px', right: '-8px', minWidth: '16px', height: '16px', fontSize: '10px', border: '2px solid #fff', borderRadius: '50rem', lineHeight: 1 }}>
-                                        {cartItems.length}
-                                    </span>
-                                )}
-                            </div>
-                            <span className="mt-1 font-11 fw-bold mf-link-title">سبد خرید</span>
+                        <span className="dot"></span>
+                    </Link>
+
+                    <Link to="/compare" className={`nav-item-curved ${isCompareActive ? 'active' : ''}`}>
+                        <div className="icon-wrapper">
+                            <i className="bi bi-shuffle"></i>
+                            {compareIds?.length > 0 && (
+                                <span className="count-badge">{compareIds.length}</span>
+                            )}
                         </div>
-                    </li>
-                </ul>
+                        <span className="dot"></span>
+                    </Link>
+
+                    <div className="nav-item-center-wrap" data-bs-toggle="offcanvas" data-bs-target="#offcanvasCart">
+                        <div className="center-fab shadow-lg">
+                            <i className="bi bi-bag fs-4 text-white"></i>
+                            {cartItems?.length > 0 && (
+                                <span className="fab-badge">{cartItems.length}</span>
+                            )}
+                        </div>
+                    </div>
+
+                    <Link to="/dashboard/favorites" className={`nav-item-curved ${isFavActive ? 'active' : ''}`}>
+                        <div className="icon-wrapper">
+                            <i className={`bi ${isFavActive ? 'bi-heart-fill' : 'bi-heart'}`}></i>
+                        </div>
+                        <span className="dot"></span>
+                    </Link>
+
+                    <Link to="/dashboard" className={`nav-item-curved ${isProfileActive ? 'active' : ''}`}>
+                        <div className="icon-wrapper">
+                            <i className={`bi ${isProfileActive ? 'bi-person-fill' : 'bi-person'}`}></i>
+                        </div>
+                        <span className="dot"></span>
+                    </Link>
+
+                </div>
             </div>
 
             <style jsx="true">{`
+                /* Desktop Footer Styles */
                 .cursor-pointer { cursor: pointer; }
-                .overflow-visible-custom { overflow: visible !important; }
                 .hover-text-danger:hover { color: #ef4056 !important; padding-right: 5px; }
                 .hover-text-info:hover { color: #0dcaf0 !important; }
                 .hover-text-success:hover { color: #198754 !important; }
@@ -209,6 +210,151 @@ const Footer = () => {
                     height: 8px; 
                     border-radius: 50%; 
                     background-color: #ef4056; 
+                }
+
+                /* --- Curved Cutout Center FAB Navigation --- */
+                .curved-bottom-nav {
+                    position: fixed;
+                    bottom: 20px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    width: 94%;
+                    max-width: 450px;
+                    z-index: 1040;
+                }
+
+                .curved-bottom-nav .nav-container {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    height: 70px;
+                    /* The magic cutout is created using radial-gradient */
+                    /* A circle positioned 5px below the top edge creates the perfect notch */
+                    background: radial-gradient(circle at 50% 5px, transparent 36px, #ffffff 37px);
+                    border-radius: 25px;
+                    filter: drop-shadow(0 10px 25px rgba(0, 0, 0, 0.12));
+                    padding: 0 10px;
+                    direction: rtl; /* Align RTL */
+                }
+
+                .nav-item-curved {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    height: 100%;
+                    color: #b0b0b0; /* Light grey for inactive */
+                    text-decoration: none;
+                    -webkit-tap-highlight-color: transparent;
+                    transition: all 0.3s ease;
+                }
+
+                .nav-item-curved .icon-wrapper {
+                    position: relative;
+                    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                }
+
+                .nav-item-curved i {
+                    font-size: 24px;
+                }
+
+                /* Active State Styling */
+                .nav-item-curved.active {
+                    color: #ef4056;
+                }
+
+                .nav-item-curved.active .icon-wrapper {
+                    transform: translateY(-4px);
+                }
+
+                /* The Dot Indicator */
+                .nav-item-curved .dot {
+                    width: 6px;
+                    height: 6px;
+                    background-color: #ef4056;
+                    border-radius: 50%;
+                    margin-top: 4px;
+                    opacity: 0;
+                    transform: scale(0);
+                    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                }
+
+                .nav-item-curved.active .dot {
+                    opacity: 1;
+                    transform: scale(1);
+                }
+
+                /* Center FAB Styling */
+                .nav-item-center-wrap {
+                    flex: 1.2; /* Slightly wider to give breathing room around the cutout */
+                    display: flex;
+                    justify-content: center;
+                    position: relative;
+                    height: 100%;
+                    cursor: pointer;
+                    -webkit-tap-highlight-color: transparent;
+                }
+
+                .center-fab {
+                    position: absolute;
+                    top: -25px; /* Center of FAB aligns with +5px inside the bar to match the cutout */
+                    width: 60px;
+                    height: 60px;
+                    background: #ef4056;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    box-shadow: 0 8px 20px rgba(239, 64, 86, 0.4) !important;
+                    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                }
+
+                .nav-item-center-wrap:active .center-fab {
+                    transform: scale(0.9);
+                }
+
+                /* Badges */
+                .count-badge {
+                    position: absolute;
+                    top: -4px;
+                    right: -6px;
+                    background: #ef4056;
+                    color: #fff;
+                    font-size: 10px;
+                    min-width: 16px;
+                    height: 16px;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-weight: 900;
+                    border: 2px solid #fff;
+                    line-height: 1;
+                }
+
+                .fab-badge {
+                    position: absolute;
+                    top: -2px;
+                    right: -2px;
+                    background: #fff;
+                    color: #ef4056;
+                    font-size: 11px;
+                    min-width: 20px;
+                    height: 20px;
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-weight: 900;
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+                }
+
+                /* iPhone safe area support */
+                @supports (padding-bottom: env(safe-area-inset-bottom)) {
+                    .curved-bottom-nav {
+                        bottom: calc(20px + env(safe-area-inset-bottom));
+                    }
                 }
             `}</style>
         </>
