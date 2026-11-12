@@ -1,10 +1,10 @@
-FROM node:20-alpine
+FROM docker.arvancloud.ir/node:20-alpine
 
 WORKDIR /app
 
 COPY ./frontend/package.json ./frontend/package-lock.json* /app/
 
-RUN npm install
+RUN npm install --registry=https://registry.npmmirror.com
 
 COPY ./frontend /app/
 

@@ -1,13 +1,17 @@
-FROM python:3.12-slim
+FROM docker.arvancloud.ir/python:3.12-slim
 
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_INDEX_URL=https://mirror-pypi.runflare.com/simple \
+    PIP_TRUSTED_HOST=mirror-pypi.runflare.com
 
 WORKDIR /app
 
 RUN groupadd -r django && useradd -r -g django django
 
-RUN apt-get update \
+RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debian.sources && \
+    apt-get update \
     && apt-get install -y --no-install-recommends \
         libpq-dev \
         gcc \

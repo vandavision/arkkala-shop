@@ -1,14 +1,14 @@
-FROM node:20-alpine AS frontend-builder
+FROM docker.arvancloud.ir/node:20-alpine AS frontend-builder
 
 WORKDIR /app
 
 COPY ./frontend/package*.json ./
-RUN npm ci
+RUN npm ci --registry=https://registry.npmmirror.com
 
 COPY ./frontend/ ./
 RUN npm run build
 
-FROM nginx:1.27-alpine
+FROM docker.arvancloud.ir/nginx:1.27-alpine
 
 RUN rm /etc/nginx/conf.d/default.conf
 

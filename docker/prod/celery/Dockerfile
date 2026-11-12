@@ -1,14 +1,15 @@
-# syntax=docker/dockerfile:1
-
-FROM python:3.12-slim AS builder
+FROM docker.arvancloud.ir/python:3.12-slim AS builder
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=1
+    PIP_NO_CACHE_DIR=1 \
+    PIP_INDEX_URL=https://mirror-pypi.runflare.com/simple \
+    PIP_TRUSTED_HOST=mirror-pypi.runflare.com
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debian.sources && \
+    apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev \
     build-essential \
@@ -19,15 +20,19 @@ COPY arkkala/requirements.txt requirements.txt
 RUN pip install --upgrade pip \
     && pip wheel --no-cache-dir --no-deps --wheel-dir /app/wheels -r requirements.txt
 
-FROM python:3.12-slim AS runtime
+FROM docker.arvancloud.ir/python:3.12-slim AS runtime
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    DJANGO_SETTINGS_MODULE=arkkala.settings.prod
+    DJANGO_SETTINGS_MODULE=arkkala.settings.prod \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_INDEX_URL=https://mirror-pypi.runflare.com/simple \
+    PIP_TRUSTED_HOST=mirror-pypi.runflare.com
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debian.sources && \
+    apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     && rm -rf /var/lib/apt/lists/* \
     && groupadd --system celery \

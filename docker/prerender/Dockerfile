@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM docker.arvancloud.ir/node:20-alpine
 
 ENV CHROME_BIN=/usr/bin/chromium-browser \
     MEMORY_CACHE=1 \
