@@ -3,8 +3,9 @@ from django.utils import timezone
 from django.db.models import Prefetch, QuerySet, Q
 from home.application.ports.readers import HomePageReader
 from home.models import Story, Slider, Banner, StoreReview, SiteSetting, FAQ, AboutPage
-from shop.models import Product, Brand, Category as ShopCategory, Comment as ShopComment, Question as ShopQuestion
+from shop.models import Product, Brand, Category as ShopCategory
 from blog.models import Post, Comment as BlogComment
+
 
 class DjangoHomePageReader(HomePageReader):
     def get_aggregated_data(self) -> Dict[str, Any]:
@@ -15,30 +16,20 @@ class DjangoHomePageReader(HomePageReader):
         banners: QuerySet[Banner] = Banner.objects.filter(is_active=True)
         store_reviews: QuerySet[StoreReview] = StoreReview.objects.filter(is_active=True)[:10]
         categories: QuerySet[ShopCategory] = ShopCategory.objects.filter(is_active=True, parent__isnull=True)[:10]
-        
+
         brands: QuerySet[Brand] = Brand.objects.filter(
             is_active=True
         ).exclude(Q(logo__isnull=True) | Q(logo__exact=''))[:10]
 
-        product_prefetch: list = [
-            'variants__attribute_values',
-            'gallery',
-            'videos',
-            'price_history',
-            Prefetch('comments', queryset=ShopComment.objects.filter(is_approved=True), to_attr='approved_comments'),
-            Prefetch('questions', queryset=ShopQuestion.objects.filter(is_approved=True), to_attr='approved_questions')
-        ]
+        base_product_qs = Product.objects.active().with_relations().with_approved_feedback()
 
-        special_offers: QuerySet[Product] = Product.objects.filter(
-            is_active=True,
+        special_offers: QuerySet[Product] = base_product_qs.filter(
             special_discount_percent__gt=0,
             special_offer_end__isnull=False,
             special_offer_end__gt=now
-        ).select_related('brand', 'category').prefetch_related(*product_prefetch).order_by('special_offer_end')[:10]
+        ).order_by('special_offer_end')[:10]
 
-        best_sellers: QuerySet[Product] = Product.objects.filter(
-            is_active=True
-        ).select_related('brand', 'category').prefetch_related(*product_prefetch).order_by('-sold_count')[:10]
+        best_sellers: QuerySet[Product] = base_product_qs.order_by('-sold_count')[:10]
 
         latest_posts: QuerySet[Post] = Post.objects.filter(is_published=True).select_related('category', 'author').prefetch_related(
             'tags',

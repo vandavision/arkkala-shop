@@ -16,17 +16,20 @@ class ProductCategorySerializer(serializers.ModelSerializer):
 
 
 class ProductSeoSerializer(BaseSeoSerializer):
-    """Outputs SEO bindings."""
+    """Outputs complete SEO, OpenGraph, Twitter, and GEO bindings."""
     class Meta:
         model = Product
         fields = [
-            'seo_keywords', 'meta_description', 'canonical_url', 'og_image_url', 'schema_markup',
-            'og_title', 'og_type', 'og_description', 'og_url', 'og_site_name', 'og_locale',
-            'twitter_card', 'twitter_site', 'twitter_creator'
+            'title', 'seo_keywords', 'meta_description', 'canonical_url', 'og_image_url', 'schema_markup',
+            'og_title', 'og_type', 'og_description', 'og_url', 'og_site_name', 'og_locale', 'article_author',
+            'twitter_card', 'twitter_site', 'twitter_creator', 'expert_reviewer', 'key_takeaways', 'citations',
+            'created_at', 'modified_at'
         ]
-        
+
     def get_canonical_url(self, obj: Product) -> str:
-        return self.get_frontend_url(f"/product/{obj.slug}/")
+        if obj.og_url:
+            return obj.og_url
+        return self.get_frontend_url(f"/product/{obj.slug}")
 
 
 class ProductVariantSerializer(serializers.ModelSerializer):
@@ -42,7 +45,7 @@ class ProductVariantSerializer(serializers.ModelSerializer):
 class ProductGallerySerializer(serializers.ModelSerializer):
     """Outputs product images."""
     url = serializers.FileField(source='image')
-    
+
     class Meta:
         model = ProductGallery
         fields = ['uuid', 'url', 'image_alt', 'is_main']
@@ -51,7 +54,7 @@ class ProductGallerySerializer(serializers.ModelSerializer):
 class ProductVideoSerializer(serializers.ModelSerializer):
     """Outputs product videos."""
     url = serializers.FileField(source='video_file')
-    
+
     class Meta:
         model = ProductVideo
         fields = ['uuid', 'title', 'url']
@@ -77,16 +80,17 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     price_history = PriceHistorySerializer(many=True, read_only=True)
     is_favorite = serializers.SerializerMethodField()
     is_special_offer = serializers.BooleanField(source='is_special_offer_active', read_only=True)
+    final_price = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Product
         fields = [
-            'uuid', 'title', 'english_title', 'slug', 'category', 'brand', 'short_description', 'description', 
-            'key_takeaways', 'expert_reviewer', 'citations', 'base_price', 'base_inventory', 'weight', 'volume',
+            'uuid', 'title', 'english_title', 'slug', 'category', 'brand', 'short_description', 'description',
+            'key_takeaways', 'expert_reviewer', 'citations', 'base_price', 'final_price', 'base_inventory', 'weight', 'volume',
             'is_wholesale', 'wholesale_min_quantity', 'wholesale_base_price',
             'special_discount_percent', 'special_offer_end', 'is_special_offer',
-            'sold_count', 'view_count', 'average_rating', 'is_variable', 'gallery', 'videos', 
-            'variants', 'comments', 'seo', 'created_at', 'questions', 'price_history', 'is_favorite'
+            'sold_count', 'view_count', 'average_rating', 'is_variable', 'gallery', 'videos',
+            'variants', 'comments', 'seo', 'created_at', 'modified_at', 'questions', 'price_history', 'is_favorite'
         ]
 
     def get_is_favorite(self, obj: Product) -> bool:

@@ -7,6 +7,7 @@ from django.db import transaction
 from orders.models.cart import Cart, CartItem
 from shop.models.product import Product, ProductVariant
 
+
 class CartService:
     """
     Business logic for Cart management, merging, and price calculations.
@@ -16,13 +17,13 @@ class CartService:
     def merge_guest_cart_to_user_cart(user: AbstractUser, guest_id: str) -> None:
         if not user or not guest_id:
             return
-            
+
         guest_cart = Cart.objects.filter(guest_id=guest_id, user__isnull=True).first()
         if not guest_cart:
             return
-            
+
         user_cart, _ = Cart.objects.get_or_create(user=user)
-        
+
         for guest_item in guest_cart.items.all():
             user_item = user_cart.items.filter(product=guest_item.product, variant=guest_item.variant).first()
             if user_item:
@@ -31,7 +32,7 @@ class CartService:
             else:
                 guest_item.cart = user_cart
                 guest_item.save(update_fields=['cart'])
-                
+
         guest_cart.delete()
 
     @staticmethod
@@ -39,16 +40,21 @@ class CartService:
         if user and user.is_authenticated:
             cart, _ = Cart.objects.get_or_create(user=user)
             return cart
-            
+
         if guest_id:
             cart, _ = Cart.objects.get_or_create(guest_id=guest_id, user__isnull=True)
             return cart
-            
+
         raise ValueError("باید شناسه کاربر یا مهمان موجود باشد.")
 
     @staticmethod
-    def add_to_cart(product_id: str, variant_id: Optional[str] = None, quantity: int = 1, 
-                    user: Optional[AbstractUser] = None, guest_id: Optional[str] = None) -> CartItem:
+    def add_to_cart(
+        product_id: str,
+        variant_id: Optional[str] = None,
+        quantity: int = 1,
+        user: Optional[AbstractUser] = None,
+        guest_id: Optional[str] = None
+    ) -> CartItem:
         cart = CartService.get_or_create_cart(user, guest_id)
         item, created = CartItem.objects.get_or_create(
             cart=cart, product_id=product_id, variant_id=variant_id,
@@ -85,17 +91,18 @@ class CartService:
     def calculate_item_price(item: CartItem) -> Decimal:
         product: Product = item.product
         variant: Optional[ProductVariant] = item.variant
-        
-        final_price = variant.price if variant else product.base_price
+
+        base_unit_price = Decimal(variant.price if variant else product.base_price)
+        final_price = base_unit_price
 
         if product.is_wholesale and item.quantity >= product.wholesale_min_quantity:
             wholesale_price = variant.wholesale_price if variant else product.wholesale_base_price
             if wholesale_price:
-                final_price = wholesale_price
+                final_price = Decimal(wholesale_price)
 
-        if getattr(product, 'is_special_offer_active', False):
-            discount_multiplier = Decimal(1 - (product.special_discount_percent / 100))
-            special_price = (variant.price if variant else product.base_price) * discount_multiplier
+        if getattr(product, 'is_special_offer_active', False) and product.special_discount_percent > 0:
+            discount = (base_unit_price * Decimal(product.special_discount_percent)) / Decimal(100)
+            special_price = max(Decimal(0), base_unit_price - discount)
             final_price = min(final_price, special_price)
 
         return Decimal(int(final_price))

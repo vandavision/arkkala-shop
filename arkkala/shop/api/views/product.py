@@ -48,7 +48,14 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
         try:
             obj = get_object_or_404(queryset, uuid=uuid.UUID(identifier, version=4))
         except ValueError:
-            obj = get_object_or_404(queryset, slug=identifier)
+            obj = queryset.filter(slug=identifier).first()
+            if not obj:
+                from platform_seo.models import SlugSwap
+                swap = SlugSwap.objects.filter(old_slug=identifier, content_type__model='product').order_by('-id').first()
+                if swap:
+                    obj = get_object_or_404(queryset, slug=swap.new_slug)
+                else:
+                    obj = get_object_or_404(queryset, slug=identifier)
         self.check_object_permissions(self.request, obj)
         return obj
 

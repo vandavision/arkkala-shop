@@ -6,6 +6,7 @@ from django.apps import apps
 
 User = get_user_model()
 
+
 class ProductQuerySet(models.QuerySet):
     """Encapsulates complex querying logic for Product model."""
 
@@ -16,28 +17,34 @@ class ProductQuerySet(models.QuerySet):
     def with_relations(self) -> 'ProductQuerySet':
         """Applies select_related and prefetch_related for optimal database access."""
         ProductVariant = apps.get_model('shop', 'ProductVariant')
+        AttributeValue = apps.get_model('shop', 'AttributeValue')
         return self.select_related('brand', 'category').prefetch_related(
-            Prefetch('variants', queryset=ProductVariant.objects.prefetch_related('attribute_values')),
+            Prefetch(
+                'variants',
+                queryset=ProductVariant.objects.select_related('gallery_image').prefetch_related(
+                    Prefetch('attribute_values', queryset=AttributeValue.objects.select_related('attribute'))
+                ),
+            ),
             'gallery',
             'videos',
-            'price_history'
+            'price_history',
         )
 
     def with_approved_feedback(self) -> 'ProductQuerySet':
-        """Prefetches only approved comments and questions to avoid N+1 queries."""
+        """Prefetches only approved comments and questions with their authors to avoid N+1 queries."""
         Comment = apps.get_model('shop', 'Comment')
         Question = apps.get_model('shop', 'Question')
         return self.prefetch_related(
             Prefetch(
                 'comments',
-                queryset=Comment.objects.filter(is_approved=True),
-                to_attr='approved_comments'
+                queryset=Comment.objects.filter(is_approved=True).select_related('user').order_by('-created_at'),
+                to_attr='approved_comments',
             ),
             Prefetch(
                 'questions',
-                queryset=Question.objects.filter(is_approved=True),
-                to_attr='approved_questions'
-            )
+                queryset=Question.objects.filter(is_approved=True).select_related('user').order_by('-created_at'),
+                to_attr='approved_questions',
+            ),
         )
 
     def with_user_favorite(self, user: Optional[User]) -> 'ProductQuerySet':
@@ -46,7 +53,7 @@ class ProductQuerySet(models.QuerySet):
             ProductFavorite = apps.get_model('shop', 'ProductFavorite')
             favorite_subquery = ProductFavorite.objects.filter(
                 product_id=OuterRef('pk'),
-                user_id=user.id
+                user_id=user.id,
             )
             return self.annotate(is_user_favorite=Exists(favorite_subquery))
         return self.annotate(is_user_favorite=Value(False, output_field=BooleanField()))

@@ -1,25 +1,24 @@
 from rest_framework import serializers
 from django.db.models import Q
 from shop.models import Category, Brand, Product
-from shop.serializers import ProductDetailSerializer
 
 
 class SearchProductItemSerializer(serializers.ModelSerializer):
     """Minimal serializer for products inside search and menus."""
     image_url = serializers.SerializerMethodField()
-    
+    final_price = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = Product
-        fields = ['uuid', 'title', 'slug', 'base_price', 'image_url']
-        
+        fields = ['uuid', 'title', 'slug', 'base_price', 'final_price', 'image_url']
+
     def get_image_url(self, obj: Product) -> str | None:
-        # Avoid .first() DB query by using Python next() on fetched .all()
-        gallery_images = obj.gallery.all()
+        gallery_images = list(obj.gallery.all())
         main_image = next((img for img in gallery_images if img.is_main), None)
-        
-        if not main_image and len(gallery_images) > 0:
+
+        if not main_image and gallery_images:
             main_image = gallery_images[0]
-            
+
         if main_image and main_image.image:
             request = self.context.get('request')
             if request:
@@ -38,7 +37,6 @@ class CategoryTreeSerializer(serializers.ModelSerializer):
         fields = ['uuid', 'title', 'slug', 'image', 'children', 'products']
 
     def get_children(self, obj: Category):
-        # Prevent secondary DB hitting by using .all() and filtering in Python memory
         children = [child for child in obj.children.all() if child.is_active]
         if children:
             return CategoryTreeSerializer(children, many=True, context=self.context).data
@@ -49,8 +47,7 @@ class CategoryTreeSerializer(serializers.ModelSerializer):
             products = Product.objects.filter(
                 Q(category=obj) | Q(category__parent=obj),
                 is_active=True
-            ).distinct().order_by('-view_count')[:4]
-            # Used minimal serializer representation for tree speed
+            ).prefetch_related('gallery').distinct().order_by('-view_count')[:4]
             return SearchProductItemSerializer(products, many=True, context=self.context).data
         return []
 

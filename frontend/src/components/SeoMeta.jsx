@@ -1,96 +1,232 @@
-import React from 'react';
+import React, { useEffect, useContext } from 'react';
 import { Helmet } from 'react-helmet-async';
+import { SiteContext } from '../context/SiteContext';
 
-const SeoMeta = ({ seoData, fallbackTitle, price, oldPrice, inventory, isArticle = false, customImage, customSchema, slug, productId, guarantee, brand }) => {
-    if (!seoData) return null;
+const SeoMeta = ({
+    seoData,
+    fallbackTitle,
+    fallbackDescription,
+    price,
+    oldPrice,
+    inventory,
+    isArticle = false,
+    isProduct = false,
+    customImage,
+    customSchema,
+    slug,
+    productId,
+    guarantee = 'گارانتی اصالت و سلامت فیزیکی کالا',
+    brand,
+}) => {
+    const siteCtx = useContext(SiteContext);
+    const settings = siteCtx?.settings || {};
 
-    const baseUrl = import.meta.env.VITE_FRONTEND_URL || 'https://arkkala.com';
-    const cleanBaseUrl = baseUrl.replace(/\/$/, '');
+    const safeSeo = seoData && typeof seoData === 'object' ? seoData : {};
+    const hasSeoContent = Boolean(
+        Object.keys(safeSeo).length > 0 || fallbackTitle || fallbackDescription || customSchema
+    );
 
-    const metaTitle = seoData.og_title || seoData.title || fallbackTitle || 'محصول بدون نام';
-    const siteName = seoData.og_site_name || 'ارک کالا';
-    const fullTitle = metaTitle.includes(siteName) ? metaTitle : `${metaTitle} | ${siteName}`;
+    // Determine active origin dynamically so Canonical is always strictly self-referencing
+    const getActiveOrigin = () => {
+        if (typeof window !== 'undefined' && window.location?.origin) {
+            const host = window.location.hostname;
+            if (host !== 'nginx' && host !== 'django') {
+                return window.location.origin.replace(/\/$/, '');
+            }
+        }
+        return (import.meta.env.VITE_FRONTEND_URL || 'https://arkkala.com').replace(/\/$/, '');
+    };
 
-    let metaDesc = seoData.og_description || seoData.meta_description || seoData.short_description || seoData.description || '';
+    const cleanBaseUrl = getActiveOrigin();
+    const siteName = safeSeo.og_site_name || settings?.site_name || 'ارک کالا';
+    const rawTitle = safeSeo.og_title || safeSeo.title || fallbackTitle || siteName;
+    const fullTitle = rawTitle.includes(siteName) ? rawTitle : `${rawTitle} | ${siteName}`;
+
+    let metaDesc =
+        safeSeo.og_description ||
+        safeSeo.meta_description ||
+        safeSeo.short_description ||
+        safeSeo.description ||
+        fallbackDescription ||
+        '';
 
     if (!metaDesc || metaDesc.trim() === '') {
-        metaDesc = `خرید و قیمت ${metaTitle} در فروشگاه اینترنتی ${siteName}. بررسی مشخصات و خرید آنلاین با تضمین بهترین قیمت.`;
-    } else if (metaDesc.length < 120) {
-        metaDesc = `${metaDesc} | نقد و بررسی تخصصی، انتخاب هوشمندانه و خرید آنلاین با تضمین بهترین قیمت و اصالت کالا در فروشگاه اینترنتی ${siteName}.`;
+        metaDesc = `${rawTitle} در فروشگاه اینترنتی ${siteName}. بررسی مشخصات، مقایسه تخصصی و خرید آنلاین با تضمین بهترین قیمت و اصالت کالا.`;
+    } else if (metaDesc.length < 100) {
+        metaDesc = `${metaDesc} | خرید آنلاین با تضمین اصالت کالا و بهترین قیمت در فروشگاه اینترنتی ${siteName}.`;
     }
 
-    if (metaDesc.length > 157) {
-        metaDesc = metaDesc.substring(0, 154) + '...';
+    if (metaDesc.length > 160) {
+        metaDesc = metaDesc.substring(0, 157) + '...';
     }
 
-    const keywords = Array.isArray(seoData.seo_keywords) ? seoData.seo_keywords.join(', ') : (seoData.seo_keywords || '');
-    const ogType = seoData.og_type || (isArticle ? 'article' : 'product');
-    const ogLocale = seoData.og_locale || 'fa_IR';
-    const robotsContent = seoData.robots || "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1";
+    const keywords = Array.isArray(safeSeo.seo_keywords)
+        ? safeSeo.seo_keywords.join(', ')
+        : safeSeo.seo_keywords || '';
 
-    // داینامیک کردن قطعی تگ Canonical (حل ارور Self-Referencing در تست سئو)
-    let canonicalUrl = '';
-    if (typeof window !== 'undefined') {
-        canonicalUrl = window.location.origin + window.location.pathname;
-    } else {
-        if (seoData.canonical_url) {
-            canonicalUrl = seoData.canonical_url.replace(/http:\/\/(localhost|nginx|127\.0\.0\.1)(:\d+)?/g, cleanBaseUrl);
-        } else {
-            canonicalUrl = `${cleanBaseUrl}${isArticle ? '/blog/' : '/product/'}${slug || ''}`;
-        }
+    const isProductPage = isProduct || price !== undefined || Boolean(productId);
+    const ogType = safeSeo.og_type || (isArticle ? 'article' : isProductPage ? 'product' : 'website');
+    const ogLocale = safeSeo.og_locale || 'fa_IR';
+    const robotsContent =
+        safeSeo.robots || 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
+
+    let currentPath = '/';
+    if (typeof window !== 'undefined' && window.location?.pathname) {
+        currentPath = window.location.pathname;
+    } else if (slug) {
+        currentPath = `${isArticle ? '/blog/' : isProductPage ? '/product/' : '/'}${slug}`;
     }
 
-    let imageUrl = customImage || seoData.og_image_url || seoData.image || seoData.image_url || '/assets/image/logo.png';
+    const normalizedPath = currentPath === '/' ? '/' : currentPath.replace(/\/$/, '');
+    const canonicalUrl = `${cleanBaseUrl}${normalizedPath}`;
+
+    let imageUrl =
+        customImage ||
+        safeSeo.og_image_url ||
+        safeSeo.image ||
+        safeSeo.image_url ||
+        settings?.logo_url ||
+        '/assets/image/logo.png';
+
     if (imageUrl && imageUrl.startsWith('/')) {
         imageUrl = `${cleanBaseUrl}${imageUrl}`;
+    } else if (imageUrl) {
+        imageUrl = imageUrl.replace(/^https?:\/\/[^/]+/i, cleanBaseUrl);
     }
-    imageUrl = imageUrl.replace(/http:\/\/(localhost|nginx|127\.0\.0\.1)(:\d+)?/g, cleanBaseUrl);
 
-    const twitterCard = seoData.twitter_card || 'summary_large_image';
-    const twitterSite = seoData.twitter_site || '@arkkala';
-    const twitterCreator = seoData.twitter_creator || '';
+    const twitterCard = safeSeo.twitter_card || 'summary_large_image';
+    const twitterSite = safeSeo.twitter_site || '@arkkala';
+    const twitterCreator = safeSeo.twitter_creator || '';
 
-    const finalSchema = customSchema || seoData.schema_markup || seoData.json_ld;
+    const configuredSocials = [
+        settings?.instagram,
+        settings?.telegram,
+        settings?.linkedin,
+        settings?.twitter,
+        settings?.whatsapp,
+    ].filter((link) => link && typeof link === 'string' && link.startsWith('http'));
+
+    const sameAsLinks =
+        configuredSocials.length > 0
+            ? configuredSocials
+            : [
+                  'https://instagram.com/arkkala',
+                  'https://t.me/arkkala',
+                  'https://www.linkedin.com/company/arkkala',
+              ];
 
     const orgSchema = {
-        "@type": "Organization",
-        "name": siteName,
-        "url": cleanBaseUrl,
-        "logo": `${cleanBaseUrl}/assets/image/logo.png`
+        '@type': 'Organization',
+        '@id': `${cleanBaseUrl}/#organization`,
+        name: siteName,
+        url: cleanBaseUrl,
+        logo: {
+            '@type': 'ImageObject',
+            url: settings?.logo_url || `${cleanBaseUrl}/assets/image/logo.png`,
+        },
+        sameAs: sameAsLinks,
+        contactPoint: {
+            '@type': 'ContactPoint',
+            telephone: settings?.phone_number || '+98-21-12345678',
+            contactType: 'customer service',
+            areaServed: 'IR',
+            availableLanguage: ['Persian', 'fa'],
+        },
     };
 
     const websiteSchema = {
-        "@type": "WebSite",
-        "name": siteName,
-        "url": cleanBaseUrl,
-        "potentialAction": {
-            "@type": "SearchAction",
-            "target": `${cleanBaseUrl}/shop?search={search_term_string}`,
-            "query-input": "required name=search_term_string"
-        }
+        '@type': 'WebSite',
+        '@id': `${cleanBaseUrl}/#website`,
+        name: siteName,
+        url: cleanBaseUrl,
+        publisher: { '@id': `${cleanBaseUrl}/#organization` },
+        inLanguage: 'fa-IR',
+        potentialAction: {
+            '@type': 'SearchAction',
+            target: {
+                '@type': 'EntryPoint',
+                urlTemplate: `${cleanBaseUrl}/shop?search={search_term_string}`,
+            },
+            'query-input': 'required name=search_term_string',
+        },
     };
 
-    let parsedSchema = finalSchema;
-    if (typeof finalSchema === 'string') {
+    const rawSchema = customSchema || safeSeo.schema_markup || safeSeo.json_ld;
+    let parsedSchema = rawSchema;
+    if (typeof rawSchema === 'string') {
         try {
-            parsedSchema = JSON.parse(finalSchema);
-        } catch (e) {
+            parsedSchema = JSON.parse(rawSchema);
+        } catch {
             parsedSchema = null;
         }
     }
 
     let schemaGraph = [orgSchema, websiteSchema];
     if (parsedSchema && typeof parsedSchema === 'object') {
-        if (parsedSchema['@graph']) {
-            schemaGraph = [...schemaGraph, ...parsedSchema['@graph']];
-        } else {
-            const { '@context': _, ...restSchema } = parsedSchema;
-            schemaGraph.push(restSchema);
+        const normalizedParsed = JSON.parse(
+            JSON.stringify(parsedSchema).replace(/https?:\/\/arkkala\.com/g, cleanBaseUrl)
+        );
+        if (Array.isArray(normalizedParsed['@graph'])) {
+            const filteredGraph = normalizedParsed['@graph'].filter(
+                (node) => node['@type'] !== 'Organization' && node['@type'] !== 'WebSite'
+            );
+            schemaGraph = [...schemaGraph, ...filteredGraph];
+        } else if (Object.keys(normalizedParsed).length > 0) {
+            const { '@context': _, ...restSchema } = normalizedParsed;
+            if (
+                Object.keys(restSchema).length > 0 &&
+                restSchema['@type'] !== 'Organization' &&
+                restSchema['@type'] !== 'WebSite'
+            ) {
+                schemaGraph.push(restSchema);
+            }
         }
     }
 
-    const compiledSchema = { "@context": "https://schema.org", "@graph": schemaGraph };
-    const modifiedAt = seoData.modified_at || new Date().toISOString();
+    const compiledSchema = {
+        '@context': 'https://schema.org',
+        '@graph': schemaGraph,
+    };
+
+    const serializedSchema = JSON.stringify(compiledSchema);
+
+    useEffect(() => {
+        if (typeof window === 'undefined' || !hasSeoContent) return;
+
+        // Deduplicate any extra JSON-LD scripts rendered by child pages so only ONE exists
+        const allJsonLdScripts = document.querySelectorAll('script[type="application/ld+json"]');
+        let primaryScript = document.getElementById('ssr-json-ld');
+
+        if (!primaryScript && allJsonLdScripts.length > 0) {
+            primaryScript = allJsonLdScripts[0];
+            primaryScript.id = 'ssr-json-ld';
+        }
+
+        allJsonLdScripts.forEach((scriptEl) => {
+            if (scriptEl !== primaryScript) {
+                scriptEl.remove();
+            }
+        });
+
+        if (primaryScript) {
+            primaryScript.removeAttribute('data-rh');
+            if (primaryScript.textContent !== serializedSchema) {
+                primaryScript.textContent = serializedSchema;
+            }
+        }
+
+        const timer = setTimeout(() => {
+            window.prerenderReady = true;
+        }, 50);
+
+        return () => clearTimeout(timer);
+    }, [hasSeoContent, serializedSchema, canonicalUrl]);
+
+    if (!hasSeoContent) return null;
+
+    const modifiedAt = safeSeo.modified_at || safeSeo.created_at || new Date().toISOString();
+    const effectivePrice = inventory > 0 && price !== undefined ? price : 0;
+    const hasSsrScript = typeof document !== 'undefined' && Boolean(document.getElementById('ssr-json-ld'));
 
     return (
         <Helmet>
@@ -100,24 +236,26 @@ const SeoMeta = ({ seoData, fallbackTitle, price, oldPrice, inventory, isArticle
             <meta name="description" content={metaDesc} />
             {keywords && <meta name="keywords" content={keywords} />}
             <meta name="robots" content={robotsContent} />
+            <meta name="googlebot" content={robotsContent} />
+            <meta name="bingbot" content={robotsContent} />
             <meta name="theme-color" content="#ef4056" />
 
-            <link rel="preconnect" href={cleanBaseUrl} crossOrigin="use-credentials" />
-            <link rel="dns-prefetch" href={cleanBaseUrl} />
-            {imageUrl && <link rel="preload" as="image" href={imageUrl} fetchPriority="high" />}
+            <link rel="canonical" href={canonicalUrl} />
+            <link rel="alternate" hrefLang="fa-IR" href={canonicalUrl} />
+            <link rel="alternate" hrefLang="x-default" href={canonicalUrl} />
 
-            {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
-
+            {/* OpenGraph Metadata */}
             <meta property="og:title" content={fullTitle} />
             <meta property="og:description" content={metaDesc} />
             <meta property="og:type" content={ogType} />
-            {canonicalUrl && <meta property="og:url" content={canonicalUrl} />}
+            <meta property="og:url" content={canonicalUrl} />
             <meta property="og:site_name" content={siteName} />
             <meta property="og:locale" content={ogLocale} />
             {imageUrl && <meta property="og:image" content={imageUrl} />}
             {imageUrl && <meta property="og:image:alt" content={fullTitle} />}
             <meta property="og:updated_time" content={modifiedAt} />
 
+            {/* Twitter Card Metadata */}
             <meta name="twitter:card" content={twitterCard} />
             <meta name="twitter:title" content={fullTitle} />
             <meta name="twitter:description" content={metaDesc} />
@@ -126,25 +264,42 @@ const SeoMeta = ({ seoData, fallbackTitle, price, oldPrice, inventory, isArticle
             {twitterSite && <meta name="twitter:site" content={twitterSite} />}
             {twitterCreator && <meta name="twitter:creator" content={twitterCreator} />}
 
-            <script type="application/ld+json">
-                {JSON.stringify(compiledSchema)}
-            </script>
+            {/* GEO / E-E-A-T Signals */}
+            {safeSeo.expert_reviewer && <meta name="author" content={safeSeo.expert_reviewer} />}
+            {safeSeo.expert_reviewer && <meta name="reviewed-by" content={safeSeo.expert_reviewer} />}
+            {Array.isArray(safeSeo.citations) && safeSeo.citations.length > 0 && (
+                <meta name="citation_reference" content={safeSeo.citations.join(' | ')} />
+            )}
 
-            {!isArticle && price !== undefined && <meta property="product:price:amount" content={price.toString()} />}
-            {!isArticle && price !== undefined && <meta property="product:price:currency" content="IRT" />}
-            {!isArticle && inventory !== undefined && <meta property="product:availability" content={inventory > 0 ? "instock" : "oos"} />}
-            {!isArticle && brand && <meta property="product:brand" content={brand} />}
+            {/* Product & Shopping Bots Meta Tags */}
+            {isProductPage && price !== undefined && (
+                <meta property="product:price:amount" content={String(effectivePrice)} />
+            )}
+            {isProductPage && price !== undefined && <meta property="product:price:currency" content="IRT" />}
+            {isProductPage && inventory !== undefined && (
+                <meta property="product:availability" content={inventory > 0 ? 'instock' : 'oos'} />
+            )}
+            {isProductPage && brand && <meta property="product:brand" content={brand} />}
 
-            {isArticle && seoData.article_author && <meta property="article:author" content={seoData.article_author} />}
-            {isArticle && <meta property="article:published_time" content={seoData.created_at || modifiedAt} />}
-            {isArticle && <meta property="article:modified_time" content={modifiedAt} />}
+            {isProductPage && productId && <meta name="product_id" content={String(productId)} />}
+            {isProductPage && rawTitle && <meta name="product_name" content={rawTitle} />}
+            {isProductPage && price !== undefined && (
+                <meta name="product_price" content={String(effectivePrice)} />
+            )}
+            {isProductPage && oldPrice !== undefined && Number(oldPrice) > Number(effectivePrice) && (
+                <meta name="product_old_price" content={String(oldPrice)} />
+            )}
+            {isProductPage && inventory !== undefined && (
+                <meta name="availability" content={inventory > 0 ? 'instock' : 'outofstock'} />
+            )}
+            {isProductPage && guarantee && <meta name="guarantee" content={guarantee} />}
 
-            {!isArticle && productId && <meta name="product_id" content={productId} />}
-            {!isArticle && metaTitle && <meta name="product_name" content={metaTitle} />}
-            {!isArticle && price !== undefined && <meta name="product_price" content={price.toString()} />}
-            {!isArticle && oldPrice !== undefined && <meta name="product_old_price" content={oldPrice.toString()} />}
-            {!isArticle && inventory !== undefined && <meta name="availability" content={inventory > 0 ? "instock" : "outofstock"} />}
-            {!isArticle && guarantee && <meta name="guarantee" content={guarantee} />}
+            {/* Only render via Helmet if SSR script wasn't already injected */}
+            {!hasSsrScript && (
+                <script id="ssr-json-ld" type="application/ld+json">
+                    {serializedSchema}
+                </script>
+            )}
         </Helmet>
     );
 };

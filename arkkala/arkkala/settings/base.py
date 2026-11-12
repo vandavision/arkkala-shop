@@ -49,6 +49,8 @@ MIDDLEWARE: list[str] = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'platform_seo.middleware.url_redirect.URLRedirectMiddleware',
+    'platform_seo.middleware.slug_swap.OldSlugRedirectMiddleware',
 ]
 
 ROOT_URLCONF: str = 'arkkala.urls'
@@ -113,10 +115,21 @@ CORS_ALLOW_HEADERS: list[str] = list(default_headers) + [
     'x-guest-id',
 ]
 
-AUTH_MODE: str = os.environ.get('AUTH_MODE', 'EMAIL')
+AUTH_MODE: str = os.environ.get('AUTH_MODE', 'otp') #EMAIL, otp
 
 KAVENEGAR_API_KEY: str = os.environ.get('KAVENEGAR_API_KEY', 'your_kavenegar_api_key_here')
 KAVENEGAR_OTP_TEMPLATE: str = os.environ.get('KAVENEGAR_OTP_TEMPLATE', 'verify')
 
 OTP_WAIT_TIME_MINUTES: int = 2
 OTP_MAX_DAILY_REQUESTS: int = 5
+
+
+FRONTEND_URL: str = os.environ.get('FRONTEND_URL', 'https://arkkala.com')
+SITE_NAME: str = os.environ.get('SITE_NAME', 'ارک کالا')
+
+SLUG_TYPE_MAPPING: dict[str, str] = {
+    'product_slug': 'product',
+    'category_slug': 'category',
+    'post_slug': 'post',
+    'slug': 'product',
+}

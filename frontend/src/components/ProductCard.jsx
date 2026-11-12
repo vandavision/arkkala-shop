@@ -42,9 +42,11 @@ const ProductCard = ({ product }) => {
     const mainImage = mainImageObj?.url || product.image_url || '/assets/image/product/product-no-bg.png';
     const mainImageAlt = mainImageObj?.image_alt || product.title;
     
-    const discountPercent = product.special_discount_percent || 0;
-    const originalPrice = product.base_price || 0;
-    const finalPrice = discountPercent > 0 ? originalPrice - (originalPrice * discountPercent / 100) : originalPrice;
+    const discountPercent = product.is_special_offer ? (product.special_discount_percent || 0) : 0;
+    const originalPrice = Number(product.base_price || 0);
+    const finalPrice = product.final_price !== undefined
+        ? Number(product.final_price)
+        : (discountPercent > 0 ? originalPrice - (originalPrice * discountPercent / 100) : originalPrice);
 
     const handleFavorite = async (e) => {
         e.preventDefault();
@@ -93,7 +95,7 @@ const ProductCard = ({ product }) => {
             await addToCart(product.uuid, null, 1);
             showToast("محصول با موفقیت به سبد خرید اضافه شد.", "success");
         } catch (error) {
-            if(error.response?.status === 401) {
+            if (error.response?.status === 401) {
                 showToast("برای افزودن به سبد خرید ابتدا وارد شوید.", "warning");
                 setTimeout(() => navigate('/login'), 2000);
             } else {
@@ -141,7 +143,11 @@ const ProductCard = ({ product }) => {
                     </button>
                 </div>
 
-                <Link to={`/product/${product.slug}`} className="d-block text-center mb-3 pt-4 pb-2 text-decoration-none">
+                <Link
+                    to={`/product/${product.slug}`}
+                    aria-label={product.title}
+                    className="d-block text-center mb-3 pt-4 pb-2 text-decoration-none"
+                >
                     <img 
                         src={resolveImageUrl(mainImage)} 
                         alt={mainImageAlt} 
@@ -150,7 +156,7 @@ const ProductCard = ({ product }) => {
                         style={{ height: '180px', width: '100%' }} 
                         loading="lazy"
                         decoding="async"
-                        onError={(e)=>{e.target.src='/assets/image/product/product-no-bg.png'}} 
+                        onError={(e) => { e.target.src = '/assets/image/product/product-no-bg.png'; }} 
                     />
                 </Link>
 
