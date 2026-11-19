@@ -1,6 +1,6 @@
 .PHONY: help dev-up dev-down dev-logs dev-shell dev-migrate dev-build \
         prod-up prod-down prod-logs prod-shell prod-migrate prod-build \
-        deploy dev-backup dev-restore backup restore ps clean
+        front-build deploy dev-backup dev-restore backup restore ps clean
 
 COMPOSE_DEV := docker compose -f development.yml --env-file .env.dev
 COMPOSE_PROD := docker compose -f production.yml --env-file .env.prod
@@ -33,6 +33,9 @@ dev-migrate: ## Run migrations in dev
 dev-build: ## Rebuild dev images
 	$(COMPOSE_DEV) build --no-cache
 
+front-build: ## Build frontend manually on host server
+	./build-front.sh
+
 prod-up: ## Start prod stack
 	$(COMPOSE_PROD) up -d --build
 
@@ -51,7 +54,7 @@ prod-migrate: ## Run migrate only
 prod-build: ## Rebuild prod images
 	$(COMPOSE_PROD) build --no-cache
 
-deploy: ## Deploy using deploy.sh script
+deploy: ## Deploy backend stack using deploy.sh
 	./deploy.sh
 
 dev-backup: ## Backup the development database
@@ -61,10 +64,10 @@ dev-restore: ## Restore the development database
 	$(COMPOSE_DEV) exec -T postgres sh -c 'pg_restore -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -1 -c /var/lib/postgresql/data/$(FILE)'
 
 backup: ## Backup the production database
-	$(COMPOSE_PROD) exec -T postgres sh -c 'pg_dump -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -F c -f /backups/backup_$$(date +%Y%m%d_%H%M%S).dump'
+	./docker/prod/postgres/scripts/backup.sh
 
-restore: ## Restore the production database
-	$(COMPOSE_PROD) exec -T postgres sh -c 'pg_restore -U "$$POSTGRES_USER" -d "$$POSTGRES_DB" -1 -c /backups/$(FILE)'
+restore: ## Restore the production database (make restore FILE=path/to/dump.sql.gz)
+	./docker/prod/postgres/scripts/restore.sh $(FILE)
 
 ps: ## Show running prod containers
 	$(COMPOSE_PROD) ps

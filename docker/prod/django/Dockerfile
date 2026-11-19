@@ -8,7 +8,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-RUN groupadd -r django && useradd -r -g django django
+RUN groupadd --gid 1000 appgroup \
+    && useradd --uid 1000 --gid appgroup --home-dir /app --shell /usr/sbin/nologin django
 
 RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debian.sources && \
     apt-get update \
@@ -21,20 +22,23 @@ RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debia
 COPY ./arkkala/requirements.txt /app/
 RUN pip install --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt \
-    && pip install gunicorn uvicorn psycopg2-binary redis
+    && pip install --no-cache-dir gunicorn uvicorn psycopg2-binary redis
 
 COPY ./arkkala /app/
 COPY ./docker/scripts/wait_for_deps.py /wait_for_deps.py
 COPY ./docker/scripts/entrypoint.sh /entrypoint.sh
+COPY ./docker/scripts/healthcheck.py /healthcheck.py
 
-RUN chown -R django:django /app /wait_for_deps.py /entrypoint.sh \
-    && chmod +x /entrypoint.sh
+RUN sed -i 's/\r$//g' /entrypoint.sh /wait_for_deps.py /healthcheck.py \
+    && mkdir -p /app/staticfiles /app/mediafiles \
+    && chown -R django:appgroup /app /wait_for_deps.py /entrypoint.sh /healthcheck.py \
+    && chmod +x /entrypoint.sh /healthcheck.py
 
 USER django
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:8000/healthz/ || exit 1
+    CMD python /healthcheck.py
 
 ENTRYPOINT ["/entrypoint.sh"]
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "--worker-class", "uvicorn.workers.UvicornWorker", "--log-level", "info", "--access-logfile", "-", "--error-logfile", "-", "arkkala.asgi:application"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "--worker-class", "uvicorn.workers.UvicornWorker", "--timeout", "120", "--log-level", "info", "--access-logfile", "-", "--error-logfile", "-", "arkkala.asgi:application"]

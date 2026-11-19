@@ -35,8 +35,8 @@ RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debia
     apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     && rm -rf /var/lib/apt/lists/* \
-    && groupadd --system celery \
-    && useradd --system --gid celery --home-dir /app --shell /usr/sbin/nologin celery
+    && groupadd --gid 1000 appgroup \
+    && useradd --uid 1000 --gid appgroup --home-dir /app --shell /usr/sbin/nologin celery
 
 COPY --from=builder /app/wheels /wheels
 COPY arkkala/requirements.txt requirements.txt
@@ -50,9 +50,11 @@ COPY ./docker/scripts/wait_for_deps.py /wait_for_deps.py
 COPY ./docker/prod/celery/start_worker /start_worker
 COPY ./docker/prod/celery/start_beat /start_beat
 
-RUN sed -i 's/\r$//g' /start_worker /start_beat \
+RUN sed -i 's/\r$//g' /start_worker /start_beat /wait_for_deps.py \
     && chmod +x /start_worker /start_beat \
-    && mkdir -p /app/celerybeat \
-    && chown -R celery:celery /app /start_worker /start_beat /wait_for_deps.py
+    && mkdir -p /app/celerybeat /app/mediafiles \
+    && chown -R celery:appgroup /app /start_worker /start_beat /wait_for_deps.py
 
 USER celery
+
+CMD ["/start_worker"]
